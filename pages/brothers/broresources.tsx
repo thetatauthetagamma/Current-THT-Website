@@ -9,7 +9,7 @@ export default function BroResources() {
       <ul className="space-y-2 font-bold flex-grow text-lg xs:max-sm:flex xs:max-sm:flex-col xs:max-sm:items-center pl-8">
         <h1 className="font-bold text-4xl py-4">Resources</h1>
         <li className="hover:bg-gray-200 transition-colors duration-300 rounded flex-grow ">
-          <a href="https://docs.google.com/forms/d/e/1FAIpQLSeTxmB4izmoL-nWGXb1Zo9XhAogTX9A3G5qvZ0DJbYzbAo5Rg/viewform" target="_blank" className="block p-2 rounded">📋 Attendance Form</a>
+          <a href="https://forms.gle/qB3CHWFFnkVmSG3PA" target="_blank" className="block p-2 rounded">📋 Attendance Form</a>
         </li>
         <li className="hover:bg-gray-200 transition-colors duration-300 rounded  flex-grow">
           <a href="https://docs.google.com/forms/d/e/1FAIpQLSdfHRTc4M4yQXpUBWtXyslxA2YPedpIl5wZ91OnCUKHvhA4Sg/viewform" target="_blank" className="block p-2 rounded">📝 Fraternity Feedback Form</a>
@@ -24,7 +24,7 @@ export default function BroResources() {
           <a href="https://docs.google.com/forms/d/e/1FAIpQLSfNNyhwN1R-PwXXp7xacAd4_QEu-FVPMiP5RU10sEd19k0mDw/viewform" target="_blank" className="block p-2 rounded">👶 Pledge Feedback Form</a>
         </li>
         <li className="hover:bg-gray-200 transition-colors duration-300 rounded flex-grow">
-          <a href="https://docs.google.com/forms/d/e/1FAIpQLSd2m1KXGjHWSWUd3aMQapdcx0YG5Tfm_O0f7SUEe-xDkmmdpw/viewform" target="_blank" className="block p-2 rounded">💰 Reimbursement Form</a>
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLScMzwW7Y9IXBiTk2XIL9jNb95Kq-qDCreHqghWyeatQcgeBgw/viewform" target="_blank" className="block p-2 rounded">💰 Reimbursement Form W25</a>
         </li>
       </ul>
     </div>
