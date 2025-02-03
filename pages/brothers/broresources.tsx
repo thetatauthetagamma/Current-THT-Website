@@ -1,6 +1,7 @@
 import BroNavBar from "@/components/BroNavBar";
 export default function BroResources() {
 //TODO: Make it so that web head can add and edit resources from front end. 
+
   return (
     <div className="flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]">
 
