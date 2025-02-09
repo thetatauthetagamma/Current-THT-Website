@@ -100,7 +100,7 @@ export default function pledgetracking() {
         <div className="flex-grow h-full m-4">
           <h1 className="font-bold text-4xl xs:max-sm:text-center pb-2">Pledge Progress</h1>
           <div className='hover:bg-gray-200 transition-colors duration-300 rounded flex-grow mb-2'>
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfNNyhwN1R-PwXXp7xacAd4_QEu-FVPMiP5RU10sEd19k0mDw/viewform" target="_blank" className="block p-2 rounded">👶 Pledge Feedback Form</a>
+            <a href="https://forms.gle/SM3GDZzfLDXgfhDz6" target="_blank" className="block p-2 rounded">👶 Pledge Feedback Form</a>
           </div>
           {/* Search Bar */}
           <input

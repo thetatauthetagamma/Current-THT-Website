@@ -28,7 +28,7 @@ export const committeeList = {
 
 
 /*This should have the following format: YYYY-MM-DD */
-export const requirementDueDate = '2024/12/08'
+export const requirementDueDate = '2024/4/13'
 
 /*Update the required number of academic and social hours required each semester*/ 
 export const numAcademicHours = 20;

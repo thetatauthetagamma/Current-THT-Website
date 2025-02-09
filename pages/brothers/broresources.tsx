@@ -21,7 +21,7 @@ export default function BroResources() {
           <a href="https://docs.google.com/forms/d/e/1FAIpQLSfUTU0_aeKyi1cL5y-2_lhdQWmVQg86Th0YQnl_5_j-_SmO8w/viewform" target="_blank" className="block p-2 rounded">📝 Risk Manager Form W25</a>
         </li>
         <li className="hover:bg-gray-200 transition-colors duration-300 rounded  flex-grow">
-          <a href="https://docs.google.com/forms/d/e/1FAIpQLSfNNyhwN1R-PwXXp7xacAd4_QEu-FVPMiP5RU10sEd19k0mDw/viewform" target="_blank" className="block p-2 rounded">👶 Pledge Feedback Form</a>
+          <a href="https://forms.gle/SM3GDZzfLDXgfhDz6" target="_blank" className="block p-2 rounded">👶 Pledge Feedback Form</a>
         </li>
         <li className="hover:bg-gray-200 transition-colors duration-300 rounded flex-grow">
           <a href="https://docs.google.com/forms/d/e/1FAIpQLScMzwW7Y9IXBiTk2XIL9jNb95Kq-qDCreHqghWyeatQcgeBgw/viewform" target="_blank" className="block p-2 rounded">💰 Reimbursement Form W25</a>
