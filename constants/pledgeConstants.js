@@ -22,7 +22,8 @@ export const committeeList = {
     socialMedia:'Social Media',
     brohood: 'Brotherhood',
     corsec: 'Cor Sec',
-    corporate: 'Corporate'
+    corporate: 'Corporate',
+    fundraising: 'Fundraising'
   }
 
 
