@@ -62,7 +62,7 @@ const NewPledgeTile = ({ fetchPledges }) => {
       // Send a request to create a new pledge with the provided uniqname
       const { data, error } = await supabase.from('Pledges').insert([
         {
-          uniqname: uniqname,
+          uniqname: uniqname.toLowerCase(),
           firstname: firstname,
           lastname: lastname,
           pronouns: pronouns,
