@@ -15,6 +15,8 @@ import {
 
 const PledgeTile = ({ pledge, fetchPledges }) => {
   const [interviews, setInterviews] = useState(pledge.interviews)
+    //array of brother firstname lastname who pledge has interviewed:
+  const [interviewedBrothers, setInterviewedBrothers] = useState([])
   const [hasInterviewed, sethasInterviewed] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
 
@@ -115,6 +117,25 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
       }
     } catch (error) {}
   }
+
+  async function fetchInterviewedBrothers () {
+    try {
+      const { data, error } = await supabase
+        .from('Brothers')
+        .select('firstname, lastname')
+        .in('email', interviews)
+      if (error) throw error
+      if (data) {
+        setInterviewedBrothers(data)
+      }
+    } catch (error) {
+      console.error('Error fetching interviewed brothers:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchInterviewedBrothers()
+  }, [interviews, userID])
 
  //Check if the logged in brother has already been interviewed by pledge
   async function checkBrotherInPledge () {
@@ -606,6 +627,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
           )}
         </div>
       </div>
+  
       <div className='flex flex-col items-center w-9/12'>
         <div className='flex flex-col md:flex-row items-center justify-evenly w-full pb-2'>
           <div className='flex flex-col items-center p-2 '>
@@ -625,9 +647,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             <p className='text-sm'>{numCommitteeSOs}</p>
           </div>
           <div className='flex flex-col items-center md:border-x-2 border-black p-2'>
-            <p className='text-sm text-center font-bold mb-1'>
-              # of Social Hours
-            </p>
+            <p className='text-sm text-center font-bold mb-1'># of Social Hours</p>
             <p className='text-sm'>
               {editableFields.socialHours && isAdmin ? (
                 <input
@@ -647,23 +667,21 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
               # of Academic Hours
             </p>
             <p className='text-sm'>
-              {' '}
-              <p className='text-sm'>
-                {editableFields.academicHours && isAdmin ? (
-                  <input
-                    type='text'
-                    placeholder={academicHours}
-                    value={academicHours}
-                    onChange={e => setAcademicHours(e.target.value)}
-                    className='whitespace-nowrap w-30 text-center border-2 border-[#8b000070]'
-                  />
-                ) : (
-                  `${academicHours}`
-                )}
-              </p>
+              {editableFields.academicHours && isAdmin ? (
+                <input
+                  type='text'
+                  placeholder={academicHours}
+                  value={academicHours}
+                  onChange={e => setAcademicHours(e.target.value)}
+                  className='whitespace-nowrap w-30 text-center border-2 border-[#8b000070]'
+                />
+              ) : (
+                `${academicHours}`
+              )}
             </p>
           </div>
         </div>
+  
         <div className='flex flex-col items-center w-full p-2'>
           <ProgressBar
             className='w-full'
@@ -672,8 +690,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             height='40px'
           />
         </div>
+  
         <div className='flex flex-col md:flex-row items-center m-4 w-full justify-evenly'>
-          {/* Interview Button (to the left) */}
           <button
             onClick={handleInterviewClick}
             className={`flex-start ${
@@ -686,9 +704,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                 : `${firstname} has not interviewed me`}
             </span>
           </button>
-
-        {/* TODO: make this dropdown a component */}
-          <div className='flex items-center justify-center  m-2 md:w-1/3'>
+  
+          <div className='flex items-center justify-center m-2 md:w-1/3'>
             <Dropdown>
               <DropdownTrigger>
                 <button className='bg-gray-500 text-white p-2 rounded-md'>
@@ -715,8 +732,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                 </DropdownSection>
               </DropdownMenu>
             </Dropdown>
-
-            {/* Submit Button */}
+  
             <button
               onClick={handlePDSignOff}
               className='ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105'
@@ -724,9 +740,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
               Submit
             </button>
           </div>
-
+  
           <div className='flex items-center justify-center m-2 md:w-1/3'>
-            {/* Committee Dropdown */}
             <Dropdown>
               <DropdownTrigger>
                 <button className='bg-gray-500 text-white p-2 rounded-md'>
@@ -750,12 +765,10 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                         </DropdownItem>
                       )
                   )}
-
-                  {/* Add other committees as needed */}
                 </DropdownSection>
               </DropdownMenu>
             </Dropdown>
-
+  
             <button
               onClick={handleCommitteeSignOffSubmit}
               className='ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105'
@@ -764,6 +777,22 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             </button>
           </div>
         </div>
+  
+        {/* BROTHERS INTERVIEWED SECTION */}
+        {isAdmin && (
+        <div className='flex flex-col items-start w-full mt-2'>
+          <div className='text-base font-semibold'>Brothers Interviewed:</div>
+          <div className='flex flex-wrap gap-2 mt-2'>
+            {interviewedBrothers.map((brother, idx) => (
+              <div
+                key={idx}
+                className='border-2 border-gray-400 rounded p-1 text-center transition-transform transform-gpu hover:scale-105 hover:border-[#8b0000]'
+              >
+                {brother.firstname} {brother.lastname}
+              </div>
+            ))}
+          </div>
+        </div>)}
       </div>
     </div>
   )
