@@ -779,7 +779,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         </div>
   
         {/* BROTHERS INTERVIEWED SECTION */}
-        {isAdmin && (
+        {isAdmin && !(interviewedBrothers === undefined) &&(
         <div className='flex flex-col items-start w-full mt-2'>
           <div className='text-base font-semibold'>Brothers Interviewed:</div>
           <div className='flex flex-wrap gap-2 mt-2'>

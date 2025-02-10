@@ -20,6 +20,7 @@
     "@types/react-dom": "18.2.7",
     "autoprefixer": "^10.4.14",
     "axios": "^1.6.0",
+    "browser-image-compression": "^2.0.2",
     "d3": "^7.8.5",
     "framer-motion": "^10.16.4",
     "googleapis": "^128.0.0",

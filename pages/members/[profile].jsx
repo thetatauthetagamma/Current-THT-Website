@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
+import Image from 'next/image'
+import imageCompression from 'browser-image-compression'  // <-- 1) IMPORT HERE
+
 import supabase from '@/supabase'
 import thtlogo from '../../public/tht-logo.png'
-import Image from 'next/image'
 import BroNavBar from '@/components/BroNavBar'
-import { useRouter } from 'next/router'
 
 export default function Profile () {
   const router = useRouter()
@@ -26,6 +28,7 @@ export default function Profile () {
   const [isPledge, setIsPledge] = useState(true)
   const [profileIsPledge, setProfileIsPledge] = useState(true)
 
+  // Control which fields are editable
   const [editableFields, setEditableFields] = useState({
     firstname: false,
     lastname: false,
@@ -39,23 +42,23 @@ export default function Profile () {
     pronouns: false
   })
 
+  // 1) Get the userID from the URL query
   useEffect(() => {
     const fetchUnique = async () => {
       const queryParams = router.query
-
       setUserid(queryParams.profile)
     }
-
     fetchUnique()
   }, [router.query.profile])
 
+  // 2) Determine if *current* user is a Brother or Pledge
   useEffect(() => {
     const checkIfBrother = async () => {
       const { data, error } = await supabase
         .from('Brothers')
         .select('*')
         .eq('email', currentEmail)
-      if (data?.length == 1 && !error) {
+      if (data?.length === 1 && !error) {
         setIsPledge(false)
       }
     }
@@ -64,15 +67,15 @@ export default function Profile () {
         .from('Pledges')
         .select('*')
         .eq('email', currentEmail)
-      if (data?.length == 1 && !error) {
+      if (data?.length === 1 && !error) {
         setIsPledge(true)
       }
     }
-
     checkIfBrother()
     checkIfPledge()
   }, [currentEmail])
 
+  // 3) Fetch session and load user data (Brother or Pledge)
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -86,15 +89,12 @@ export default function Profile () {
     }
 
     const fetchBrotherData = async () => {
-      console.log('fetching data')
-      console.log(userid)
       const { data, error } = await supabase
         .from('Brothers')
         .select('*')
         .eq('userid', userid)
 
-      console.log(data)
-      console.log(error)
+      // If we found exactly one brother row
       if (data?.length === 1 && !error) {
         setProfileIsPledge(false)
         setUserid(data[0].userid)
@@ -109,25 +109,24 @@ export default function Profile () {
         setCurrentClasses(data[0].classes)
         setPronouns(data[0].pronouns)
       } else {
-        const { data, error } = await supabase
+        // Otherwise, check the Pledges table
+        const { data: pledgeData, error: pledgeError } = await supabase
           .from('Pledges')
           .select('*')
           .eq('uniqname', userid)
-        if (data?.length === 1 && !error) {
-          console.log(data)
+
+        if (pledgeData?.length === 1 && !pledgeError) {
           setProfileIsPledge(true)
-          setFirstname(data[0].firstname)
-          setLastname(data[0].lastname)
-          setYear(data[0].year)
-          setMajor(data[0].major)
-          setPronouns(data[0].pronouns)
-          setPhone(data[0].phone)
-          setLinkedin(data[0].linkedin)
-          setEmail(data[0].email)
-          setCurrentClasses(data[0].classes)
-          console.log("Is this brother a pledge?", profileIsPledge)
+          setFirstname(pledgeData[0].firstname)
+          setLastname(pledgeData[0].lastname)
+          setYear(pledgeData[0].year)
+          setMajor(pledgeData[0].major)
+          setPronouns(pledgeData[0].pronouns)
+          setPhone(pledgeData[0].phone)
+          setLinkedin(pledgeData[0].linkedin)
+          setEmail(pledgeData[0].email)
+          setCurrentClasses(pledgeData[0].classes)
         }
-        
       }
     }
 
@@ -135,6 +134,7 @@ export default function Profile () {
     fetchSession()
   }, [userid, currentEmail, editableFields])
 
+  // 4) Try to fetch existing profile image from Supabase Storage
   useEffect(() => {
     const fetchBrotherImage = async () => {
       if (userid) {
@@ -142,27 +142,29 @@ export default function Profile () {
           .from('brothers')
           .download(`${userid}.jpeg`)
 
-        if (!error) {
+        if (!error && ImageData) {
+          console.log('Profile image found')
+          console.log(userid);
           setImageUrl(URL.createObjectURL(new Blob([ImageData])))
         }
       }
     }
-
     fetchBrotherImage()
   }, [userid])
 
+  // 5) Check if logged-in user can edit this profile
   useEffect(() => {
     const isEditAble = async () => {
-      if (userid == currentEmail.slice(0, -10)) {
+      if (userid === currentEmail.slice(0, -10)) {
         setIsEditable(true)
       } else {
         setIsEditable(false)
       }
     }
-
     isEditAble()
   }, [userid, currentEmail])
 
+  // Toggle editable state for all fields
   const handleFieldEdit = () => {
     setEditableFields(prevFields => ({
       ...prevFields,
@@ -178,32 +180,52 @@ export default function Profile () {
     }))
   }
 
+  /**
+   * 6) Save updated fields back to Supabase (either Brothers or Pledges)
+   */
   const handleSave = async () => {
     if (!profileIsPledge) {
+      // It's a Brother
       try {
-        // Update the user's profile in Supabase with the new values
-
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('Brothers')
-          .update([
-            {
-              firstname,
-              lastname,
-              year,
-              major,
-              phone,
-              linkedin: linkedin,
-              classes: currentClasses,
-              pronouns: pronouns
-            }
-          ])
+          .update({
+            firstname,
+            lastname,
+            year,
+            major,
+            phone,
+            linkedin,
+            classes: currentClasses,
+            pronouns
+          })
           .eq('email', email)
 
         if (!error) {
-          console.log('Profile updated successfully')
+          console.log('Brother profile updated successfully')
         }
 
-        // Optionally reset editableFields state to hide input fields
+        // Upload the new profile photo if selected
+        if (profileImage) {
+          const fileName = `${userid}.jpeg`
+          const { error: uploadError } = await supabase.storage
+            .from('brothers')
+            .upload(fileName, profileImage, {
+              cacheControl: '3600',
+              contentType: 'image/jpeg',
+              upsert: true
+            })
+
+          if (!uploadError) {
+            console.log('Profile photo uploaded successfully')
+            setImageUrl(URL.createObjectURL(profileImage))
+            setProfileImage(null)
+          } else {
+            console.error('Error uploading profile photo:', uploadError.message)
+          }
+        }
+
+        // Reset editable fields
         setEditableFields({
           firstname: false,
           lastname: false,
@@ -215,55 +237,52 @@ export default function Profile () {
           currentClasses: false,
           pronouns: false
         })
-
-        // Upload the new profile photo if a file is selected
-        if (profileImage) {
-          const fileName = `${userid}.jpeg`
-          const { data: uploadData, error: uploadError } =
-            await supabase.storage
-              .from('brothers')
-              .upload(fileName, profileImage, {
-                cacheControl: '3600',
-                contentType: 'image/jpeg',
-                upsert: true
-              })
-
-          if (!uploadError) {
-            console.log('Profile photo uploaded successfully')
-            setImageUrl(URL.createObjectURL(profileImage))
-            setProfileImage(null) // Reset profileImage after successful upload
-          } else {
-            console.error('Error uploading profile photo:', uploadError.message)
-          }
-        } else {
-          console.error('Error updating brother profile:', error.message)
-        }
       } catch (error) {
         console.error('Error updating brother profile:', error.message)
       }
-    }
-    if (profileIsPledge) {
-      console.log('isPledge')
+    } else {
+      // It's a Pledge
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('Pledges')
-          .update([
-            {
-              firstname,
-              lastname,
-              year,
-              major,
-              phone,
-              linkedin: linkedin,
-              classes: currentClasses,
-              pronouns: pronouns
-            }
-          ])
+          .update({
+            firstname,
+            lastname,
+            year,
+            major,
+            phone,
+            linkedin,
+            classes: currentClasses,
+            pronouns
+          })
           .eq('email', email)
 
         if (!error) {
-          console.log('Profile updated successfully')
+          console.log('Pledge profile updated successfully')
         }
+
+        // Upload the new profile photo if selected
+        if (profileImage) {
+          console.log("Updating profile image")
+          const fileName = `${userid}.jpeg`
+          const { error: uploadError } = await supabase.storage
+            .from('brothers') // or 'pledges' if you store pledge images differently
+            .upload(fileName, profileImage, {
+              cacheControl: '3600',
+              contentType: 'image/jpeg',
+              upsert: true
+            })
+
+          if (!uploadError) {
+            console.log('Profile photo uploaded successfully')
+            setImageUrl(URL.createObjectURL(profileImage))
+            setProfileImage(null)
+          } else {
+            console.error('Error uploading profile photo:', uploadError.message)
+          }
+        }
+
+        // Reset editable fields
         setEditableFields({
           firstname: false,
           lastname: false,
@@ -275,48 +294,48 @@ export default function Profile () {
           currentClasses: false,
           pronouns: false
         })
-
-        // Upload the new profile photo if a file is selected
-        if (profileImage) {
-          const fileName = `${userid}.jpeg`
-          const { data: uploadData, error: uploadError } =
-            await supabase.storage
-              .from('brothers')
-              .upload(fileName, profileImage, {
-                cacheControl: '3600',
-                contentType: 'image/jpeg',
-                upsert: true
-              })
-
-          if (!uploadError) {
-            console.log('Profile photo uploaded successfully')
-            setImageUrl(URL.createObjectURL(profileImage))
-            setProfileImage(null) // Reset profileImage after successful upload
-          } else {
-            console.error('Error uploading profile photo:', uploadError.message)
-          }
-        } else {
-          console.error('Error updating pledge profile:', error.message)
-        }
       } catch (error) {
         console.error('Error updating pledge profile:', error.message)
       }
     }
   }
 
-  const handleImageChange = e => {
+  /**
+   * 7) Compress the file to ~30KB using `browser-image-compression`
+   *    before setting it for upload.
+   */
+  const handleImageChange = async (e) => {
     const file = e.target.files[0]
+    if (!file) return
 
-    // Check if the file is of type image/jpeg
-    if (file && file.type === 'image/jpeg') {
-      const image = URL.createObjectURL(file)
-      setProfileImage(file)
-      setProfileImageUrl(image)
-    } else {
-      console.error('Invalid file format. Please select a JPEG image.')
+    try {
+      // Check if the file is actually a JPEG
+      if (file.type !== 'image/jpeg') {
+        console.error('Invalid file format. Please select a JPEG image.')
+        return
+      }
+
+      // ~30KB = 0.03MB
+      const options = {
+        maxSizeMB: 0.03,
+        maxWidthOrHeight: 1000,
+        useWebWorker: true
+      }
+
+      // Compress the file
+      const compressedFile = await imageCompression(file, options)
+
+      // Create a preview URL
+      const compressedFileUrl = URL.createObjectURL(compressedFile)
+
+      setProfileImage(compressedFile)     // Compressed file
+      setProfileImageUrl(compressedFileUrl) // For immediate preview in the <img />
+    } catch (err) {
+      console.error('Error compressing image:', err)
     }
   }
 
+  // Manage Current Classes
   const handleCurrentClassChange = (index, value) => {
     const updatedClasses = [...currentClasses]
     updatedClasses[index] = value
@@ -330,9 +349,8 @@ export default function Profile () {
   }
 
   const handleAddClass = () => {
-    const classesArray = currentClasses || [] // Use empty array if currentClasses is null
-    const updatedClasses = [...classesArray, ''] // Add an empty string for a new class
-    setCurrentClasses(updatedClasses)
+    const classesArray = currentClasses || []
+    setCurrentClasses([...classesArray, ''])
   }
 
   return (
@@ -344,8 +362,9 @@ export default function Profile () {
       )}
       <div className='flex-grow'>
         <div className='flex flex-col items-center bg-gray-100 p-2 mb-4 h-full'>
+          {/* PROFILE IMAGE */}
           <div className='flex flex-col items-center w-full'>
-            {profileImage ? (
+            {profileImageUrl ? (
               <div className='mb-2 w-40 h-40'>
                 <img
                   src={profileImageUrl}
@@ -353,8 +372,7 @@ export default function Profile () {
                   className='rounded-full w-full h-full object-cover'
                 />
               </div>
-            ) : // If no temporary image, check for imageUrl
-            imageUrl ? (
+            ) : imageUrl ? (
               <div className='mb-2 w-40 h-40'>
                 <img
                   src={imageUrl}
@@ -363,7 +381,6 @@ export default function Profile () {
                 />
               </div>
             ) : (
-              // If no imageUrl, display the default logo
               <div className='mb-2 w-32 h-34'>
                 <Image
                   src={thtlogo}
@@ -372,6 +389,8 @@ export default function Profile () {
                 />
               </div>
             )}
+
+            {/* UPLOAD BUTTON (Only if editing) */}
             {editableFields.imageUrl && isEditable && (
               <div>
                 <label className='cursor-pointer bg-[#8b000070] text-white rounded-md mb-4 p-2'>
@@ -386,8 +405,12 @@ export default function Profile () {
               </div>
             )}
           </div>
+
+          {/* PROFILE FIELDS */}
           <div className='flex flex-col items-center w-full'>
             <div className='flex flex-col items-center justify-evenly w-full pb-2'>
+
+              {/* NAME FIELDS */}
               <div className='flex flex-col md:flex-row items-center mt-4'>
                 <div className='text-2xl font-bold text-center md:mr-2'>
                   {editableFields.firstname && isEditable ? (
@@ -402,6 +425,7 @@ export default function Profile () {
                     `${firstname}`
                   )}
                 </div>
+
                 <div className='text-2xl font-bold text-center'>
                   {editableFields.lastname && isEditable ? (
                     <input
@@ -416,6 +440,8 @@ export default function Profile () {
                   )}
                 </div>
               </div>
+
+              {/* PRONOUNS */}
               <div className='flex flex-col items-center p-2 w-full'>
                 {editableFields.pronouns && isEditable ? (
                   <input
@@ -431,9 +457,11 @@ export default function Profile () {
                   </p>
                 )}
               </div>
+
               <div className='flex flex-col items-center justify-evenly w-full'>
                 <div className='flex flex-row items-start justify-evenly w-1/3'>
                   <div className='flex flex-col md:flex-row md:items-start items-center justify-evenly w-60'>
+                    {/* YEAR (only if year > 2023 is some logic you had) */}
                     {year > 2023 && (
                       <div className='text-xl'>
                         <p className='text-lg font-semibold mb-1 whitespace-nowrap text-center'>
@@ -452,6 +480,8 @@ export default function Profile () {
                         )}
                       </div>
                     )}
+
+                    {/* MAJOR */}
                     <div className='text-xl'>
                       <p className='text-lg font-semibold mb-1 whitespace-nowrap text-center'>
                         Major
@@ -471,17 +501,21 @@ export default function Profile () {
                   </div>
                 </div>
 
+                {/* ROLL (only for Brothers) */}
                 {!profileIsPledge && (
                   <div className='flex flex-col items-center p-2'>
                     <p className='text-lg font-semibold mb-1'>Roll</p>
                     <p className='text-lg'>{roll}</p>
                   </div>
                 )}
+
+                {/* EMAIL */}
                 <div className='flex flex-col items-center p-2'>
                   <p className='text-lg font-semibold mb-1'>Email</p>
                   <p className='text-lg'>{email}</p>
                 </div>
 
+                {/* PHONE NUMBER */}
                 <div className='flex flex-col items-center p-2 w-full'>
                   <p className='text-lg font-semibold mb-1 whitespace-nowrap '>
                     Phone Number
@@ -500,6 +534,8 @@ export default function Profile () {
                     </p>
                   )}
                 </div>
+
+                {/* LINKEDIN */}
                 <div className='flex flex-col items-center p-2 w-full'>
                   <p className='text-lg font-semibold mb-1'>LinkedIn URL</p>
                   {editableFields.linkedin && isEditable ? (
@@ -516,41 +552,35 @@ export default function Profile () {
                     </p>
                   )}
                 </div>
+
+                {/* CURRENT CLASSES */}
                 <div className='flex flex-col items-center p-2 w-full'>
                   <p className='text-lg font-semibold'>Current Classes</p>
                   {editableFields.currentClasses && isEditable ? (
                     <div className='flex flex-col'>
                       <p className='text-center mb-2 text-red-500'>
-                        Please add class name in this format (EECS 482, MECHENG
-                        211, AEROSP 200){' '}
+                        Please add class name in this format (EECS 482, MECHENG 211, AEROSP 200)
                       </p>
                       <div className='grid grid-cols-3 gap-4'>
-                        {currentClasses &&
-                          currentClasses.map((className, index) => (
-                            <div
-                              key={index}
-                              className='flex flex-row items-center'
+                        {currentClasses?.map((className, index) => (
+                          <div key={index} className='flex flex-row items-center'>
+                            <button
+                              onClick={() => handleDeleteClass(index)}
+                              className='text-red-500 hover:text-red-700 font-semibold mr-2'
                             >
-                              <button
-                                onClick={() => handleDeleteClass(index)}
-                                className='text-red-500 hover:text-red-700 font-semibold mr-2'
-                              >
-                                X
-                              </button>
-                              <input
-                                type='text'
-                                placeholder={`Class ${index + 1}`}
-                                value={className}
-                                onChange={e =>
-                                  handleCurrentClassChange(
-                                    index,
-                                    e.target.value
-                                  )
-                                }
-                                className='whitespace-nowrap w-full border-2 border-[#8b000070] text-center'
-                              />
-                            </div>
-                          ))}
+                              X
+                            </button>
+                            <input
+                              type='text'
+                              placeholder={`Class ${index + 1}`}
+                              value={className}
+                              onChange={e =>
+                                handleCurrentClassChange(index, e.target.value)
+                              }
+                              className='whitespace-nowrap w-full border-2 border-[#8b000070] text-center'
+                            />
+                          </div>
+                        ))}
                       </div>
                       <button
                         onClick={handleAddClass}
@@ -561,20 +591,20 @@ export default function Profile () {
                     </div>
                   ) : (
                     <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
-                      {currentClasses &&
-                        currentClasses.map((className, index) => (
-                          <div
-                            key={index}
-                            className='text-lg text-center whitespace-nowrap'
-                          >
-                            {className}
-                          </div>
-                        ))}
+                      {currentClasses?.map((className, index) => (
+                        <div
+                          key={index}
+                          className='text-lg text-center whitespace-nowrap'
+                        >
+                          {className}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
 
+              {/* EDIT / SAVE BUTTONS */}
               {isEditable && (
                 <div className='flex flex-col md:flex-row items-center justify-evenly w-full'>
                   {!Object.values(editableFields).some(field => field) ? (
