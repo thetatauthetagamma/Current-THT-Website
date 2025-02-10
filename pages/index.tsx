@@ -21,7 +21,7 @@ const Home: NextPage = ({}) => {
     
     <div className='bg-gray-50  border-b-2 border-[#8b000050]'>
 
-      <div className="bg-cover bg-[url('/fratphoto.jpg')] flex w-full">
+      <div className="bg-cover bg-[url('/fratphoto1.jpg')] flex w-full">
 
 
 

@@ -36,7 +36,7 @@ export const isAdmin = async (userEmail) => {
         .eq('email', userEmail.value) // Assuming userEmail is a string
 
       if (error || !data || data.length === 0) {
-        console.error('Error checking admin status or no data found:', error);
+        // console.error('Error checking admin status or no data found:', error);
         return false;
       }
 
