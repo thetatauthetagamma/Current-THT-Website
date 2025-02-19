@@ -37,72 +37,86 @@ export default function RushBook() {
     };
     fetchSession();
   }, []);
+  const fetchRushees = async () => {
+    const { data: rusheesData, error } = await supabase
+      .from('Rushees')
+      .select('*');
 
+    if (error) {
+      console.error(error);
+    } else if (rusheesData) {
+      setRushees(rusheesData);
+    }
+  };
   // 2. Fetch rushees
   useEffect(() => {
-    const fetchRushees = async () => {
-      const { data: rusheesData, error } = await supabase
-        .from('Rushees')
-        .select('*');
-
-      if (error) {
-        console.error(error);
-      } else if (rusheesData) {
-        setRushees(rusheesData);
-      }
-    };
+   
     fetchRushees();
   }, []);
 
   // 3. Sort & filter whenever rushees or sort settings change
   useEffect(() => {
-    // Make a copy so we don’t mutate the original array
+    // Make a copy so we don’t mutate the original
+    fetchRushees();
     let updated = [...rushees];
-
-    // Optional: Filter by searchTerm (search in uniqname or firstname)
+  
+    // Filter by searchTerm
     if (searchTerm.trim() !== '') {
-      updated = updated.filter((r) => {
-        const term = searchTerm.toLowerCase();
-        return (
-          r.uniqname?.toLowerCase().includes(term) ||
-          r.firstname?.toLowerCase().includes(term)
-        );
-      });
+      const term = searchTerm.toLowerCase();
+      updated = updated.filter((r) =>
+        r.uniqname?.toLowerCase().includes(term) ||
+        r.firstname?.toLowerCase().includes(term)
+      );
     }
-
-    // Sort logic
+  
+    // Sort in ascending order, then invert if "desc"
     updated.sort((a, b) => {
-      // Decide each field
+      let result = 0;
+      
+      // Values used in numeric sorts
       const aLikes = a.likes?.length || 0;
       const bLikes = b.likes?.length || 0;
       const aDislikes = a.dislikes?.length || 0;
       const bDislikes = b.dislikes?.length || 0;
       const aStars = a.stars?.length || 0;
       const bStars = b.stars?.length || 0;
-
+  
+      // Helper for net score
+      const aNet = getNetScore(a); // likes + 2*stars - dislikes
+      const bNet = getNetScore(b);
+  
       switch (sortField) {
         case 'likes':
-          return bLikes - aLikes;
+          // ascending => smaller #likes first
+          result = aLikes - bLikes;
+          break;
         case 'dislikes':
-          return bDislikes - aDislikes;
+          // ascending => smaller #dislikes first
+          result = aDislikes - bDislikes;
+          break;
         case 'stars':
-          return bStars - aStars;
+          // ascending => smaller #stars first
+          result = aStars - bStars;
+          break;
         case 'netscore':
-          return getNetScore(b) - getNetScore(a);
+          // ascending => lower netscore first
+          result = aNet - bNet;
+          break;
         case 'uniqname':
-          return a.uniqname.localeCompare(b.uniqname);
+          // localeCompare returns negative if a < b => ascending
+          result = a.uniqname.localeCompare(b.uniqname);
+          break;
         case 'firstname':
-          return a.firstname.localeCompare(b.firstname);
+          result = a.firstname.localeCompare(b.firstname);
+          break;
         default:
-          return 0;
+          result = 0;
       }
+  
+      // If user selected desc, invert the result
+      return sortOrder === 'desc' ? -result : result;
     });
-
-    // If user selected ascending, reverse it
-    if (sortOrder === 'asc') {
-      updated.reverse();
-    }
-
+  
     setSortedRushees(updated);
   }, [rushees, sortField, sortOrder, searchTerm]);
 
