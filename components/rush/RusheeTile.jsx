@@ -4,18 +4,14 @@ import supabase from '@/supabase'
 import Image from 'next/image'
 import thtlogo from '../../public/tht-logo.png'
 
-// React-icons
-import {
-  FaThumbsUp, FaRegThumbsUp,
-  FaThumbsDown, FaRegThumbsDown,
-  FaStar, FaRegStar
-} from 'react-icons/fa'
+// Import the new ReactionBar
+import ReactionBar from './ReactionBar'
 
 export default function RusheeTile({
   uniqname,
   firstname,
   lastname,
-    pronouns,
+  pronouns,
   likes = [],
   dislikes = [],
   stars = [],
@@ -23,19 +19,6 @@ export default function RusheeTile({
 }) {
   const router = useRouter()
   const [imageUrl, setImageUrl] = useState('')
-  
-  // Keep local copies of the arrays so we can setState after toggling
-  const [localLikes, setLikes] = useState(likes || [])
-  const [localDislikes, setDislikes] = useState(dislikes || [])
-  const [localStars, setStars] = useState(stars || [])
-
-  // Fetch current user ID from your app/auth context (example only)
-//   const currentUserId = 'abc123' // Replace this with the real user ID
-
-  // Check if user has already liked/disliked/starred
-  const isLiked = localLikes.includes(brotherID)
-  const isDisliked = localDislikes.includes(brotherID)
-  const isStarred = localStars.includes(brotherID)
 
   // Fetch the image from Supabase storage
   useEffect(() => {
@@ -53,64 +36,8 @@ export default function RusheeTile({
     fetchRusheeImage()
   }, [uniqname])
 
-  // Toggle helpers
-  async function handleLike() {
-    let updated = []
-    if (isLiked) {
-      updated = localLikes.filter((id) => id !== brotherID)
-    } else {
-      updated = [...localLikes, brotherID]
-    }
-
-    const { data, error } = await supabase
-      .from('Rushees')
-      .update({ likes: updated })
-      .eq('uniqname', uniqname)
-      .single()
-
-    if (!error) setLikes(updated)
-  }
-
-  async function handleDislike() {
-    let updated = []
-    if (isDisliked) {
-      updated = localDislikes.filter((id) => id !== brotherID)
-    } else {
-      updated = [...localDislikes, brotherID]
-      // Optionally remove from likes if you want to allow only one reaction
-      // setLikes(localLikes.filter(id => id !== currentUserId))
-    }
-
-    const { data, error } = await supabase
-      .from('Rushees')
-      .update({ dislikes: updated })
-      .eq('uniqname', uniqname)
-      .single()
-
-    if (!error) setDislikes(updated)
-  }
-
-  async function handleStar() {
-    let updated = []
-    if (isStarred) {
-      updated = localStars.filter((id) => id !== brotherID)
-    } else {
-      updated = [...localStars, brotherID]
-    }
-
-    const { data, error } = await supabase
-      .from('Rushees')
-      .update({ stars: updated })
-      .eq('uniqname', uniqname)
-      .single()
-
-    if (!error) setStars(updated)
-  }
-
-  // Card click to see full details
   function handleCardClick() {
-    // e.g., open a full page for comments, etc.
-    router.push(`/rushees/${uniqname}`)
+    router.push(`/brothers/rushees/${uniqname}`)
   }
 
   return (
@@ -146,63 +73,14 @@ export default function RusheeTile({
         </h3>
       </div>
 
-      {/* ACTION ROW (ICONS + COUNTS) */}
-      {/* We wrap icon + count together in a small flex so they appear side-by-side. */}
-      <div className="bg-gray-50 px-4 py-2 flex items-center justify-around">
-        {/* LIKE */}
-        <div
-          className="flex items-center space-x-1"
-          onClick={(e) => {
-            e.stopPropagation(); // Don’t trigger card click
-            handleLike();
-          }}
-        >
-          {isLiked ? (
-            <FaThumbsUp className="text-[#8B0000] text-2xl cursor-pointer" />
-          ) : (
-            <FaRegThumbsUp className="text-[#8B0000] text-2xl cursor-pointer" />
-          )}
-          <span className="text-lg font-semibold text-gray-700">
-            {localLikes.length}
-          </span>
-        </div>
-
-        {/* DISLIKE */}
-        <div
-          className="flex items-center space-x-1"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDislike();
-          }}
-        >
-          {isDisliked ? (
-            <FaThumbsDown className="text-[#8B0000] text-2xl cursor-pointer" />
-          ) : (
-            <FaRegThumbsDown className="text-[#8B0000] text-2xl cursor-pointer" />
-          )}
-          <span className="text-lg font-semibold text-gray-700">
-            {localDislikes.length}
-          </span>
-        </div>
-
-        {/* STAR */}
-        <div
-          className="flex items-center space-x-1"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleStar();
-          }}
-        >
-          {isStarred ? (
-            <FaStar className="text-[#8B0000] text-2xl cursor-pointer" />
-          ) : (
-            <FaRegStar className="text-[#8B0000] text-2xl cursor-pointer" />
-          )}
-          <span className="text-lg font-semibold text-gray-700">
-            {localStars.length}
-          </span>
-        </div>
-      </div>
+      {/* Reusable ReactionBar */}
+      <ReactionBar
+        uniqname={uniqname}
+        brotherID={brotherID}
+        likes={likes}
+        dislikes={dislikes}
+        stars={stars}
+      />
     </div>
   )
 }
