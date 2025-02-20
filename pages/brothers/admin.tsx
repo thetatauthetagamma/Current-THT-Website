@@ -2,7 +2,7 @@ import BroNavBar from "@/components/BroNavBar";
 import { useState, useEffect } from 'react';
 import supabase from '@/supabase';
 import Select from 'react-select';
-
+import RushAdminPanel from '@/components/admin/RushAdminPanel';
 interface RoleAssignments {
   [key: string]: string;
 }
@@ -71,7 +71,7 @@ export default function Admin() {
       const { data, error } = await supabase
         .from('Brothers')
         .select('userid, firstname, lastname, adminrole')
-        .in('adminrole', ['regent', 'vice', 'scribe', 'treasurer', 'corsec', 'parents', 'academic']);
+        .in('adminrole', ['regent', 'vice', 'scribe', 'treasurer', 'corsec', 'parents', 'academic', 'rush']);
 
       if (error) {
         throw error;
@@ -358,106 +358,170 @@ export default function Admin() {
   const currentMember = eboardMembers.find(member => member.adminrole === selectedRole);
 
   return (
-    <div className="flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020] ">
+    <div className="flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020] min-h-screen">
       <BroNavBar isPledge={false} />
-      
-      <div className="flex lg:flex-row m-5 flex-col md:w-3/4">
-        {adminRole == 'parent' || adminRole === 'dev' && (
-          <div className='bg-gray-100 rounded-md p-2 m-2 lg:w-1/3 min-h-1/2'>
-            <h1 className="flex flex-center text-lg my-2 font-bold">Pledge Settings</h1>
-            <h1> Set PD Sign Offs</h1>
-            <h1> Set Committee Sign Offs</h1>
-            <h1> Set Required Number of Academic Hours</h1>
-            <h1> Set Required Number of Social Hours</h1>
-          </div>
-        )}
-        {(adminRole === 'regent' || adminRole === 'scribe' || adminRole === 'dev') && (
-          <div className="flex flex-col bg-gray-100 rounded-md p-2 m-2 lg:w-1/3 min-h-1/2">
-            <h1 className="flex flex-center text-lg my-2 font-bold">Update Statuses</h1>
-            {rollEditingMode ? (
-              <div className="bg-[#fff0f0] p-4 rounded-md flex flex-col m-2 items-center">
-                <h1 className='text-lg font-bold'>Assign pledges roll numbers:</h1>
-                {pledges.map(pledge => (
-                  <div key={pledge.uniqname} className="flex flex-col sm:flex-row m-4 w-full justify-center">
-                    <p className="m-2 whitespace-nowrap text-end">{`${pledge.firstname} ${pledge.lastname}`}</p>
-                    <div className="flex self-center">
-                      <input
-                        type="text"
-                        placeholder="Assign Roll Number"
-                        className="whitespace-nowrap text-center border-2 border-[#8b000070]"
-                        onChange={(e) => handleRoleNumberChange(pledge.uniqname, e.target.value)}
+
+      <div className="flex-1 p-4">
+        <h1 className="text-3xl font-bold text-[#8B0000] mb-4">
+          Admin Dashboard
+        </h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          {/* COLUMN 1: Rush Admin Panel (if user is rush or dev) */}
+          {(adminRole === 'rush' || adminRole === 'dev') && (
+            <div className="w-full lg:w-full">
+              <RushAdminPanel />
+            </div>
+          )}
+
+          {/* COLUMN 2: Additional Settings */}
+          <div className="flex flex-col space-y-6 w-1/2">
+            {/* Update Statuses (regent, scribe, dev) */}
+            {(adminRole === 'regent' || adminRole === 'scribe' || adminRole === 'dev') && (
+              <div className="bg-white rounded-md shadow-md p-4">
+                <h2 className="text-xl font-semibold text-[#8B0000] mb-2">Update Statuses</h2>
+
+                {/* Roll-Editing Mode */}
+                {rollEditingMode ? (
+                  <div className="bg-[#fff0f0] p-4 rounded-md">
+                    <h3 className="text-lg font-bold mb-2">
+                      Assign pledges roll numbers
+                    </h3>
+                    {pledges.map((pledge) => (
+                      <div
+                        key={pledge.uniqname}
+                        className="flex flex-col sm:flex-row mb-2 w-full items-center"
+                      >
+                        <p className="sm:w-2/5 font-semibold">
+                          {pledge.firstname} {pledge.lastname}
+                        </p>
+                        <input
+                          type="text"
+                          placeholder="Assign Roll Number"
+                          className="border-2 border-[#8b000070] rounded ml-2 p-1"
+                          onChange={(e) =>
+                            handleRoleNumberChange(pledge.uniqname, e.target.value)
+                          }
+                        />
+                      </div>
+                    ))}
+                    <div className="flex space-x-2 mt-4">
+                      <button
+                        onClick={handleCancel}
+                        className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSubmit}
+                        className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleInitiatePledges}
+                    className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+                  >
+                    Initiate Pledges
+                  </button>
+                )}
+
+                {/* Eboard Editing */}
+                {eboardEditingMode ? (
+                  <div className="bg-[#fff0f0] p-4 rounded-md mt-4">
+                    <h3 className="text-lg font-bold mb-2">
+                      Update Eboard and Committee Heads
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      (Update yourself last to avoid losing admin access)
+                    </p>
+                    {/* Choose Role */}
+                    <div className="mb-4">
+                      <Select
+                        options={eboardPositions.map(({ role, label }) => ({
+                          value: role,
+                          label,
+                        }))}
+                        onChange={handleRoleChange}
+                        placeholder="Select role to update"
+                        isClearable
                       />
                     </div>
-                  </div>
-                ))}
-                <div className='flex flex-row'>
-                  <button onClick={handleCancel} className="font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center w-24 m-2">Cancel</button>
-                  <button onClick={handleSubmit} className="font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center w-24 m-2">Submit</button>
-                </div>
-              </div>
-            ) : (
-              <button onClick={handleInitiatePledges} className="font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center my-2 w-48">Initiate Pledges</button>
-            )}
-            {eboardEditingMode ? (
-              <div className='bg-[#fff0f0] p-4 rounded-md flex flex-col m-2'>
-                <div className='flex flex-col'>
-                  <h1 className='text-lg font-bold text-left mb-4'>Update Eboard and Committee Heads (Update yourself last!):</h1>
-                </div>
-                <div className='flex flex-col'>
-                  <div className='mb-4'>
-                    <Select
-                      options={eboardPositions.map(({ role, label }) => ({
-                        value: role,
-                        label: label
-                      }))}
-                      onChange={handleRoleChange}
-                      placeholder='Select role to update'
-                      isClearable
-                    />
-                  </div>
-                  {selectedRole && (
-                    <div className='flex flex-col mb-4'>
-                      <p className='mb-1'>
-                        Current {eboardPositions.find(pos => pos.role === selectedRole)?.label}: {currentMember ?
-                          `${currentMember.firstname} ${currentMember.lastname}` :
-                          'No one found'
-                        }
-                      </p>
-                      <div className='flex xl:flex-row lg:flex-col flex-row items-center'>
-                        <div className="flex w-64 mr-2">
-                          <Select
-                            className=""
-                            options={searchResults.map(brother => ({
-                              value: brother.userid,
-                              label: `${brother.firstname} ${brother.lastname}`
-                            }))}
-                            onInputChange={(newValue) => handleInputChange(newValue, selectedRole)}
-                            onChange={(selectedOption) => handleSelectChange(selectedOption, selectedRole)}
-                            placeholder={`Search for new ${eboardPositions.find(pos => pos.role === selectedRole)?.label} by first name.`}
-                            isClearable
-                          />
+
+                    {selectedRole && (
+                      <div className="mb-4">
+                        <p className="mb-1 text-sm text-gray-700">
+                          Current {eboardPositions.find((pos) => pos.role === selectedRole)?.label}:{' '}
+                          {currentMember
+                            ? `${currentMember.firstname} ${currentMember.lastname}`
+                            : 'None'}
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center">
+                          <div className="w-full sm:w-2/3 mb-2 sm:mb-0 sm:mr-2">
+                            <Select
+                              options={searchResults.map((brother) => ({
+                                value: brother.userid,
+                                label: `${brother.firstname} ${brother.lastname}`,
+                              }))}
+                              onInputChange={(newValue) =>
+                                handleInputChange(newValue, selectedRole)
+                              }
+                              onChange={(selectedOption) =>
+                                setNewRoleNames((prev) => ({
+                                  ...prev,
+                                  [selectedRole]: selectedOption ? selectedOption.value : '',
+                                }))
+                              }
+                              placeholder={`Search new ${eboardPositions.find((pos) => pos.role === selectedRole)?.label}`}
+                              isClearable
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleEboardSubmit(selectedRole)}
+                            className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
+                          >
+                            Submit
+                          </button>
                         </div>
-                        <button onClick={() => handleEboardSubmit(selectedRole)} className="font-bold text-md bg-[#8b000070] p-2 rounded-md text-center w-24">Submit</button>
                       </div>
-                    </div>
-                  )}
-                  <div className="text-left">
-                    <button onClick={handleCancelEBoard} className="font-bold text-md bg-red-400 p-2 rounded-md text-center w-48 mt-2">Done Updating</button>
+                    )}
+                    <button
+                      onClick={handleCancelEBoard}
+                      className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full sm:w-auto"
+                    >
+                      Done Updating
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <button
+                    onClick={handleUpdateEboard}
+                    className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full"
+                  >
+                    Update EBoard
+                  </button>
+                )}
               </div>
-            ) : (
-              <button onClick={handleUpdateEboard} className="font-bold text-md bg-[#8b000070] p-2 rounded-md text-center my-2 w-48">Update EBoard</button>
+            )}
+
+            {/* Misc Settings (academic, dev) */}
+            {(adminRole === 'academic' || adminRole === 'dev') && (
+              <div className="bg-white rounded-md shadow-md p-4">
+                <h2 className="text-xl font-semibold text-[#8B0000] mb-2">
+                  Misc Settings
+                </h2>
+                <button
+                  onClick={handleArchiveClasses}
+                  className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+                >
+                  Archive Classes
+                </button>
+              </div>
             )}
           </div>
-        )}
-        {(adminRole == 'academic' || adminRole == 'dev') && (
-          <div className='flex flex-col bg-gray-100 rounded-md p-2 m-2 lg:w-1/3 min-h-1/2'>
-            <h1 className="flex flex-center text-lg my-2 font-bold">Misc Settings</h1>
-            <button onClick={handleArchiveClasses} className="font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center">Archive Classes</button>
-          </div>
-        )}
+        </div>
       </div>
     </div>
-  )
+  );
 }
