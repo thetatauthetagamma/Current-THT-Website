@@ -92,7 +92,7 @@ export default function RusheeTile({
     <div
       className="max-w-xs w-full bg-white rounded-lg shadow-md 
                  overflow-hidden transition-transform transform 
-                 hover:scale-105 cursor-pointer"
+                 hover:scale-105 cursor-pointer "
       onClick={handleCardClick}
     >
       {/* TOP SECTION (IMAGE + NAME) */}

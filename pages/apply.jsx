@@ -536,7 +536,7 @@ export default function Application () {
               </div>
 
               <div className='flex flex-col'>
-                <label className='font-semibold mb-1'>Year</label>
+                <label className='font-semibold mb-1'>Grad Year</label>
                 <input
                   type='text'
                   name='year'
