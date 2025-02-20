@@ -434,7 +434,7 @@ export default function Application () {
                     className='w-full h-full object-cover rounded-full'
                   />
                 </div>
-              ) : (
+              ) : isPastDue && (
                 <p>No profile photo uploaded.</p>
               )}
 
