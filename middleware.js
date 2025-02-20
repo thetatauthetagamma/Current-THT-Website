@@ -18,6 +18,7 @@ export default async function middleware(req) {
   const brotherRoutes = [
     '/brothers',
     '/brothers/*',
+    '/brothers/rushees/*'
   ];
 
   const pledgeRoutes = [

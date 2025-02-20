@@ -83,7 +83,7 @@ export default function RushAdminPanel() {
       const safeList = `(${parsedUnames.join(',')})`
       const { error } = await supabase
         .from('Rushees')
-        .delete()
+        .update({ active: false })
         .not('uniqname', 'in', safeList)
 
       if (error) {
@@ -97,6 +97,86 @@ export default function RushAdminPanel() {
     } catch (err) {
       console.error('Error in handleEliminateOthers:', err)
       alert('Something went wrong. Check console.')
+    }
+  }
+
+
+  async function handleFinalizePC() {
+    // Confirm with user before proceeding
+    const confirmMsg = `This will move all current rushees into the Pledges table and reset RushInfo. Please only do this once they have all accepted their bids. This action CANNOT be undone.`;
+    if (!window.confirm(confirmMsg)) return;
+  
+    try {
+      // Fetch all active rushees
+      const { data: rushees, error: fetchError } = await supabase
+        .from('Rushees')
+        .select('uniqname, firstname, lastname, major, year, pronouns')
+        .eq('active', true);
+  
+      if (fetchError) {
+        console.error('Error fetching active rushees:', fetchError);
+        alert('Failed to fetch rushees. Check console.');
+        return;
+      }
+  
+      if (!rushees || rushees.length === 0) {
+        alert('No active rushees to move.');
+        return;
+      }
+  
+      // Insert all rushees into the Pledges table
+      const { error: insertError } = await supabase
+        .from('Pledges')
+        .insert(rushees); // Directly inserts the array
+  
+      if (insertError) {
+        console.error('Error inserting pledges:', insertError);
+        alert('Error moving rushees to pledges. Check console.');
+        return;
+      }
+
+      const pdSignOffsData = rushees.map(({ uniqname }) => ({ pledge: uniqname }));
+      const committeeSignOffsData = rushees.map(({ uniqname }) => ({ pledge: uniqname }));
+  
+      const { error: pdError } = await supabase.from('PDSignOffs').insert(pdSignOffsData);
+      if (pdError) {
+        console.error('Error inserting PD sign-offs:', pdError);
+        alert('Error inserting PD sign-offs. Check console.');
+        return;
+      }
+  
+      const { error: committeeError } = await supabase.from('CommitteeSignOffs').insert(committeeSignOffsData);
+      if (committeeError) {
+        console.error('Error inserting Committee sign-offs:', committeeError);
+        alert('Error inserting Committee sign-offs. Check console.');
+        return;
+      }
+  
+      // Mark all rushees as inactive
+      const { error: updateError } = await supabase
+        .from('Rushees')
+        .update({ active: false })
+        .eq('active', true);
+  
+      if (updateError) {
+        console.error('Error marking rushees as inactive:', updateError);
+        alert('Error updating rushee status. Check console.');
+        return;
+      }
+  
+      // Delete all rows from RushInfo
+      const { error: deleteError } = await supabase.from('RushInfo').delete().neq('id', 0); // Delete all rows
+  
+      if (deleteError) {
+        console.error('Error resetting RushInfo:', deleteError);
+        alert('Error resetting RushInfo. Check console.');
+        return;
+      }
+  
+      alert('Rush finalized successfully! All active rushees moved to pledges, RushInfo reset.');
+    } catch (err) {
+      console.error('Unexpected error in handleFinalizePC:', err);
+      alert('Something went wrong. Check console.');
     }
   }
 
@@ -139,6 +219,7 @@ export default function RushAdminPanel() {
           app_due_date: appDueDate ? appDueDate.toISOString() : null,
         },
       ])
+      .select('*')
       .single()
 
     if (error) {
@@ -302,7 +383,8 @@ export default function RushAdminPanel() {
         ) : (
           /** If we do have RushInfo, show the edit form */
           <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-            <h3 className="text-lg font-semibold mb-4">Application Dates</h3>
+            <h3 className="text-lg font-semibold ">Application Dates</h3>
+            <p className="text-sm text-gray-600 mb-4">(Disregard times)</p>
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div>
                 <label className="block font-medium mb-1">Start Date:</label>
@@ -425,7 +507,7 @@ export default function RushAdminPanel() {
           Round Cuts (CSV Upload)
         </h2>
         <p className="text-sm text-gray-600 mb-3">
-          Upload a CSV file where each row’s first column is a single uniqname (no header) of rushees ADVANCING.
+          Upload a CSV file where each row’s first column is a single uniqname (no header) of rushees ADVANCING TO THE NEXT ROUND OF RUSH.
         </p>
 
         <input
@@ -447,6 +529,7 @@ export default function RushAdminPanel() {
           >
             Eliminate Others
           </button>
+          
         </div>
 
         {/* If some names were parsed, show them */}
@@ -463,6 +546,14 @@ export default function RushAdminPanel() {
           </div>
         )}
       </div>
+      <div className="mt-8 p-4 border rounded bg-gray-50">
+      <button
+            onClick={handleFinalizePC}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Finalize PC!!!!!!!!!! 
+          </button>
+          </div>
     </div>
   )
 }

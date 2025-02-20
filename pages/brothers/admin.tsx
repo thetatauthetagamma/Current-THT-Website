@@ -365,16 +365,16 @@ export default function Admin() {
         <h1 className="text-3xl font-bold text-[#8B0000] mb-4">
           Admin Dashboard
         </h1>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
           {/* COLUMN 1: Rush Admin Panel (if user is rush or dev) */}
           {(adminRole === 'rush' || adminRole === 'dev') && (
-            <div className="w-full">
+            <div className="w-full lg:w-full">
               <RushAdminPanel />
             </div>
           )}
 
           {/* COLUMN 2: Additional Settings */}
-          <div className="flex flex-col space-y-6">
+          <div className="flex flex-col space-y-6 w-1/2">
             {/* Update Statuses (regent, scribe, dev) */}
             {(adminRole === 'regent' || adminRole === 'scribe' || adminRole === 'dev') && (
               <div className="bg-white rounded-md shadow-md p-4">

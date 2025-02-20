@@ -2,6 +2,7 @@ import BroNavBar from "@/components/BroNavBar";
 import { useEffect, useState } from "react";
 import RusheeTile from "@/components/rush/RusheeTile";
 import supabase from "../../supabase";
+import { CSVLink } from "react-csv"; // Import CSV download library
 
 // Helper to compute "net score"
 function getNetScore(rushee) {
@@ -40,7 +41,8 @@ export default function RushBook() {
   const fetchRushees = async () => {
     const { data: rusheesData, error } = await supabase
       .from('Rushees')
-      .select('*');
+      .select('*')
+      .eq('active', true);
 
     if (error) {
       console.error(error);
@@ -120,6 +122,20 @@ export default function RushBook() {
     setSortedRushees(updated);
   }, [rushees, sortField, sortOrder, searchTerm]);
 
+
+  const generateCSVData = () => {
+    return sortedRushees.map((rushee) => ({
+      uniqname: rushee.uniqname,
+      full_name: `${rushee.firstname} ${rushee.lastname}`,
+      pronouns: rushee.pronouns || '',
+      likes: rushee.likes?.length || 0,
+      dislikes: rushee.dislikes?.length || 0,
+      stars: rushee.stars?.length || 0,
+      
+    }));
+  };
+
+
   return (
     <div className="flex flex-col md:flex-row flex-grow border-b-2 border-[#a3000020] min-h-screen">
       <BroNavBar />
@@ -127,7 +143,13 @@ export default function RushBook() {
 
         {/* Page Title */}
         <h1 className="text-2xl font-bold mb-4">Rush Book</h1>
-
+        <CSVLink
+            data={generateCSVData()}
+            filename={`rushee_data_${new Date().toISOString().slice(0, 10)}.csv`}
+            className="bg-red-800 text-white px-3 py-2 rounded hover:bg-red-900"
+          >
+            Download CSV
+          </CSVLink>
         {/* SORT & SEARCH BAR */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
           {/* Search Input */}
@@ -138,7 +160,7 @@ export default function RushBook() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border rounded px-2 py-1"
-              placeholder="e.g. Katemcg"
+              placeholder="e.g. katemcg"
             />
           </div>
 
