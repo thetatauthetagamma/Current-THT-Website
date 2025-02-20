@@ -25,7 +25,7 @@ export default function rush() {
         <p>
           Please fill out our&nbsp;
           <a target="blank" href="https://docs.google.com/forms/d/e/1FAIpQLSeQ_od1EoyK9anNkffh9iKqdVoIkV4lmJ1Vw2RxqJzSmFvYUA/viewform" className="text-blue-500 hover:text-blue-300 ">
-           application for Fall 2025 semesters rush!
+           application for FA25 semesters rush!
           </a>
           &nbsp;
         </p>
