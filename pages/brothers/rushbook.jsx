@@ -151,7 +151,7 @@ export default function RushBook() {
             Download CSV
           </CSVLink>
         {/* SORT & SEARCH BAR */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 ">
           {/* Search Input */}
           <div>
             <label className="font-semibold mr-2">Search (Name/Uniqname):</label>
@@ -196,7 +196,7 @@ export default function RushBook() {
         </div>
 
         {/* RUSHEE TILES IN A RESPONSIVE GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedRushees.map((rushee) => (
             <RusheeTile
               key={rushee.uniqname}
