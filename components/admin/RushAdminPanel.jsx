@@ -205,8 +205,8 @@ export default function RushAdminPanel() {
     }
     if (data) {
       setRushInfo(data)
-      setAppStartDate(data.app_start_date ? new Date(data.app_start_date) : null)
-      setAppDueDate(data.app_due_date ? new Date(data.app_due_date) : null)
+      setAppStartDate(data.app_start_date ? new Date(data.app_start_date + 'T00:00:00') : null)
+      setAppDueDate(data.app_due_date ? new Date(data.app_due_date + 'T00:00:00') : null)
     }
   }
 
