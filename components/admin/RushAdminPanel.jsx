@@ -215,37 +215,38 @@ export default function RushAdminPanel() {
       .from('RushInfo')
       .insert([
         {
-          app_start_date: appStartDate ? appStartDate.toISOString() : null,
-          app_due_date: appDueDate ? appDueDate.toISOString() : null,
+          app_start_date: appStartDate ? appStartDate.toLocaleDateString('en-CA') // produces "YYYY-MM-DD"
+          : null,
+          app_due_date: appDueDate ? appDueDate.toLocaleDateString('en-CA') : null,
         },
       ])
       .select('*')
       .single()
-
+  
     if (error) {
       console.error('Error creating RushInfo:', error)
       alert('Failed to create RushInfo')
     } else {
       alert('Rush Info created successfully!')
       setRushInfo(data)
-      setAppStartDate(data.app_start_date ? new Date(data.app_start_date) : null)
-      setAppDueDate(data.app_due_date ? new Date(data.app_due_date) : null)
+      setAppStartDate(data.app_start_date ? new Date(`${data.app_start_date}T00:00:00`) : null)
+      setAppDueDate(data.app_due_date ? new Date(`${data.app_due_date}T00:00:00`) : null)
     }
   }
-
+  
   async function handleSaveRushInfo() {
     if (!rushInfo) return
-
+  
     const { data, error } = await supabase
       .from('RushInfo')
       .update({
-        app_start_date: appStartDate ? appStartDate.toISOString() : null,
-        app_due_date: appDueDate ? appDueDate.toISOString() : null,
+        app_start_date: appStartDate ? appStartDate.toLocaleDateString('en-CA') : null,
+        app_due_date: appDueDate ? appDueDate.toLocaleDateString('en-CA') : null,
       })
       .eq('id', rushInfo.id)
       .select('*')
       .single()
-
+  
     if (error) {
       console.error('Error updating RushInfo:', error)
       alert('Failed to update RushInfo')
@@ -355,8 +356,9 @@ export default function RushAdminPanel() {
                 <DatePicker
                   selected={appStartDate}
                   onChange={(date) => setAppStartDate(date)}
+                  
                   showTimeSelect
-                  dateFormat="Pp"
+                  dateFormat="yyyy-MM-dd"
                   placeholderText="Select Start"
                   className="border rounded p-1 w-full"
                 />
@@ -367,7 +369,7 @@ export default function RushAdminPanel() {
                   selected={appDueDate}
                   onChange={(date) => setAppDueDate(date)}
                   showTimeSelect
-                  dateFormat="Pp"
+                  dateFormat="yyyy-MM-dd"
                   placeholderText="Select Due"
                   className="border rounded p-1 w-full"
                 />
@@ -392,7 +394,7 @@ export default function RushAdminPanel() {
                   selected={appStartDate}
                   onChange={(date) => setAppStartDate(date)}
                   showTimeSelect
-                  dateFormat="Pp"
+                  dateFormat="yyyy-MM-dd"
                   placeholderText="Select Start"
                   className="border rounded p-1 w-full"
                 />
@@ -403,7 +405,7 @@ export default function RushAdminPanel() {
                   selected={appDueDate}
                   onChange={(date) => setAppDueDate(date)}
                   showTimeSelect
-                  dateFormat="Pp"
+                  dateFormat="yyyy-MM-dd"
                   placeholderText="Select Due"
                   className="border rounded p-1 w-full"
                 />
