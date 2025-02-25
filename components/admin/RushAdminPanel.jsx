@@ -527,7 +527,7 @@ export default function RushAdminPanel() {
           </button>
           <button
             onClick={handleEliminateOthers}
-            className="bg-[#8B0000]text-white px-4 py-2 rounded hover:bg-red-800"
+            className="bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
           >
             Eliminate Others
           </button>
