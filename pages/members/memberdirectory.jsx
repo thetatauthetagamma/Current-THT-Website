@@ -5,11 +5,12 @@ import supabase from '../../supabase'
 import Cookies from 'js-cookie'
 
 /*
-This page displays a member directory. It displays first all of the pledges then the brothers in reverse role order.
-To limit egress, only 10 members are shown at a time. 
+This page displays a member directory. It displays first all of the pledges then the brothers 
+in reverse roll order. 
+To limit egress, only 10 members are shown at a time.
 */
 
-export default function MemberDirectory () {
+export default function MemberDirectory() {
   const [brothers, setBrothers] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMajor, setSelectedMajor] = useState('')
@@ -17,6 +18,7 @@ export default function MemberDirectory () {
   const [isPledge, setIsPledge] = useState(true)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+
   const brothersPerPage = 10
 
   useEffect(() => {
@@ -24,19 +26,23 @@ export default function MemberDirectory () {
 
     const fetchData = async () => {
       try {
+        // Fetch pledge data for user
         const [pledgeData, brothersData] = await Promise.all([
           supabase.from('Pledges').select('*').eq('email', userEmail),
           supabase.from('Brothers').select('*')
         ])
 
+        // If user is found in Pledges, they are a pledge
         if (pledgeData.data?.length === 1 && !pledgeData.error) {
           setIsPledge(true)
         }
 
+        // Handle potential errors
         if (brothersData.error) {
           throw brothersData.error
         }
 
+        // Sort Brothers data by roll in descending order
         if (brothersData.data) {
           const sortedData = brothersData.data.sort((a, b) => b.roll - a.roll)
           setBrothers(sortedData)
@@ -57,16 +63,17 @@ export default function MemberDirectory () {
         .from('Brothers')
         .select('*')
         .eq('email', userEmail)
-      if (data?.length == 1 && !error) {
+      if (data?.length === 1 && !error) {
         setIsPledge(false)
       }
     }
+
     const checkIfPledge = async () => {
       const { data, error } = await supabase
         .from('Pledges')
         .select('*')
         .eq('email', userEmail)
-      if (data?.length == 1 && !error) {
+      if (data?.length === 1 && !error) {
         setIsPledge(true)
       }
     }
@@ -75,73 +82,75 @@ export default function MemberDirectory () {
     checkIfPledge()
   }, [userEmail])
 
-  const normalizedSearchQuery  = searchQuery.replace(/[\(\s\-\)]/g, '').toLowerCase();
- 
+  // Normalize phone strings for comparison
   function normalizePhone(brother) {
-    return brother.phone?.replace(/[\(\s\-\)]/g, '');
-  } 
+    return brother.phone?.replace(/[\(\s\-\)]/g, '')
+  }
 
-  const [searchFirstName, searchLastName] = searchQuery.toLowerCase().split(" ");
-  
-  const filteredBrothers = brothers.filter(brother => 
-    (brother.firstname.toLowerCase().startsWith(searchFirstName) && 
-    (!searchLastName || brother.lastname.toLowerCase().includes(searchLastName) )) || 
-    (!searchLastName && brother.lastname.toLowerCase().startsWith(searchFirstName)) ||
-    normalizePhone(brother)?.includes(normalizedSearchQuery) 
-  );
-  
+  // Strip out parentheses, spaces, hyphens to make phone search easier
+  const normalizedSearchQuery = searchQuery.replace(/[\(\s\-\)]/g, '').toLowerCase()
 
+  // Split the search into first name and last name (if present)
+  const [searchFirstName, searchLastName] = searchQuery.toLowerCase().split(' ')
+
+  // Filter brothers by name OR phone
+  const filteredBrothers = brothers.filter((brother) => {
+    const fname = brother.firstname.toLowerCase()
+    const lname = brother.lastname.toLowerCase()
+
+    // Name matches:
+    const matchesName =
+      (fname.startsWith(searchFirstName) &&
+        (!searchLastName || lname.includes(searchLastName))) ||
+      (!searchLastName && lname.startsWith(searchFirstName))
+
+    // Phone matches:
+    const matchesPhone = normalizePhone(brother)?.includes(normalizedSearchQuery)
+
+    return matchesName || matchesPhone
+  })
+
+  // Filter by selected major if one is chosen
   const majorFilteredBrothers = selectedMajor
-    ? filteredBrothers.filter(brother => {
+    ? filteredBrothers.filter((brother) => {
         if (brother.major) {
           const normalizedMajor = brother.major.toLowerCase()
           const normalizedSelectedMajor = selectedMajor.toLowerCase()
 
-          // Check for exact match for "CE" or "CEE"
+          // Special check for exact matches "CE"/"CEE" or "EE"/"CEE"
           if (normalizedSelectedMajor === 'ce' && normalizedMajor === 'ce') {
             return true
-          } else if (
-            normalizedSelectedMajor === 'ce' &&
-            normalizedMajor === 'cee'
-          ) {
+          } else if (normalizedSelectedMajor === 'ce' && normalizedMajor === 'cee') {
             return false
           }
           if (normalizedSelectedMajor === 'ee' && normalizedMajor === 'ee') {
             return true
-          } else if (
-            normalizedSelectedMajor === 'ee' &&
-            normalizedMajor === 'cee'
-          ) {
+          } else if (normalizedSelectedMajor === 'ee' && normalizedMajor === 'cee') {
             return false
           }
           return normalizedMajor.includes(normalizedSelectedMajor)
         }
-
         return false
       })
     : filteredBrothers
 
+  // Pagination calculations
   const totalPages = Math.ceil(majorFilteredBrothers.length / brothersPerPage)
-
-  const handleNextPage = () => {
-    setCurrentPage(prevPage => Math.min(prevPage + 1, totalPages))
-  }
-
-  const handlePrevPage = () => {
-    setCurrentPage(prevPage => Math.max(prevPage - 1, 1))
-  }
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery])
-  useEffect(() => {
-    setCurrentPage(1);
-}, [searchQuery, selectedMajor])
   const indexOfLastBrother = currentPage * brothersPerPage
   const indexOfFirstBrother = indexOfLastBrother - brothersPerPage
-  const currentBrothers = majorFilteredBrothers.slice(
-    indexOfFirstBrother,
-    indexOfLastBrother
-  )
+  const currentBrothers = majorFilteredBrothers.slice(indexOfFirstBrother, indexOfLastBrother)
+
+  // Reset to first page if search or major changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedMajor])
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+  }
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1))
+  }
 
   const majors = [
     'Mech E',
@@ -161,48 +170,70 @@ export default function MemberDirectory () {
   ]
 
   if (loading) {
-    return null // Return nothing or a loading indicator
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    )
   }
 
   return (
-    <div className='flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]'>
-      {isPledge ? (
-        <BroNavBar isPledge={true} />
-      ) : (
-        <BroNavBar isPledge={false} />
-      )}
-      <div className='flex-grow'>
-        <div className='flex-grow h-full m-4'>
-          <h1 className='font-bold text-4xl xs:max-sm:text-center pb-4'>
-            Our Brothers
-          </h1>
-          <div className='flex flex-col md:flex-row items-center md:item-center md:justify-start'>
+    <div className="flex min-h-screen bg-gray-100">
+      {/* Left Nav */}
+      {isPledge ? <BroNavBar isPledge /> : <BroNavBar isPledge={false} />}
+
+      {/* Main Content */}
+      <div className="flex-grow p-4 md:p-8">
+        {/* Header Card */}
+        <div className="bg-white rounded shadow p-4 mb-6">
+          <h1 className="font-bold text-2xl md:text-3xl mb-2">Our Brothers</h1>
+          <p className="text-gray-600">
+            Browse through our directory of brothers. Use the search bar and major filter
+            to narrow down your search.
+          </p>
+        </div>
+
+        {/* Search & Filter Card */}
+        <div className="bg-white rounded shadow p-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:space-x-4">
+            {/* Search Input */}
             <input
-              type='text'
-              placeholder='Search by name or phone number'  
+              type="text"
+              placeholder="Search by name or phone number"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className='p-2 border border-gray-800 rounded w-full md:w-1/2 mb-4 md:mr-8'
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 mb-4 md:mb-0 p-2 border border-gray-300 rounded"
             />
-            <div className='mb-4 md:w-1/4'> 
-              <select
-                value={selectedMajor}
-                onChange={e => setSelectedMajor(e.target.value)}
-                className='p-2 border border-gray-800 rounded w-full'
-              >
-                <option value=''>All Majors</option>
-                {majors.map(major => (
-                  <option key={major} value={major}>
-                    {major}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Major Dropdown */}
+            <select
+              value={selectedMajor}
+              onChange={(e) => setSelectedMajor(e.target.value)}
+              className="p-2 border border-gray-300 rounded w-full md:w-1/3"
+            >
+              <option value="">All Majors</option>
+              {majors.map((major) => (
+                <option key={major} value={major}>
+                  {major}
+                </option>
+              ))}
+            </select>
           </div>
-          {/* Display Brothers */}
-          <div style={{ maxHeight: '550px', overflowY: 'auto' }}>
-            {currentBrothers.map(brother => (
-              <div key={brother.userid}>
+        </div>
+
+        {/* Directory List Card */}
+        <div className="bg-white rounded shadow p-4">
+          {/* If no results found */}
+          {currentBrothers.length === 0 && (
+            <p className="text-gray-600">No members found matching your criteria.</p>
+          )}
+
+          {/* Brothers List (scrollable) */}
+          <div className="max-h-[550px] overflow-y-auto divide-y divide-gray-200">
+            {currentBrothers.map((brother) => (
+              <div
+                key={brother.userid}
+                className="py-4 px-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
                 <MemberTile
                   userid={brother.userid}
                   firstname={brother.firstname}
@@ -217,18 +248,29 @@ export default function MemberDirectory () {
               </div>
             ))}
           </div>
+
           {/* Pagination */}
-          <div className='flex justify-between mt-4'>
-            <button onClick={handlePrevPage} disabled={currentPage === 1}>
-              &larr; Previous Page
-            </button>
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages}
-            >
-              Next Page &rarr;
-            </button>
-          </div>
+          {majorFilteredBrothers.length > 0 && (
+            <div className="flex justify-between items-center mt-4">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+              >
+                &larr; Previous
+              </button>
+              <p>
+                Page {currentPage} of {totalPages || 1}
+              </p>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+              >
+                Next &rarr;
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
