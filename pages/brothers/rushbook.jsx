@@ -139,7 +139,7 @@ export default function RushBook() {
   return (
     <div className="flex flex-col md:flex-row flex-grow border-b-2 border-[#a3000020] min-h-screen">
       <BroNavBar />
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-4 bg-gray-100">
 
         {/* Page Title */}
         <h1 className="text-2xl font-bold mb-4">Rush Book</h1>

@@ -149,7 +149,7 @@ export default function StudyBuddySearch() {
       ) : (
         <BroNavBar isPledge={false} />
       )}
-      <div className='flex-grow'>
+      <div className='flex-grow '>
         <div className='flex-grow h-full m-4'>
           <h1 className='font-bold text-4xl xs:max-sm:text-center pb-4'>
             Find Study Buddies
