@@ -178,12 +178,12 @@ export default function MemberDirectory() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen ">
       {/* Left Nav */}
       {isPledge ? <BroNavBar isPledge /> : <BroNavBar isPledge={false} />}
 
       {/* Main Content */}
-      <div className="flex-grow p-4 md:p-8">
+      <div className="flex-grow p-4 md:p-8 bg-gray-100">
         {/* Header Card */}
         <div className="bg-white rounded shadow p-4 mb-6">
           <h1 className="font-bold text-2xl md:text-3xl mb-2">Our Brothers</h1>
