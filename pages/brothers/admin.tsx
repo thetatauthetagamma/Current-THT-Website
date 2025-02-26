@@ -592,7 +592,7 @@ function RushCommitteeManager({
         .from("Brothers")
         .select("userid, firstname, lastname, major, year, pronouns, email, phone, linkedin, roll, adminrole, classes, archivedclasses")
         .or(`firstname.ilike.%${query}%,lastname.ilike.%${query}%`)
-        .neq("adminrole", "rush");
+        
   
       if (error) throw error;
       setSearchResults(data as BrotherData[] || []);
@@ -662,7 +662,7 @@ function RushCommitteeManager({
             value: brother.userid,
             label: `${brother.firstname} ${brother.lastname}`,
           }))}
-          onInputChange={handleSearchChange}
+          onInputChange={(newValue) => handleSearchChange(newValue)}
           onChange={(selectedOption) => {
             const brother = searchResults.find((b) => b.userid === selectedOption?.value);
             setSelectedBrother(brother || null);
