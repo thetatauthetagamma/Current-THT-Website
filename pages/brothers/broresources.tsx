@@ -6,7 +6,7 @@ export default function BroResources() {
 
       <BroNavBar isPledge={false} />
       
-      <ul className="space-y-2 font-bold flex-grow text-lg xs:max-sm:flex xs:max-sm:flex-col xs:max-sm:items-center pl-8">
+      <ul className="space-y-2 font-bold flex-grow text-lg xs:max-sm:flex xs:max-sm:flex-col xs:max-sm:items-center pl-8 bg-gray-100">
         <h1 className="font-bold text-4xl py-4">Resources</h1>
         <li className="hover:bg-gray-200 transition-colors duration-300 rounded flex-grow ">
           <a href="https://forms.gle/qB3CHWFFnkVmSG3PA" target="_blank" className="block p-2 rounded">📋 Attendance Form</a>

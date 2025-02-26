@@ -177,8 +177,8 @@ export default function RusheeProfile () {
     <div className='flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]'>
       <BroNavBar />
 
-      <div className='flex-1 p-4'>
-        <h1 className='text-2xl font-bold mb-4'>Rushee Profile</h1>
+      <div className='flex-1 p-4 '>
+
 
         {/* Basic rushee info */}
         <div className='flex items-center mb-4'>
