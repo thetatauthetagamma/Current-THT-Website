@@ -6,6 +6,22 @@ import RushAdminPanel from '@/components/admin/RushAdminPanel';
 interface RoleAssignments {
   [key: string]: string;
 }
+
+interface BrotherData {
+  userid: string;
+  firstname: string;
+  lastname: string;
+  major: string;
+  year: number;
+  pronouns: string;
+  email: string;
+  phone: string;
+  linkedin: string;
+  roll: string;
+  adminrole: string;
+  classes: string[];
+  archivedclasses: string[];
+}
 /*This page is shown to "admin" of our org. On it different  */
 export default function Admin() {
   const [userID, setUserID] = useState('');
@@ -14,6 +30,7 @@ export default function Admin() {
   const [pledges, setPledges] = useState<PledgeData[]>([]);
   const [rollEditingMode, setRollEditingMode] = useState<boolean>(false);
   const [eboardEditingMode, setEboardEditingMode] = useState<boolean>(false);
+  const [rushEditingMode, setRushEditingMode] = useState<boolean>(false);
   const [eboardMembers, setEboardMembers] = useState<BrotherData[]>([]);
   const [newRoleNames, setNewRoleNames] = useState<{ [key: string]: string }>({});
   const [searchResults, setSearchResults] = useState<BrotherData[]>([]);
@@ -42,21 +59,6 @@ export default function Admin() {
     archivedclasses: string[];
   }
 
-  interface BrotherData {
-    userid: string;
-    firstname: string;
-    lastname: string;
-    major: string;
-    year: number;
-    pronouns: string;
-    email: string;
-    phone: string;
-    linkedin: string;
-    roll: string;
-    adminrole: string;
-    classes: string[];
-    archivedclasses: string[];
-  }
 
   const handleRoleNameChange = (role: string, newName: string) => {
     setNewRoleNames((prevNames) => ({
@@ -374,7 +376,7 @@ export default function Admin() {
           )}
 
           {/* COLUMN 2: Additional Settings */}
-          <div className="flex flex-col space-y-6 w-1/2">
+          <div className="flex flex-col space-y-6">
             {/* Update Statuses (regent, scribe, dev) */}
             {(adminRole === 'regent' || adminRole === 'scribe' || adminRole === 'dev') && (
               <div className="bg-white rounded-md shadow-md p-4">
@@ -502,6 +504,7 @@ export default function Admin() {
                     Update EBoard
                   </button>
                 )}
+                {rushEditingMode ? <RushCommitteeManager setRushEditingMode={setRushEditingMode} /> : (<button onClick={() => setRushEditingMode(!rushEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Rush Committee</button>)}
               </div>
             )}
 
@@ -522,6 +525,166 @@ export default function Admin() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+
+function RushCommitteeManager({
+  setRushEditingMode,
+}: {
+  setRushEditingMode: (value: boolean) => void;
+}) {
+  const [rushCommittee, setRushCommittee] = useState<BrotherData[]>([]);
+  const [searchResults, setSearchResults] = useState<BrotherData[]>([]);
+  const [selectedBrother, setSelectedBrother] = useState<BrotherData | null>(null);
+
+  // Fetch Rush Committee Members
+  const fetchRushCommittee = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("Brothers")
+        .select("userid, firstname, lastname, adminrole")
+        .eq("adminrole", "rush");
+
+      if (error) throw error;
+      if (data) setRushCommittee(data as BrotherData[]);
+    } catch (error) {
+      console.error("Error fetching rush committee:", error);
+    }
+  };
+
+  // Remove Rush Member
+  const removeRushMember = async (userid: string) => {
+    const confirmRemove = window.confirm(
+      "Are you sure you want to remove this member from the Rush Committee?"
+    );
+    if (!confirmRemove) return;
+
+    try {
+      const { error } = await supabase
+        .from("Brothers")
+        .update({ adminrole: null })
+        .eq("userid", userid);
+
+      if (error) throw error;
+      setRushCommittee((prev) => prev.filter((member) => member.userid !== userid));
+    } catch (error) {
+      console.error("Error removing rush member:", error);
+    }
+  };
+
+  // Search for Brothers (Exclude Current Rush Members)
+  const handleSearchChange = (inputValue: string) => {
+    if (inputValue.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+  
+    // Fetch data asynchronously but don't return a promise to the Select component
+    fetchBrothers(inputValue);
+  };
+  
+  const fetchBrothers = async (query: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("Brothers")
+        .select("userid, firstname, lastname, major, year, pronouns, email, phone, linkedin, roll, adminrole, classes, archivedclasses")
+        .or(`firstname.ilike.%${query}%,lastname.ilike.%${query}%`)
+        .neq("adminrole", "rush");
+  
+      if (error) throw error;
+      setSearchResults(data as BrotherData[] || []);
+    } catch (error) {
+      console.error("Error searching brothers:", error);
+    }
+  };
+
+  // Add Rush Member
+  const addRushMember = async () => {
+    if (!selectedBrother) return alert("Please select a brother to add!");
+
+    try {
+      const { error } = await supabase
+        .from("Brothers")
+        .update({ adminrole: "rush" })
+        .eq("userid", selectedBrother.userid);
+
+      if (error) throw error;
+
+      setRushCommittee((prev) => [...prev, selectedBrother]);
+      setSelectedBrother(null);
+      setSearchResults([]);
+    } catch (error) {
+      console.error("Error adding rush member:", error);
+    }
+  };
+
+  // Fetch Committee Members on Mount
+  useEffect(() => {
+    fetchRushCommittee();
+  }, []);
+
+  return (
+    <div className="bg-white rounded-md shadow-md p-4">
+      <h2 className="text-xl font-semibold text-[#8B0000] mb-2">Rush Committee Management</h2>
+
+      {/* Current Members */}
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">Current Rush Committee</h3>
+        {rushCommittee.length > 0 ? (
+          <ul>
+            {rushCommittee.map((member) => (
+              <li key={member.userid} className="flex justify-between items-center border-b py-2">
+                <span>
+                  {member.firstname} {member.lastname}
+                </span>
+                <button
+                  onClick={() => removeRushMember(member.userid)}
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No members in the Rush Committee.</p>
+        )}
+      </div>
+
+      {/* Add New Member */}
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Add Brother to Rush</h3>
+        <Select
+          options={searchResults.map((brother) => ({
+            value: brother.userid,
+            label: `${brother.firstname} ${brother.lastname}`,
+          }))}
+          onInputChange={handleSearchChange}
+          onChange={(selectedOption) => {
+            const brother = searchResults.find((b) => b.userid === selectedOption?.value);
+            setSelectedBrother(brother || null);
+          }}
+          placeholder="Search for a brother..."
+          isClearable
+        />
+        <button
+          onClick={addRushMember}
+          className="bg-green-600 text-white px-3 py-2 mt-2 rounded hover:bg-green-700"
+        >
+          Add to Rush Committee
+        </button>
+      </div>
+
+      {/* Done Updating Button */}
+      <button
+        onClick={() => setRushEditingMode(false)}
+        className="bg-gray-400 text-white px-3 py-2 mt-4 rounded hover:bg-gray-500"
+      >
+        Done Updating Rush Committee
+      </button>
     </div>
   );
 }
