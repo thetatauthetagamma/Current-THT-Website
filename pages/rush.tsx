@@ -24,8 +24,8 @@ export default function rush() {
         <p>Interested in joining the Brotherhood?</p>
         <p>
           Please fill out our&nbsp;
-          <a target="blank" href="https://pyli.app/rec/677f5546cc432" className="text-blue-500 hover:text-blue-300 ">
-           application for this semesters rush!
+          <a target="blank" href="https://docs.google.com/forms/d/e/1FAIpQLSeQ_od1EoyK9anNkffh9iKqdVoIkV4lmJ1Vw2RxqJzSmFvYUA/viewform" className="text-blue-500 hover:text-blue-300 ">
+           application for FA25 semesters rush!
           </a>
           &nbsp;
         </p>
