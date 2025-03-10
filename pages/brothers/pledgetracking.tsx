@@ -99,9 +99,16 @@ export default function pledgetracking() {
       <div className="flex-grow">
         <div className="flex-grow h-full m-4">
           <h1 className="font-bold text-4xl xs:max-sm:text-center pb-2">Pledge Progress</h1>
-          <div className='hover:bg-gray-200 transition-colors duration-300 rounded flex-grow mb-2'>
-            <a href="https://forms.gle/SM3GDZzfLDXgfhDz6" target="_blank" className="block p-2 rounded">👶 Pledge Feedback Form</a>
-          </div>
+          <div className="bg-white rounded shadow p-4 mb-6">
+          <a
+            href="https://forms.gle/SM3GDZzfLDXgfhDz6"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-4 py-2 bg-blue-500 text-white font-medium rounded hover:bg-blue-600 transition"
+          >
+            👶 Fill Out the Pledge Feedback Form
+          </a>
+        </div>
           {/* Search Bar */}
           <input
             type="text"

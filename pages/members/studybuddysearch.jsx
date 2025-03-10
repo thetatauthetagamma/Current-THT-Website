@@ -4,13 +4,6 @@ import ClassMemberTile from '@/components/ClassMemberTile'
 import supabase from '../../supabase'
 import Cookies from 'js-cookie'
 
-/*
-This page is used to search for members who are taking the same class as you.
-Classes are stored in both the Pledges and Brothers table in the column classes.
-At the end of the semester, classes are moved to the archivedClasses column.
-TODO: Add functionality to search for brothers who have already taken your class.
-*/
-
 export default function StudyBuddySearch() {
   const [searchQuery, setSearchQuery] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -33,6 +26,7 @@ export default function StudyBuddySearch() {
         let combinedMembers = [];
 
         if (pledgeData.data && !pledgeData.error) {
+          // Sort pledges in descending order by lastname
           const sortedPledges = pledgeData.data.sort(
             (a, b) => b.lastname - a.lastname
           );
@@ -40,6 +34,7 @@ export default function StudyBuddySearch() {
         }
 
         if (brothersData.data && !brothersData.error) {
+          // Sort brothers in descending order by roll
           const sortedData = brothersData.data.sort((a, b) => b.roll - a.roll);
           combinedMembers.push(...sortedData);
         }
@@ -109,19 +104,19 @@ export default function StudyBuddySearch() {
   const totalPastPages = Math.ceil(pastClassMembers.length / membersPerPage);
 
   const handleNextPageCurrent = () => {
-    setCurrentPageCurrent(prevPage => Math.min(prevPage + 1, totalCurrentPages));
+    setCurrentPageCurrent(prev => Math.min(prev + 1, totalCurrentPages));
   };
 
   const handlePrevPageCurrent = () => {
-    setCurrentPageCurrent(prevPage => Math.max(prevPage - 1, 1));
+    setCurrentPageCurrent(prev => Math.max(prev - 1, 1));
   };
 
   const handleNextPagePast = () => {
-    setCurrentPagePast(prevPage => Math.min(prevPage + 1, totalPastPages));
+    setCurrentPagePast(prev => Math.min(prev + 1, totalPastPages));
   };
 
   const handlePrevPagePast = () => {
-    setCurrentPagePast(prevPage => Math.max(prevPage - 1, 1));
+    setCurrentPagePast(prev => Math.max(prev - 1, 1));
   };
 
   const indexOfLastMemberCurrent = currentPageCurrent * membersPerPage;
@@ -139,36 +134,47 @@ export default function StudyBuddySearch() {
   );
 
   if (loading) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
   }
 
   return (
-    <div className='flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]'>
-      {isPledge ? (
-        <BroNavBar isPledge={true} />
-      ) : (
-        <BroNavBar isPledge={false} />
-      )}
-      <div className='flex-grow'>
-        <div className='flex-grow h-full m-4'>
-          <h1 className='font-bold text-4xl xs:max-sm:text-center pb-4'>
-            Find Study Buddies
-          </h1>
+    <div className="flex min-h-screen bg-gray-100">
+      {/* Left Nav */}
+      {isPledge ? <BroNavBar isPledge /> : <BroNavBar isPledge={false} />}
+
+      {/* Main Content */}
+      <div className="flex-grow p-4 md:p-8">
+        {/* Page Header / Intro */}
+        <div className="bg-white rounded shadow p-4 mb-6">
+          <h1 className="font-bold text-2xl md:text-3xl mb-2">Find Study Buddies</h1>
+          <p className="text-gray-600 mb-4">
+            Search by class name and number (e.g. "EECS 482", "MECHENG 211", "AEROSP 200").
+          </p>
           <input
-            type='text'
-            placeholder='Search by class name and number (EECS 482, MECHENG 211, AEROSP 200)'
+            type="text"
+            placeholder="Type a class..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className='p-2 border border-gray-800 rounded w-full mb-4'
+            className="w-full p-2 border border-gray-300 rounded"
           />
-          <div className='mb-4'>
-            <h2 className='font-bold text-2xl'>Currently Enrolled</h2>
-            <div
-              className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full'
-              style={{ maxHeight: '550px', overflowY: 'auto' }}
-            >
+        </div>
+
+        {/* Currently Enrolled Section */}
+        <div className="bg-white rounded shadow p-4 mb-6">
+          <h2 className="font-bold text-xl md:text-2xl mb-4">Currently Enrolled</h2>
+          {currentMembers.length === 0 ? (
+            <p className="text-gray-600">No members found for this query.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[550px] overflow-y-auto">
               {currentMembers.map(member => (
-                <div key={member.userid ? member.userid : member.uniqname}>
+                <div
+                  key={member.userid ? member.userid : member.uniqname}
+                  className="bg-gray-50 rounded-lg p-4 shadow hover:shadow-md transition"
+                >
                   <ClassMemberTile
                     userid={member.userid ? member.userid : member.uniqname}
                     firstname={member.firstname}
@@ -179,26 +185,44 @@ export default function StudyBuddySearch() {
                 </div>
               ))}
             </div>
-            <div className='flex justify-between mt-4'>
-              <button onClick={handlePrevPageCurrent} disabled={currentPageCurrent === 1}>
-                &larr; Previous Page
+          )}
+
+          {/* Pagination for Current */}
+          {currentMembers.length > 0 && (
+            <div className="flex justify-between items-center mt-4">
+              <button
+                onClick={handlePrevPageCurrent}
+                disabled={currentPageCurrent === 1}
+                className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+              >
+                &larr; Previous
               </button>
+              <p>
+                Page {currentPageCurrent} of {totalCurrentPages || 1}
+              </p>
               <button
                 onClick={handleNextPageCurrent}
-                disabled={currentPageCurrent === totalCurrentPages}
+                disabled={currentPageCurrent === totalCurrentPages || totalCurrentPages === 0}
+                className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
               >
-                &rarr; Next Page
+                Next &rarr;
               </button>
             </div>
-          </div>
-          <div>
-            <h2 className='font-bold text-2xl'>Previously Enrolled</h2>
-            <div
-              className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full'
-              style={{ maxHeight: '550px', overflowY: 'auto' }}
-            >
+          )}
+        </div>
+
+        {/* Previously Enrolled Section */}
+        <div className="bg-white rounded shadow p-4">
+          <h2 className="font-bold text-xl md:text-2xl mb-4">Previously Enrolled</h2>
+          {pastMembers.length === 0 ? (
+            <p className="text-gray-600">No members found for this query.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[550px] overflow-y-auto">
               {pastMembers.map(member => (
-                <div key={member.userid ? member.userid : member.uniqname}>
+                <div
+                  key={member.userid ? member.userid : member.uniqname}
+                  className="bg-gray-50 rounded-lg p-4 shadow hover:shadow-md transition"
+                >
                   <ClassMemberTile
                     userid={member.userid ? member.userid : member.uniqname}
                     firstname={member.firstname}
@@ -209,18 +233,30 @@ export default function StudyBuddySearch() {
                 </div>
               ))}
             </div>
-            <div className='flex justify-between mt-4'>
-              <button onClick={handlePrevPagePast} disabled={currentPagePast === 1}>
-                &larr; Previous Page
+          )}
+
+          {/* Pagination for Past */}
+          {pastMembers.length > 0 && (
+            <div className="flex justify-between items-center mt-4">
+              <button
+                onClick={handlePrevPagePast}
+                disabled={currentPagePast === 1}
+                className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+              >
+                &larr; Previous
               </button>
+              <p>
+                Page {currentPagePast} of {totalPastPages || 1}
+              </p>
               <button
                 onClick={handleNextPagePast}
-                disabled={currentPagePast === totalPastPages}
+                disabled={currentPagePast === totalPastPages || totalPastPages === 0}
+                className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
               >
-                &rarr; Next Page
+                Next &rarr;
               </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
