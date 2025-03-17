@@ -39,18 +39,18 @@ export default function BLPairAdder() {
         
         // Validate headers
         if (!headers || headers.length !== 2 || 
-            headers[0].toLowerCase() !== 'little' || 
-            headers[1].toLowerCase() !== 'big') {
-          setError('Invalid CSV format. Headers must be "little" and "big" (case insensitive).')
+            headers[0].toLowerCase() !== 'littleuserid' || 
+            headers[1].toLowerCase() !== 'biguserid') {
+          setError('Invalid CSV format. Headers must be "littleuserid" and "biguserid" (case insensitive).')
           return
         }
 
         // Process the data
         const validPairings = results.data
-          .filter(row => row.little && row.big) // Filter out empty rows
+          .filter(row => row.littleuserid && row.biguserid) // Filter out empty rows
           .map(row => ({
-            little: row.little.trim(),
-            big: row.big.trim()
+            littleuserid: row.littleuserid.trim(),
+            biguserid: row.biguserid.trim()
           }))
 
         if (validPairings.length === 0) {
@@ -78,7 +78,7 @@ export default function BLPairAdder() {
 
     try {
       const { error: insertError } = await supabase
-        .from('BigLittlePairings')
+        .from('FakeBigLittlePairings')
         .insert(pairings)
 
       if (insertError) {
@@ -87,9 +87,17 @@ export default function BLPairAdder() {
         return
       }
 
-      setSuccess(`Successfully added ${pairings.length} pairings!`)
+      // Reset all states immediately
       setPairings([])
       setCsvFile(null)
+      setError(null)
+      // Reset the file input
+      const fileInput = document.querySelector('input[type="file"]')
+      if (fileInput) {
+        fileInput.value = ''
+      }
+      setSuccess(`Successfully added pairings to database!`)
+
     } catch (err) {
       setError('An unexpected error occurred.')
       console.error('Error in handleAddPairings:', err)
@@ -171,8 +179,8 @@ export default function BLPairAdder() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {pairings.map((pair, index) => (
                     <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pair.little}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pair.big}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pair.littleuserid}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pair.biguserid}</td>
                     </tr>
                   ))}
                 </tbody>
