@@ -25,7 +25,7 @@ export default function BLPairAdder() {
   }
 
   // 2) Parse CSV - want big/little header, and so final data is [[big, little], [big, little]]
-  const handleParseCsv = () => {
+  const handleParseCsv = async () => {
     if (!csvFile) {
       setError('Please select a CSV file first.')
       return
@@ -34,7 +34,7 @@ export default function BLPairAdder() {
     Papa.parse(csvFile, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: async (results) => {
         const headers = results.meta.fields
         
         // Validate headers
@@ -47,7 +47,7 @@ export default function BLPairAdder() {
 
         // Process the data
         const validPairings = results.data
-          .filter(row => row.littleuserid && row.biguserid) // Filter out empty rows
+          .filter(row => row.littleuserid && row.biguserid)
           .map(row => ({
             littleuserid: row.littleuserid.trim(),
             biguserid: row.biguserid.trim()
@@ -55,6 +55,37 @@ export default function BLPairAdder() {
 
         if (validPairings.length === 0) {
           setError('No valid pairings found in CSV.')
+          return
+        }
+
+        // Would doing this be too costly in terms of memory?
+        // Get all unique IDs to check
+        const allIds = [...new Set([
+          ...validPairings.map(p => p.littleuserid),
+          ...validPairings.map(p => p.biguserid)
+        ])]
+
+       
+        // Check if all IDs exist in Brothers table
+        const { data: brotherData, error: brotherError } = await supabase
+          .from('Brothers')
+          .select('userid')
+          .in('userid', allIds)
+
+        if (brotherError) {
+          setError('Error validating brother IDs.')
+          console.error('Brother validation error:', brotherError)
+          return
+        }
+
+        // Create set of valid brother IDs for quick lookup
+        const validBrotherIds = new Set(brotherData.map(b => b.userid))
+
+        // Find any invalid IDs
+        const invalidIds = allIds.filter(id => !validBrotherIds.has(id))
+
+        if (invalidIds.length > 0) {
+          setError('Some IDs are not valid brothers. Please check the file and try again.')
           return
         }
 
