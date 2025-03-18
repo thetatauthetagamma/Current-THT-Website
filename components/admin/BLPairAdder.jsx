@@ -105,7 +105,7 @@ export default function BLPairAdder() {
 
     try {
       const { error: insertError } = await supabase
-        .from('FakeBigLittlePairings')
+        .from('BigLittlePairings')
         .insert(pairings)
 
       if (insertError) {

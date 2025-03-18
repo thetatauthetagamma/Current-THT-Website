@@ -526,7 +526,7 @@ export default function Admin() {
             )}
 
              {/* Big Little Pairing */}
-             {(adminRole === 'dev') && (
+             {(adminRole === 'dev' || adminRole === 'parent') && (
               <div className="mt-8">
               <BLPairAdder />
             </div>
