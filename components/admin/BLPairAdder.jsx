@@ -25,7 +25,7 @@ export default function BLPairAdder() {
   }
 
   // 2) Parse CSV - want big/little header, and so final data is [[big, little], [big, little]]
-  const handleParseCsv = async () => {
+  const handleParseCsv = () => {
     if (!csvFile) {
       setError('Please select a CSV file first.')
       return
@@ -34,7 +34,7 @@ export default function BLPairAdder() {
     Papa.parse(csvFile, {
       header: true,
       skipEmptyLines: true,
-      complete: async (results) => {
+      complete: async (results) => {  // Make callback async to handle DB query
         const headers = results.meta.fields
         
         // Validate headers
@@ -53,7 +53,37 @@ export default function BLPairAdder() {
             biguserid: row.biguserid.trim()
           }))
 
-       
+        if (validPairings.length === 0) {
+          setError('No valid pairings found in CSV.')
+          return
+        }
+
+        // Get unique IDs to verify
+        const uniqueIds = [...new Set([
+          ...validPairings.map(p => p.littleuserid),
+          ...validPairings.map(p => p.biguserid)
+        ])]
+
+        // Check if all IDs exist in Brothers table
+        const { data: existingBrothers, error: brothersError } = await supabase
+          .from('Brothers')
+          .select('userid')
+          .in('userid', uniqueIds)
+
+        if (brothersError) {
+          setError('Some IDs are not valid brothers. Please check the file and try again.')
+          console.error('Error:', brothersError)
+          return
+        }
+
+        //Find any invalid IDs
+        const validIds = new Set(existingBrothers.map(b => b.userid))
+        const invalidIds = uniqueIds.filter(id => !validIds.has(id))
+
+        if (invalidIds.length > 0) {
+          setError(`Some IDs are not valid brothers. Please check the file and try again.`)
+          return
+        }
 
         setPairings(validPairings)
         setSuccess(`Successfully parsed ${validPairings.length} pairings!`)
