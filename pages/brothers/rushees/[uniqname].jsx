@@ -26,6 +26,12 @@ export default function RusheeProfile () {
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState([])
   // 1. Fetch session to get current user info
+
+
+  const [localEmphasis, setLocalEmphasis] = useState(likes || [])
+  const isEmphasized = localEmphasis.includes(brotherID)
+  const [emphasis, setEmphasis] = useState([])
+
   useEffect(() => {
     const getSession = async () => {
       const { data, error } = await supabase.auth.getSession()
