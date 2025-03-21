@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import supabase from '@/supabase';
 import Select from 'react-select';
 import RushAdminPanel from '@/components/admin/RushAdminPanel';
+import BLPairAdder from '@/components/admin/BLPairAdder';
+
 interface RoleAssignments {
   [key: string]: string;
 }
@@ -521,6 +523,13 @@ export default function Admin() {
                   Archive Classes
                 </button>
               </div>
+            )}
+
+             {/* Big Little Pairing */}
+             {(adminRole === 'dev' || adminRole === 'parent') && (
+              <div className="mt-8">
+              <BLPairAdder />
+            </div>
             )}
           </div>
         </div>
