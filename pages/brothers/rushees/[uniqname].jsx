@@ -5,8 +5,6 @@ import BroNavBar from '@/components/BroNavBar'
 import Image from 'next/image'
 import thtlogo from '../../../public/tht-logo.png'
 import ReactionBar from '@/components/rush/ReactionBar'
-
-// React Icons
 import { FaExclamation } from 'react-icons/fa'
 
 export default function RusheeProfile() {
@@ -22,15 +20,18 @@ export default function RusheeProfile() {
   // Comments
   const [feedback, setFeedback] = useState([])
   const [newComment, setNewComment] = useState('')
-  const [replyTexts, setReplyTexts] = useState({})
 
-  // "Expanded" state for replies: expandedReplies[commentId] = bool
+  // For per-comment reply text
+  const [replyTexts, setReplyTexts] = useState({})
+  // Whether each parent comment's replies are expanded
   const [expandedReplies, setExpandedReplies] = useState({})
+  // Whether each parent comment's reply box is shown
+  const [showReplyBox, setShowReplyBox] = useState({})
 
   const [imageUrl, setImageUrl] = useState('')
 
   // ─────────────────────────────────────────────────────────
-  // 1) Auth session -> get brotherID
+  // Auth session -> get brotherID
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     const getSession = async () => {
@@ -43,7 +44,7 @@ export default function RusheeProfile() {
   }, [])
 
   // ─────────────────────────────────────────────────────────
-  // 2) Fetch rushee
+  // Fetch rushee
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!uniqname) return
@@ -61,7 +62,7 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // 3) Fetch rushee image
+  // Fetch rushee image
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!uniqname) return
@@ -77,7 +78,7 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // 4) Fetch comments (Application_Feedback)
+  // Fetch comments (Application_Feedback)
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!uniqname) return
@@ -95,7 +96,7 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // 5) Fetch Q&A
+  // Fetch Q&A
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -186,6 +187,9 @@ export default function RusheeProfile() {
     } else if (data) {
       setFeedback(prev => [...prev, data])
       setReplyTexts(prev => ({ ...prev, [parentId]: '' }))
+      // You could automatically expand the replies after a new one is added
+      setExpandedReplies(prev => ({ ...prev, [parentId]: true }))
+      showReplyBox[parentId] = false
     }
   }
 
@@ -232,9 +236,17 @@ export default function RusheeProfile() {
       .sort((a, b) => new Date(a.time) - new Date(b.time))
   }
 
-  // Toggle expand
+  // Expand/collapse replies
   function handleToggleExpand(parentId) {
     setExpandedReplies(prev => ({
+      ...prev,
+      [parentId]: !prev[parentId]
+    }))
+  }
+
+  // Show/hide reply box
+  function handleToggleReplyBox(parentId) {
+    setShowReplyBox(prev => ({
       ...prev,
       [parentId]: !prev[parentId]
     }))
@@ -352,7 +364,7 @@ export default function RusheeProfile() {
 
                 return (
                   <div key={parent.id} className='flex flex-col space-y-1'>
-                    {/* Single comment container (like Instagram) */}
+                    {/* Single comment container */}
                     <div className='flex items-start justify-between'>
                       <div>
                         <p className='font-bold text-sm'>
@@ -365,18 +377,16 @@ export default function RusheeProfile() {
                           {parent.comment}
                         </p>
                       </div>
-                      {/* Emphasis icon on the right */}
+                      {/* Emphasis on the right */}
                       <div
                         className='flex items-center space-x-1 cursor-pointer'
                         onClick={() => handleToggleEmphasis(parent.id)}
-                        // "title" attribute for a simple tooltip
                         title={
                           emphasisCount > 0
                             ? `Emphasized by: ${parent.emphasis.join(', ')}`
                             : 'No emphasis yet'
                         }
                       >
-                        {/* Two FaExclamation icons side by side for "!!" */}
                         {isEmphasized ? (
                           <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
                             <FaExclamation className='mr-[-8px]' />
@@ -394,16 +404,32 @@ export default function RusheeProfile() {
                       </div>
                     </div>
 
-                    {/* "View replies" if we have child replies and not expanded */}
-                    {childReplies.length > 0 && !expandedReplies[parent.id] && (
+                    {/* Buttons: "Reply" / "View replies" */}
+                    <div className="ml-0 flex items-center space-x-2 pl-2 text-sm">
+                      {/* If there are children, show "View replies" or "Hide Replies" */}
+                      {childReplies.length > 0 && (
+                        <button
+                          onClick={() => handleToggleExpand(parent.id)}
+                          className="text-gray-500 underline"
+                        >
+                          {expandedReplies[parent.id]
+                            ? `Hide Replies`
+                            : `View replies (${childReplies.length})`}
+                        </button>
+                      )}
+                      {/* Always show "Reply" button */}
                       <button
-                        onClick={() => handleToggleExpand(parent.id)}
-                        className='ml-0 text-gray-500 text-sm pl-2 underline w-fit'
+                        onClick={() => handleToggleReplyBox(parent.id)}
+                        className="text-gray-500 underline"
                       >
-                        View replies ({childReplies.length})
+                        {showReplyBox[parent.id] ? 'Cancel Reply' : 'Reply'}
                       </button>
-                    )}
-                    {/* If expanded, show the child replies */}
+                    </div>
+
+                    {/* If showReplyBox is true, show the reply text area */}
+                   
+
+                    {/* If expanded, show child replies */}
                     {expandedReplies[parent.id] && (
                       <div className='pl-4 border-l border-gray-300 space-y-4 mt-1'>
                         {childReplies.map(child => {
@@ -418,9 +444,11 @@ export default function RusheeProfile() {
                                     {new Date(child.time).toLocaleString()}
                                   </span>
                                 </p>
-                                <p className='text-sm text-gray-800 mb-1'>{child.comment}</p>
+                                <p className='text-sm text-gray-800 mb-1'>
+                                  {child.comment}
+                                </p>
                               </div>
-                              {/* Child emphasis on the right */}
+                              {/* Child emphasis on right */}
                               <div
                                 className='flex items-center space-x-1 cursor-pointer'
                                 onClick={() => handleToggleEmphasis(child.id)}
@@ -450,36 +478,28 @@ export default function RusheeProfile() {
                         })}
                       </div>
                     )}
-
-                    {/* If expanded or no children, show a "reply" area always */}
-                    <div className='mt-2 pl-4'>
-                      <textarea
-                        value={replyTexts[parent.id] || ''}
-                        onChange={e =>
-                          setReplyTexts(prev => ({
-                            ...prev,
-                            [parent.id]: e.target.value
-                          }))
-                        }
-                        rows={1}
-                        className='border w-full p-1 rounded text-sm'
-                        placeholder='Write a reply...'
-                      />
-                      <button
-                        onClick={() => handleAddReply(parent.id)}
-                        className='bg-green-600 text-white px-3 py-1 mt-1 rounded text-sm'
-                      >
-                        Submit Reply
-                      </button>
-                      {childReplies.length > 0 && expandedReplies[parent.id] && (
+                     {showReplyBox[parent.id] && (
+                      <div className='ml-6 mt-2'>
+                        <textarea
+                          value={replyTexts[parent.id] || ''}
+                          onChange={e =>
+                            setReplyTexts(prev => ({
+                              ...prev,
+                              [parent.id]: e.target.value
+                            }))
+                          }
+                          rows={1}
+                          className='border w-full p-1 rounded text-sm'
+                          placeholder='Write a reply...'
+                        />
                         <button
-                          onClick={() => handleToggleExpand(parent.id)}
-                          className='ml-3 bg-gray-300 text-black px-3 py-1 mt-1 rounded text-sm'
+                          onClick={() => handleAddReply(parent.id)}
+                          className='bg-green-600 text-white px-3 py-1 mt-1 rounded text-sm'
                         >
-                          Hide Replies
+                          Submit Reply
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
