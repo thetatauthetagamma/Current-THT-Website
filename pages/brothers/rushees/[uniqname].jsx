@@ -268,7 +268,7 @@ export default function RusheeProfile() {
       <div className='flex-1 p-4'>
         {/* Basic rushee info */}
         <div className='flex items-center mb-4'>
-          <div className='w-32 h-32 mb-3'>
+          <div className='w-32 h-32 mb-3 mx-4'>
             {imageUrl ? (
               <img
                 className='rounded-full w-full h-full object-cover'
