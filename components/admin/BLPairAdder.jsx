@@ -151,7 +151,7 @@ export default function BLPairAdder() {
           Upload Big-Little Pairings
         </h3>
         <p className="text-sm text-gray-600 mb-3">
-          Upload a CSV file with headers "little" and "big" containing the uniqnames of paired members.
+          Upload a CSV file with headers "littleuserid" and "biguserid" containing the uniqnames of paired members.
         </p>
 
         <input
