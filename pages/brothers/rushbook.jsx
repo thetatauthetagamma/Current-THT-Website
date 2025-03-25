@@ -154,7 +154,7 @@ export default function RushBook() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 ">
           {/* Search Input */}
           <div>
-            <label className="font-semibold mr-2">Search (Name/Uniqname):</label>
+            <label className="font-semibold mr-2">Search (First Name/Uniqname):</label>
             <input
               type="text"
               value={searchTerm}

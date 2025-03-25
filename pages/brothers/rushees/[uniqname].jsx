@@ -7,7 +7,7 @@ import thtlogo from '../../../public/tht-logo.png'
 import ReactionBar from '@/components/rush/ReactionBar'
 import { FaExclamation } from 'react-icons/fa'
 
-export default function RusheeProfile() {
+export default function RusheeProfile () {
   const router = useRouter()
   const { uniqname } = router.query
   const [brotherID, setBrotherID] = useState('')
@@ -30,8 +30,11 @@ export default function RusheeProfile() {
 
   const [imageUrl, setImageUrl] = useState('')
 
+  // We'll store a dictionary: { [uniqname]: "Firstname Lastname" }
+  const [brothersMap, setBrothersMap] = useState({})
+
   // ─────────────────────────────────────────────────────────
-  // Auth session -> get brotherID
+  // 1) Auth session -> get brotherID
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     const getSession = async () => {
@@ -44,7 +47,31 @@ export default function RusheeProfile() {
   }, [])
 
   // ─────────────────────────────────────────────────────────
-  // Fetch rushee
+  // 2) Fetch all Brothers once -> build { uniqname: "First Last" } map
+  // ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchAllBrothers = async () => {
+      const { data, error } = await supabase
+        .from('Brothers')
+        .select('uniqname, firstname, lastname')
+
+      if (error) {
+        console.error('Error fetching all brothers:', error)
+        return
+      }
+      if (data) {
+        const map = {}
+        data.forEach(bro => {
+          map[bro.uniqname] = `${bro.firstname} ${bro.lastname}`
+        })
+        setBrothersMap(map)
+      }
+    }
+    fetchAllBrothers()
+  }, [])
+
+  // ─────────────────────────────────────────────────────────
+  // 3) Fetch rushee
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!uniqname) return
@@ -62,7 +89,7 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // Fetch rushee image
+  // 4) Fetch rushee image
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!uniqname) return
@@ -78,14 +105,23 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // Fetch comments (Application_Feedback)
+  // 5) Fetch comments (Application_Feedback)
+  //    Also fetch the brother's firstname + lastname from Brothers
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!uniqname) return
     const fetchFeedback = async () => {
       const { data, error } = await supabase
         .from('Application_Feedback')
-        .select('*')
+        .select(
+          `
+          *,
+          brotherDetails:Brothers(
+            firstname,
+            lastname
+          )
+        `
+        )
         .eq('rushee', uniqname)
         .order('time', { ascending: true })
       if (!error && data) {
@@ -96,7 +132,7 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // Fetch Q&A
+  // 6) Fetch Q&A
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -124,9 +160,9 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // Add top-level comment
+  // 7) Add top-level comment
   // ─────────────────────────────────────────────────────────
-  async function handleAddComment() {
+  async function handleAddComment () {
     if (!brotherID) {
       alert('You must be logged in to comment!')
       return
@@ -145,7 +181,15 @@ export default function RusheeProfile() {
           emphasis: []
         }
       ])
-      .select('*')
+      .select(
+        `
+        *,
+        brotherDetails:Brothers(
+          firstname,
+          lastname
+        )
+      `
+      )
       .single()
 
     if (error) {
@@ -157,9 +201,9 @@ export default function RusheeProfile() {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Add REPLY
+  // 8) Add REPLY
   // ─────────────────────────────────────────────────────────
-  async function handleAddReply(parentId) {
+  async function handleAddReply (parentId) {
     if (!brotherID) {
       alert('You must be logged in!')
       return
@@ -179,26 +223,41 @@ export default function RusheeProfile() {
           emphasis: []
         }
       ])
-      .select('*')
+      .select(
+        `
+        *,
+        brotherDetails:Brothers(
+          firstname,
+          lastname
+        )
+      `
+      )
       .single()
-    
+
     if (error) {
       console.error('Error adding reply:', error)
     } else if (data) {
       setFeedback(prev => [...prev, data])
       setReplyTexts(prev => ({ ...prev, [parentId]: '' }))
-      // You could automatically expand the replies after a new one is added
+      // Optionally auto-expand the replies
       setExpandedReplies(prev => ({ ...prev, [parentId]: true }))
       showReplyBox[parentId] = false
     }
   }
 
   // ─────────────────────────────────────────────────────────
-  // Toggle emphasis
+  // 9) Toggle emphasis
   // ─────────────────────────────────────────────────────────
-  async function handleToggleEmphasis(commentId) {
+  async function handleToggleEmphasis (commentId) {
     const comment = feedback.find(f => f.id === commentId)
     if (!comment) return
+
+    // Disallow self-emphasis
+    if (comment.brother === brotherID) {
+      // Optionally show alert or do nothing
+      return
+    }
+
     const oldEmphasis = comment.emphasis || []
     let newEmphasis
     if (oldEmphasis.includes(brotherID)) {
@@ -211,33 +270,40 @@ export default function RusheeProfile() {
       .from('Application_Feedback')
       .update({ emphasis: newEmphasis })
       .eq('id', commentId)
-      .select()
+      .select(
+        `
+        *,
+        brotherDetails:Brothers(
+          firstname,
+          lastname
+        )
+      `
+      )
       .single()
+
     if (error) {
       console.error('Error toggling emphasis:', error)
       return
     }
-    setFeedback(prev =>
-      prev.map(f => {
-        if (f.id === commentId) return { ...f, emphasis: newEmphasis }
-        return f
-      })
-    )
+    if (data) {
+      // Replace the entire updated comment in local state
+      setFeedback(prev => prev.map(f => (f.id === commentId ? data : f)))
+    }
   }
 
   // ─────────────────────────────────────────────────────────
-  // Sorting comments
+  // 10) Sorting comments
   // ─────────────────────────────────────────────────────────
   const topLevelComments = feedback.filter(f => !f.parent_id)
 
-  function getRepliesFor(commentId) {
+  function getRepliesFor (commentId) {
     return feedback
       .filter(f => f.parent_id === commentId)
       .sort((a, b) => new Date(a.time) - new Date(b.time))
   }
 
   // Expand/collapse replies
-  function handleToggleExpand(parentId) {
+  function handleToggleExpand (parentId) {
     setExpandedReplies(prev => ({
       ...prev,
       [parentId]: !prev[parentId]
@@ -245,13 +311,16 @@ export default function RusheeProfile() {
   }
 
   // Show/hide reply box
-  function handleToggleReplyBox(parentId) {
+  function handleToggleReplyBox (parentId) {
     setShowReplyBox(prev => ({
       ...prev,
       [parentId]: !prev[parentId]
     }))
   }
 
+  // ─────────────────────────────────────────────────────────
+  // Rendering
+  // ─────────────────────────────────────────────────────────
   if (!rushee) {
     return (
       <div className='min-h-screen'>
@@ -332,29 +401,12 @@ export default function RusheeProfile() {
 
         <hr className='my-4' />
 
-        {/* COMMENTS (top-level + replies, Instagram style) */}
+        {/* COMMENTS (top-level + replies) */}
         <div className='p-4 rounded-lg shadow-md bg-white'>
           <h3 className='text-lg font-semibold mb-2'>Comments</h3>
 
-          {/* Input for top-level comment */}
-          <div className='mb-4'>
-            <textarea
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              className='w-full p-2 rounded border'
-              placeholder='Write a top-level comment...'
-              rows={2}
-            />
-            <button
-              onClick={handleAddComment}
-              className='bg-[#8B0000] text-white px-4 py-2 mt-2 rounded hover:bg-red-800'
-            >
-              Submit
-            </button>
-          </div>
-
           {topLevelComments.length === 0 ? (
-            <p className="text-gray-500">No comments yet. Be the first!</p>
+            <p className='text-gray-500'>No comments yet. Be the first!</p>
           ) : (
             <div className='space-y-6'>
               {topLevelComments.map(parent => {
@@ -362,13 +414,28 @@ export default function RusheeProfile() {
                 const isEmphasized = parent.emphasis?.includes(brotherID)
                 const emphasisCount = parent.emphasis?.length || 0
 
+                // Grab the first+last name from the joined data
+                const brotherFirst = parent.brotherDetails?.firstname
+                const brotherLast = parent.brotherDetails?.lastname
+
+                // Map emphasis => "Firstname Lastname"
+                const emphasizedByNames = (parent.emphasis || []).map(uniq => {
+                  return brothersMap[uniq] || uniq
+                })
+
+                // Whether user can click (disallow if own comment)
+                const canClickEmphasis = parent.brother !== brotherID
+
                 return (
                   <div key={parent.id} className='flex flex-col space-y-1'>
                     {/* Single comment container */}
                     <div className='flex items-start justify-between'>
                       <div>
+                        {/* If we have brotherDetails, show that; otherwise, fallback to parent.brother */}
                         <p className='font-bold text-sm'>
-                          {parent.brother}{' '}
+                          {brotherFirst && brotherLast
+                            ? `${brotherFirst} ${brotherLast}`
+                            : parent.brother}{' '}
                           <span className='text-xs text-gray-400 ml-2'>
                             {new Date(parent.time).toLocaleString()}
                           </span>
@@ -377,16 +444,21 @@ export default function RusheeProfile() {
                           {parent.comment}
                         </p>
                       </div>
-                      {/* Emphasis on the right */}
+
+                      {/* Emphasis with a custom tooltip (no default browser delay) */}
                       <div
-                        className='flex items-center space-x-1 cursor-pointer'
-                        onClick={() => handleToggleEmphasis(parent.id)}
-                        title={
-                          emphasisCount > 0
-                            ? `Emphasized by: ${parent.emphasis.join(', ')}`
-                            : 'No emphasis yet'
-                        }
+                        // NEW: group + relative for the hover-based custom tooltip
+                        className={`relative group flex items-center space-x-1 ${
+                          canClickEmphasis
+                            ? 'cursor-pointer'
+                            : 'cursor-not-allowed'
+                        }`}
+                        onClick={() => {
+                          if (!canClickEmphasis) return
+                          handleToggleEmphasis(parent.id)
+                        }}
                       >
+                        {/* The Exclamation icons */}
                         {isEmphasized ? (
                           <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
                             <FaExclamation className='mr-[-8px]' />
@@ -401,16 +473,26 @@ export default function RusheeProfile() {
                         <span className='text-sm font-semibold text-gray-700'>
                           {emphasisCount}
                         </span>
+
+                        {/* Custom tooltip displayed on hover */}
+                        <div
+                          className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
+             whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
+                        >
+                          {emphasizedByNames.length > 0
+                            ? `Emphasized by: ${emphasizedByNames.join(', ')}`
+                            : 'No emphasis yet'}
+                        </div>
                       </div>
                     </div>
 
                     {/* Buttons: "Reply" / "View replies" */}
-                    <div className="ml-0 flex items-center space-x-2 pl-2 text-sm">
+                    <div className='ml-0 flex items-center space-x-2 pl-2 text-sm '>
                       {/* If there are children, show "View replies" or "Hide Replies" */}
                       {childReplies.length > 0 && (
                         <button
                           onClick={() => handleToggleExpand(parent.id)}
-                          className="text-gray-500 underline"
+                          className='text-gray-500 underline'
                         >
                           {expandedReplies[parent.id]
                             ? `Hide Replies`
@@ -420,26 +502,41 @@ export default function RusheeProfile() {
                       {/* Always show "Reply" button */}
                       <button
                         onClick={() => handleToggleReplyBox(parent.id)}
-                        className="text-gray-500 underline"
+                        className='text-gray-500 underline'
                       >
                         {showReplyBox[parent.id] ? 'Cancel Reply' : 'Reply'}
                       </button>
                     </div>
 
-                    {/* If showReplyBox is true, show the reply text area */}
-                   
-
                     {/* If expanded, show child replies */}
                     {expandedReplies[parent.id] && (
                       <div className='pl-4 border-l border-gray-300 space-y-4 mt-1'>
                         {childReplies.map(child => {
-                          const childEmphasized = child.emphasis?.includes(brotherID)
+                          const childEmphasized =
+                            child.emphasis?.includes(brotherID)
                           const childEmphasisCount = child.emphasis?.length || 0
+
+                          const childFirst = child.brotherDetails?.firstname
+                          const childLast = child.brotherDetails?.lastname
+
+                          const childEmphasizedByNames = (
+                            child.emphasis || []
+                          ).map(uniq => {
+                            return brothersMap[uniq] || uniq
+                          })
+
+                          const canClickChild = child.brother !== brotherID
+
                           return (
-                            <div key={child.id} className='flex items-start justify-between'>
+                            <div
+                              key={child.id}
+                              className='flex items-start justify-between'
+                            >
                               <div>
                                 <p className='font-bold text-sm'>
-                                  {child.brother}{' '}
+                                  {childFirst && childLast
+                                    ? `${childFirst} ${childLast}`
+                                    : child.brother}{' '}
                                   <span className='text-xs text-gray-400 ml-2'>
                                     {new Date(child.time).toLocaleString()}
                                   </span>
@@ -448,15 +545,18 @@ export default function RusheeProfile() {
                                   {child.comment}
                                 </p>
                               </div>
-                              {/* Child emphasis on right */}
+
+                              {/* Child emphasis with custom tooltip */}
                               <div
-                                className='flex items-center space-x-1 cursor-pointer'
-                                onClick={() => handleToggleEmphasis(child.id)}
-                                title={
-                                  childEmphasisCount > 0
-                                    ? `Emphasized by: ${child.emphasis.join(', ')}`
-                                    : 'No emphasis yet'
-                                }
+                                className={`relative group flex items-center space-x-1 ${
+                                  canClickChild
+                                    ? 'cursor-pointer'
+                                    : 'cursor-not-allowed'
+                                }`}
+                                onClick={() => {
+                                  if (!canClickChild) return
+                                  handleToggleEmphasis(child.id)
+                                }}
                               >
                                 {childEmphasized ? (
                                   <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
@@ -472,13 +572,27 @@ export default function RusheeProfile() {
                                 <span className='text-sm font-semibold text-gray-700'>
                                   {childEmphasisCount}
                                 </span>
+
+                                {/* Child tooltip */}
+                                <div
+                                  className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded 
+                                             whitespace-nowrap -top-9 left-1/2 -translate-x-1/2'
+                                >
+                                  {childEmphasizedByNames.length > 0
+                                    ? `Emphasized by: ${childEmphasizedByNames.join(
+                                        ', '
+                                      )}`
+                                    : 'No emphasis yet'}
+                                </div>
                               </div>
                             </div>
                           )
                         })}
                       </div>
                     )}
-                     {showReplyBox[parent.id] && (
+
+                    {/* If showReplyBox is true, show the reply text area */}
+                    {showReplyBox[parent.id] && (
                       <div className='ml-6 mt-2'>
                         <textarea
                           value={replyTexts[parent.id] || ''}
@@ -505,6 +619,22 @@ export default function RusheeProfile() {
               })}
             </div>
           )}
+          {/* Input for top-level comment */}
+          <div className='mt-4'>
+            <textarea
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              className='w-full p-2 rounded border'
+              placeholder='Write a top-level comment...'
+              rows={2}
+            />
+            <button
+              onClick={handleAddComment}
+              className='bg-[#8B0000] text-white px-4 py-2 mt-2 rounded hover:bg-red-800'
+            >
+              Submit
+            </button>
+          </div>
         </div>
       </div>
     </div>

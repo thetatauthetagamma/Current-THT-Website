@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import imageCompression from 'browser-image-compression'
 import Cropper from 'react-easy-crop'
 import getCroppedImg from '../utils/cropImageHelper'
-//TODO: Due date and start date of application.
+
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 
@@ -13,8 +13,6 @@ dayjs.extend(timezone)
 
 export default function Application () {
   const [session, setSession] = useState(null)
-
-  // For verifying @umich.edu domain
   const [isUmichEmail, setIsUmichEmail] = useState(false)
   const [userId, setUserId] = useState(null)
 
@@ -33,7 +31,7 @@ export default function Application () {
   const [pronouns, setPronouns] = useState('')
   const [answers, setAnswers] = useState({})
 
-  // **NEW**: Keep track of lastUpdated from the DB
+  // Keep track of lastUpdated from the DB
   const [lastUpdated, setLastUpdated] = useState(null)
 
   // Photo / Crop
@@ -42,6 +40,9 @@ export default function Application () {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
+
+  // Track any photo changes (new file OR crop/zoom changed)
+  const [photoChanged, setPhotoChanged] = useState(false)
 
   // ─────────────────────────────────────────────────────────
   // 1. Listen to Auth Changes (Session)
@@ -77,7 +78,7 @@ export default function Application () {
   }, [session])
 
   // ─────────────────────────────────────────────────────────
-  // 2b. If user is signed in, check for existing profile image
+  // 2b. If user is signed in, fetch existing profile image
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchExistingImage = async () => {
@@ -86,16 +87,18 @@ export default function Application () {
         .from('rushees')
         .download(`${userId}.jpeg`)
 
+      // If they already have an uploaded image, show it
       if (!error && ImageData) {
-        setCroppingImageUrl(URL.createObjectURL(ImageData))
-        setProfileImageFile(URL.createObjectURL(new Blob([ImageData])))
+        const urlObject = URL.createObjectURL(ImageData)
+        setCroppingImageUrl(urlObject)
+        setProfileImageFile(urlObject)
       }
     }
     fetchExistingImage()
   }, [userId])
 
   // ─────────────────────────────────────────────────────────
-  // 3. If signed in with correct domain, fetch app settings + questions + user data
+  // 3. If signed in, fetch app settings + questions + user data
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!session || !isUmichEmail) return
@@ -106,22 +109,14 @@ export default function Application () {
         .select('*')
         .single()
       if (!error && data) {
-        const dueDate = dayjs(data.app_due_date).startOf('day')
-        const startDate = dayjs(data.app_start_date).startOf('day') // No need for timezone conversion
+        const due = dayjs(data.app_due_date).startOf('day')
+        const start = dayjs(data.app_start_date).startOf('day')
         const annArborToday = dayjs().tz('America/New_York').startOf('day')
 
-        console.log('Ann Arbor Today:', annArborToday.format('YYYY-MM-DD'))
-        console.log('Start Date:', startDate.format('YYYY-MM-DD'))
-        console.log('Due Date:', dueDate.format('YYYY-MM-DD'))
-
-        setDueDate(dueDate)
-        setStartDate(startDate)
-        setIsPastDue(annArborToday.isAfter(dueDate))
-        console.log('Is Past Due:', isPastDue)
-        setIsBeforeStart(annArborToday.isBefore(startDate))
-        console.log('Is Before Start:', isBeforeStart)
-      } else {
-        console.log(error)
+        setDueDate(due)
+        setStartDate(start)
+        setIsPastDue(annArborToday.isAfter(due))
+        setIsBeforeStart(annArborToday.isBefore(start))
       }
     }
     fetchSettings()
@@ -131,12 +126,11 @@ export default function Application () {
         .from('Application_Questions')
         .select('*')
         .order('id', { ascending: true })
-
       if (!error && data) setQuestions(data)
     }
 
     const fetchUserData = async () => {
-      // 1) Personal info from "Rushees"
+      // Personal info from "Rushees"
       const { data: userData } = await supabase
         .from('Rushees')
         .select('*')
@@ -149,14 +143,12 @@ export default function Application () {
         setMajor(userData.major || '')
         setYear(userData.year || '')
         setPronouns(userData.pronouns || '')
-
-        // Store lastUpdated if present
         if (userData.updated_at) {
           setLastUpdated(userData.updated_at)
         }
       }
 
-      // 2) Answers from "Application_Answers"
+      // Answers from "Application_Answers"
       const { data: answersData } = await supabase
         .from('Application_Answers')
         .select('*')
@@ -173,7 +165,7 @@ export default function Application () {
 
     fetchQuestions()
     fetchUserData()
-  }, [session, isUmichEmail])
+  }, [session, isUmichEmail, userId])
 
   // ─────────────────────────────────────────────────────────
   // 4. Auth / Submissions
@@ -204,69 +196,11 @@ export default function Application () {
     setAnswers(prev => ({ ...prev, [qID]: newVal }))
   }
 
-  // ** Saving the form **
-  const handleSubmit = async e => {
-    e.preventDefault()
-    if (isPastDue) {
-      alert('Application deadline has passed.')
-      return
-    }
-
-    // (1) Upsert personal info (including updated_at)
-    const { data: upsertData, error: upsertError } = await supabase
-      .from('Rushees')
-      .upsert(
-        {
-          uniqname: userId,
-          firstname,
-          lastname,
-          major,
-          year,
-          pronouns,
-          updated_at: new Date()
-        },
-        { onConflict: 'uniqname' }
-      )
-      .select('*')
-      .single()
-
-    if (upsertError) {
-      console.error('Error upserting personal info:', upsertError)
-      alert('Could not save. See console.')
-      return
-    } else {
-      // Store the updated timestamp in lastUpdated
-      if (upsertData?.updated_at) {
-        setLastUpdated(upsertData.updated_at)
-      }
-    }
-
-    // (2) Upsert answers
-    const updates = questions.map(q => ({
-      question_id: q.id,
-      uniqname: userId,
-      answer: answers[q.id] || ''
-    }))
-    const { error: ansError } = await supabase
-      .from('Application_Answers')
-      .upsert(updates, { onConflict: 'question_id, uniqname' })
-
-    if (ansError) {
-      console.error('Error saving answers:', ansError)
-      alert('Could not save. See console.')
-      return
-    }
-
-    alert('Application saved!')
-  }
-
   // ─────────────────────────────────────────────────────────
-  // 5. Photo Crop Handlers
+  // 5. Photo / Crop Handlers
   // ─────────────────────────────────────────────────────────
-  const onCropComplete = useCallback((_, croppedPixels) => {
-    setCroppedAreaPixels(croppedPixels)
-  }, [])
 
+  // If the user picks a new file from disk:
   const handleImageSelect = e => {
     const file = e.target.files[0]
     if (!file) return
@@ -277,25 +211,107 @@ export default function Application () {
     const url = URL.createObjectURL(file)
     setCroppingImageUrl(url)
     setProfileImageFile(file)
+    setPhotoChanged(true)
   }
 
-  const handleCrop = async () => {
-    if (!profileImageFile || !croppedAreaPixels) return
+  // We mark "photoChanged" true if user changes crop/zoom as well.
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels)
+    setPhotoChanged(true)
+  }, [])
 
-    // 1) Crop the selected area into a Blob
-    const croppedBlob = await getCroppedImg(croppingImageUrl, croppedAreaPixels)
+  const onCropChange = useCallback(newCrop => {
+    setCrop(newCrop)
+    // Optional: can set photoChanged here, but typically set it in onCropComplete
+  }, [])
 
-    // 2) (Optional) compress
-    const options = {
-      maxSizeMB: 0.03,
-      maxWidthOrHeight: 1000,
-      useWebWorker: true
+  const handleZoomChange = newZoom => {
+    setZoom(newZoom)
+    setPhotoChanged(true)
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 6. Submit the entire form (including possibly recropped photo)
+  // ─────────────────────────────────────────────────────────
+  const handleSubmit = async e => {
+    e.preventDefault()
+    if (isPastDue) {
+      alert('Application deadline has passed.')
+      return
     }
-    const compressedFile = await imageCompression(croppedBlob, options)
 
-    // 3) Upload to Supabase
-    await uploadProfilePhoto(compressedFile)
-    alert('Photo uploaded successfully!')
+    try {
+      // If there's a cropping image and the user changed something
+      // (new file OR changed zoom/crop), then recrop & upload:
+      if (croppingImageUrl && photoChanged && croppedAreaPixels) {
+        // 1) Crop
+        const croppedBlob = await getCroppedImg(
+          croppingImageUrl,
+          croppedAreaPixels
+        )
+
+        // 2) Compress
+        const options = {
+          maxSizeMB: 0.03,
+          maxWidthOrHeight: 1000,
+          useWebWorker: true
+        }
+        const compressedFile = await imageCompression(croppedBlob, options)
+
+        // 3) Upload
+        await uploadProfilePhoto(compressedFile)
+      }
+
+      // Next, upsert personal info
+      const { data: upsertData, error: upsertError } = await supabase
+        .from('Rushees')
+        .upsert(
+          {
+            uniqname: userId,
+            firstname,
+            lastname,
+            major,
+            year,
+            pronouns,
+            updated_at: new Date()
+          },
+          { onConflict: 'uniqname' }
+        )
+        .select('*')
+        .single()
+
+      if (upsertError) {
+        console.error('Error upserting personal info:', upsertError)
+        alert('Could not save. See console.')
+        return
+      } else if (upsertData?.updated_at) {
+        setLastUpdated(upsertData.updated_at)
+      }
+
+      // Upsert answers
+      const updates = questions.map(q => ({
+        question_id: q.id,
+        uniqname: userId,
+        answer: answers[q.id] || ''
+      }))
+
+      const { error: ansError } = await supabase
+        .from('Application_Answers')
+        .upsert(updates, { onConflict: 'question_id, uniqname' })
+
+      if (ansError) {
+        console.error('Error saving answers:', ansError)
+        alert('Could not save. See console.')
+        return
+      }
+
+      // If everything succeeded:
+      alert('Application saved!')
+      setPhotoChanged(false) // Reset
+    } catch (err) {
+      console.error('Unexpected error while saving:', err)
+      alert('Unexpected error while saving. Check console for details.')
+    }
   }
 
   async function uploadProfilePhoto (file) {
@@ -311,11 +327,12 @@ export default function Application () {
 
     if (error) {
       console.error('Error uploading photo:', error.message)
+      throw error
     }
   }
 
   // ─────────────────────────────────────────────────────────
-  // 6. Rendering
+  // 7. Rendering
   // ─────────────────────────────────────────────────────────
 
   // If not signed in
@@ -349,6 +366,8 @@ export default function Application () {
       </div>
     )
   }
+
+  // If before start date
   if (isBeforeStart) {
     return (
       <div>
@@ -368,12 +387,13 @@ export default function Application () {
       </div>
     )
   }
+
+  // If past due and no submission
   if (isPastDue && lastUpdated === null) {
     return (
       <div>
         <h1 className='text-2xl font-bold mb-4'>Application</h1>
         <p>Application has closed. Please check back next semester!</p>
-
         <button
           onClick={handleSignOut}
           className='bg-gray-400 px-4 py-2 rounded mt-3'
@@ -383,6 +403,7 @@ export default function Application () {
       </div>
     )
   }
+
   // If user is properly signed in & domain is umich
   return (
     <div className='container mx-auto p-4 max-w-4xl'>
@@ -396,16 +417,19 @@ export default function Application () {
           Sign Out
         </button>
       </div>
+
       <div>
-        Hello! Welcome to the Theta Tau rush application! Please be sure to fill
+      Hello! Welcome to the Theta Tau rush application! Please be sure to fill
         out and submit all of the following sections before the due date. There
         is a section for general info about yourself, a place to upload a
         profile picture, and some application questions. Your application will
         only be considered if ALL of the sections are filled in before the due
-        date.{' '}
+        date. Please note that if you do not click "Save Application," and you
+        close the tab, your progress will not be saved, but you can save/update
+        your application as many times as you wish before the due date.
       </div>
 
-      {/* If you have a due date */}
+      {/* Due Date */}
       {dueDate && (
         <div className='mb-4 text-gray-700'>
           <span className='font-semibold'>Due Date:</span>{' '}
@@ -425,8 +449,8 @@ export default function Application () {
           <div className='flex flex-col md:flex-row gap-6'>
             {/* Photo Upload / Crop */}
             <div className='w-full md:w-1/2 flex flex-col items-center'>
-              {/* Show existing profile image if available */}
-              {croppingImageUrl && isPastDue? (
+              {/* Show existing/cropped profile image if available */}
+              {croppingImageUrl && isPastDue ? (
                 <div className='relative w-48 h-48 bg-gray-200 overflow-hidden rounded-full'>
                   <img
                     src={croppingImageUrl}
@@ -434,11 +458,11 @@ export default function Application () {
                     className='w-full h-full object-cover rounded-full'
                   />
                 </div>
-              ) : isPastDue && (
-                <p>No profile photo uploaded.</p>
+              ) : (
+                isPastDue && <p>No profile photo uploaded.</p>
               )}
 
-              {/* Only allow image selection if the application is not past due */}
+              {/* Only allow new file selection if not past due */}
               {!isPastDue && (
                 <div className='mt-2'>
                   <label className='bg-blue-500 text-white px-3 py-2 rounded cursor-pointer'>
@@ -454,9 +478,9 @@ export default function Application () {
                 </div>
               )}
 
-              {/* Show cropping UI only if image is being uploaded and past due is false */}
+              {/* Show cropping UI if we have an image and not past due */}
               {croppingImageUrl && !isPastDue && (
-                <div className='relative w-48 h-48 bg-gray-200 overflow-hidden rounded-full'>
+                <div className='relative w-48 h-48 bg-gray-200 overflow-hidden rounded-full mt-3'>
                   <Cropper
                     image={croppingImageUrl}
                     crop={crop}
@@ -464,14 +488,14 @@ export default function Application () {
                     aspect={1}
                     cropShape='round'
                     showGrid={false}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
+                    onCropChange={onCropChange}
+                    onZoomChange={handleZoomChange}
                     onCropComplete={onCropComplete}
                   />
                 </div>
               )}
 
-              {/* Zoom slider and Save button, disabled if past due */}
+              {/* Zoom slider */}
               {croppingImageUrl && !isPastDue && (
                 <div className='mt-2 flex flex-col items-center'>
                   <label>Zoom</label>
@@ -481,18 +505,9 @@ export default function Application () {
                     max={3}
                     step={0.1}
                     value={zoom}
-                    onChange={e => setZoom(Number(e.target.value))}
+                    onChange={e => handleZoomChange(Number(e.target.value))}
                     className='w-40'
-                    disabled={isPastDue}
                   />
-                  <button
-                    type='button'
-                    className='mt-2 bg-green-600 text-white px-3 py-2 rounded'
-                    onClick={handleCrop}
-                    disabled={isPastDue}
-                  >
-                    Save Photo
-                  </button>
                 </div>
               )}
             </div>
@@ -510,7 +525,6 @@ export default function Application () {
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
-
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Last Name</label>
                 <input
@@ -522,7 +536,6 @@ export default function Application () {
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
-
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Major</label>
                 <input
@@ -534,7 +547,6 @@ export default function Application () {
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
-
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Grad Year</label>
                 <input
@@ -546,7 +558,6 @@ export default function Application () {
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
-
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Pronouns</label>
                 <input
@@ -579,7 +590,7 @@ export default function Application () {
           ))}
         </div>
 
-        {/* SUBMIT BUTTON + "LAST UPDATED" */}
+        {/* SUBMIT BUTTON + LAST UPDATED */}
         <div className='flex items-center gap-4'>
           {!isPastDue && (
             <button
@@ -589,10 +600,10 @@ export default function Application () {
               Save Application
             </button>
           )}
-          {/* Show lastUpdated if available */}
           {lastUpdated && (
             <span className='text-gray-600 text-sm'>
-              Last updated: {dayjs(lastUpdated).format('MMM D, YYYY h:mm A')}
+              Last updated:{' '}
+              {dayjs(lastUpdated).format('MMM D, YYYY h:mm A')}
             </span>
           )}
         </div>
