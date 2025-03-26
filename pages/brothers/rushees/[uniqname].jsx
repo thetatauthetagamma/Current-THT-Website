@@ -575,8 +575,8 @@ export default function RusheeProfile () {
 
                                 {/* Child tooltip */}
                                 <div
-                                  className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded 
-                                             whitespace-nowrap -top-9 left-1/2 -translate-x-1/2'
+                                  className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
+             whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
                                 >
                                   {childEmphasizedByNames.length > 0
                                     ? `Emphasized by: ${childEmphasizedByNames.join(
