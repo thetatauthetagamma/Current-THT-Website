@@ -143,6 +143,6 @@ In `constants/pledgeConstants.js`:
 - Update EBoard. You can do this by updating adminRoles in supabase, or on the front end,
 - Initiate Pledges: Highly recommend doing this one on the front end because it will clear all of their data and properly add them to the brothers database.
 - Archive Classes: All you have to do is click this button and all brother classes in the `classes` column will be moved to the `archivedclasses` column.
-- Add Big Little parings to the `BigLittlePairings` table in supabase. This is how we display the big little pairings in the fam tree. You can get the pairings from the parents, and you wont be able to add them to the table until after initiation. We should add a front end feature to do this but it is currently not a feature. 
+- Add Big Little parings to the `BigLittlePairings` table in supabase. This is how we display the big little pairings in the fam tree. You can get the pairings from the parents, and you wont be able to add them to the table until after initiation. After initiation, you can upload a csv file on the admin page with the big little pairings. 
 
 
