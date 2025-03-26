@@ -4,7 +4,7 @@ import supabase from '@/supabase';
 import Select from 'react-select';
 import RushAdminPanel from '@/components/admin/RushAdminPanel';
 import BLPairAdder from '@/components/admin/BLPairAdder';
-
+import PledgeCommitteeManager from "@/components/admin/PledgeCommitteeUpdate";
 interface RoleAssignments {
   [key: string]: string;
 }
@@ -33,6 +33,7 @@ export default function Admin() {
   const [rollEditingMode, setRollEditingMode] = useState<boolean>(false);
   const [eboardEditingMode, setEboardEditingMode] = useState<boolean>(false);
   const [rushEditingMode, setRushEditingMode] = useState<boolean>(false);
+  const [pledgeEditingMode, setPledgeEditingMode] = useState<boolean>(false);
   const [eboardMembers, setEboardMembers] = useState<BrotherData[]>([]);
   const [newRoleNames, setNewRoleNames] = useState<{ [key: string]: string }>({});
   const [searchResults, setSearchResults] = useState<BrotherData[]>([]);
@@ -507,6 +508,8 @@ export default function Admin() {
                   </button>
                 )}
                 {rushEditingMode ? <RushCommitteeManager setRushEditingMode={setRushEditingMode} /> : (<button onClick={() => setRushEditingMode(!rushEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Rush Committee</button>)}
+
+                {pledgeEditingMode ? <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} /> : (<button onClick={() => setPledgeEditingMode(!pledgeEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Pledge Committee</button>)}
               </div>
             )}
 
