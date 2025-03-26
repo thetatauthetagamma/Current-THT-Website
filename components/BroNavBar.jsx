@@ -82,7 +82,7 @@ export default function BroNavBar({isPledge}) {
   }, [userEmail]);
 
   return (
-    <div className="md:border-r-2 md:border-b-0 border-r-0 border-b-2 border-[#a3000020] flex-col justify-center items-center lg:w-1/4">
+    <div className="md:border-r-2 md:border-b-0 border-r-0 border-b-2 border-[#a3000020] flex-col justify-center items-center lg:w-1/4 flex-shrink-0">
       <div className="pt-4 pl-6 pr-6 pb-4">
         <p className="font-bold text-xl bg-[#8b000070] p-4 rounded-md text-center mb-4">{getGreeting()}, {firstname}!</p>
 
