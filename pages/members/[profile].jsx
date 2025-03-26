@@ -554,54 +554,56 @@ export default function Profile () {
                 </div>
 
                 {/* CURRENT CLASSES */}
-                <div className='flex flex-col items-center p-2 w-full'>
-                  <p className='text-lg font-semibold'>Current Classes</p>
-                  {editableFields.currentClasses && isEditable ? (
-                    <div className='flex flex-col'>
-                      <p className='text-center mb-2 text-red-500'>
-                        Please add class name in this format (EECS 482, MECHENG 211, AEROSP 200)
-                      </p>
-                      <div className='grid grid-cols-3 gap-4'>
-                        {currentClasses?.map((className, index) => (
-                          <div key={index} className='flex flex-row items-center'>
-                            <button
-                              onClick={() => handleDeleteClass(index)}
-                              className='text-red-500 hover:text-red-700 font-semibold mr-2'
-                            >
-                              X
-                            </button>
-                            <input
-                              type='text'
-                              placeholder={`Class ${index + 1}`}
-                              value={className}
-                              onChange={e =>
-                                handleCurrentClassChange(index, e.target.value)
-                              }
-                              className='whitespace-nowrap w-full border-2 border-[#8b000070] text-center'
-                            />
-                          </div>
-                        ))}
-                      </div>
+                {/* Current Classes */}
+          <div className="mb-6">
+            <label className="text-lg font-semibold block mb-2 text-center">Current Classes</label>
+            {editableFields.currentClasses && isEditable ? (
+              <div>
+                <p className="text-sm text-red-500 text-center mb-2">
+                  Please add class names in this format: EECS 482, MECHENG 211, AEROSP 200
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {currentClasses.map((className, idx) => (
+                    <div key={idx} className="flex items-center">
                       <button
-                        onClick={handleAddClass}
-                        className='text-green-500 hover:text-green-700 font-semibold mt-4'
+                        onClick={() => handleDeleteClass(idx)}
+                        className="text-red-600 font-bold mr-2"
                       >
-                        Add Class
+                        X
                       </button>
+                      <input
+                        type="text"
+                        value={className}
+                        onChange={e => handleCurrentClassChange(idx, e.target.value)}
+                        className="border-2 border-[#8b000070] flex-grow px-2 py-1"
+                      />
                     </div>
-                  ) : (
-                    <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
-                      {currentClasses?.map((className, index) => (
-                        <div
-                          key={index}
-                          className='text-lg text-center whitespace-nowrap'
-                        >
-                          {className}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
+                <button
+                  onClick={handleAddClass}
+                  className="block mt-2 mx-auto bg-green-600 text-white font-semibold px-3 py-1 rounded hover:bg-green-700"
+                >
+                  Add Class
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-2">
+                {currentClasses && currentClasses.length > 0 ? (
+                  currentClasses.map((className, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-gray-200 px-3 py-1 rounded-full text-sm"
+                    >
+                      {className}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500">No classes listed.</p>
+                )}
+              </div>
+            )}
+          </div>
               </div>
 
               {/* EDIT / SAVE BUTTONS */}
