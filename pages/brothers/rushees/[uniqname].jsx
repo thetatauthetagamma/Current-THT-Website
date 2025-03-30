@@ -53,18 +53,20 @@ export default function RusheeProfile () {
     const fetchAllBrothers = async () => {
       const { data, error } = await supabase
         .from('Brothers')
-        .select('uniqname, firstname, lastname')
+        .select('userid, firstname, lastname')
 
       if (error) {
         console.error('Error fetching all brothers:', error)
         return
       }
       if (data) {
+        console.log('Fetched all brothers:', data)
         const map = {}
         data.forEach(bro => {
-          map[bro.uniqname] = `${bro.firstname} ${bro.lastname}`
+          map[bro.userid] = `${bro.firstname} ${bro.lastname}`
         })
         setBrothersMap(map)
+        console.log('Fetched brothers map:', map)
       }
     }
     fetchAllBrothers()
@@ -479,9 +481,18 @@ export default function RusheeProfile () {
                           className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
              whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
                         >
-                          {emphasizedByNames.length > 0
-                            ? `Emphasized by: ${emphasizedByNames.join(', ')}`
-                            : 'No emphasis yet'}
+                          {emphasizedByNames.length > 0 ? (
+                            <div>
+                              <p className='font-semibold mb-1'>
+                                Emphasized by:
+                              </p>
+                              {emphasizedByNames.map((name, i) => (
+                                <p key={i}>{name}</p>
+                              ))}
+                            </div>
+                          ) : (
+                            'No emphasis yet'
+                          )}
                         </div>
                       </div>
                     </div>
@@ -524,6 +535,10 @@ export default function RusheeProfile () {
                           ).map(uniq => {
                             return brothersMap[uniq] || uniq
                           })
+                          console.log(
+                            'childEmphasizedByNames:',
+                            childEmphasizedByNames
+                          )
 
                           const canClickChild = child.brother !== brotherID
 
@@ -578,11 +593,18 @@ export default function RusheeProfile () {
                                   className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
              whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
                                 >
-                                  {childEmphasizedByNames.length > 0
-                                    ? `Emphasized by: ${childEmphasizedByNames.join(
-                                        ', '
-                                      )}`
-                                    : 'No emphasis yet'}
+                                  {childEmphasizedByNames.length > 0 ? (
+                                    <div>
+                                      <p className='font-semibold mb-1'>
+                                        Emphasized by:
+                                      </p>
+                                      {childEmphasizedByNames.map((name, i) => (
+                                        <p key={i}>{name}</p>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    'No emphasis yet'
+                                  )}
                                 </div>
                               </div>
                             </div>
