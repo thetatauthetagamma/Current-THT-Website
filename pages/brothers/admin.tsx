@@ -5,6 +5,8 @@ import Select from 'react-select';
 import RushAdminPanel from '@/components/admin/RushAdminPanel';
 import BLPairAdder from '@/components/admin/BLPairAdder';
 import PledgeCommitteeManager from "@/components/admin/PledgeCommitteeUpdate";
+import PledgeRequirementsManager from "@/components/admin/PledgeRequirementsManager";
+
 interface RoleAssignments {
   [key: string]: string;
 }
@@ -534,6 +536,10 @@ export default function Admin() {
               <BLPairAdder />
             </div>
             )}
+            {/* Show the PledgeRequirementsManager if adminrole is dev or parent */}
+        {(adminRole === 'dev' || adminRole === 'parent') && (
+          <PledgeRequirementsManager />
+        )}
           </div>
         </div>
       </div>
