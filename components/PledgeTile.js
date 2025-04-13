@@ -169,11 +169,13 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         .select('uniqname, interviews')
         .eq('uniqname', pledge)
         .single()
-
+  
       if (!error && data) {
         const { interviews: currentInts } = data
         if (currentInts && currentInts.includes(userID)) {
           setHasInterviewed(true)
+        } else {
+          setHasInterviewed(false)
         }
       }
     } catch (error) {
