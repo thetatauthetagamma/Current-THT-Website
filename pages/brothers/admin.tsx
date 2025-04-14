@@ -316,13 +316,10 @@ export default function Admin() {
       fetchPledges()
     }
     await supabase
-      .from('PDSignOffs')
+      .from('Pledge_SignOffs')
       .delete()
       .eq('pledge', uniqname)
-    await supabase
-      .from('CommitteeSignOffs')
-      .delete()
-      .eq('pledge', uniqname)
+   
   }
 
   useEffect(() => {
