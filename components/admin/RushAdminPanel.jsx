@@ -135,23 +135,7 @@ export default function RushAdminPanel() {
         return;
       }
 
-      const pdSignOffsData = rushees.map(({ uniqname }) => ({ pledge: uniqname }));
-      const committeeSignOffsData = rushees.map(({ uniqname }) => ({ pledge: uniqname }));
-  
-      const { error: pdError } = await supabase.from('PDSignOffs').insert(pdSignOffsData);
-      if (pdError) {
-        console.error('Error inserting PD sign-offs:', pdError);
-        alert('Error inserting PD sign-offs. Check console.');
-        return;
-      }
-  
-      const { error: committeeError } = await supabase.from('CommitteeSignOffs').insert(committeeSignOffsData);
-      if (committeeError) {
-        console.error('Error inserting Committee sign-offs:', committeeError);
-        alert('Error inserting Committee sign-offs. Check console.');
-        return;
-      }
-  
+    
       // Mark all rushees as inactive
       const { error: updateError } = await supabase
         .from('Rushees')
