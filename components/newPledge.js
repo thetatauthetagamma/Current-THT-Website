@@ -70,11 +70,7 @@ const NewPledgeTile = ({ fetchPledges }) => {
         }
       ])
 
-      // Insert companion data into PDSignOffs
-      await supabase.from('PDSignOffs').insert([{ pledge: uniqname }])
-
-      // Insert companion data into CommitteeSignOffs
-      await supabase.from('CommitteeSignOffs').insert([{ pledge: uniqname }])
+     
 
       // Upload the compressed profile image if it exists
       if (profileImage) {
