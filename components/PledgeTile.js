@@ -7,7 +7,6 @@ import thtlogo from '../public/tht-logo.png'
 import trash from '../public/trash-can.png'
 
 // [Optional] If you still want these for default or static uses
-import { numAcademicHours, numSocialHours } from '../constants/pledgeConstants'
 
 // NextUI imports
 import {
