@@ -4,35 +4,49 @@ import thtlogo from '../public/tht-logo.png'
 import Image from 'next/image'
 import supabase from '../supabase'
 import moment from 'moment-timezone'
-import { pdRequirementList, committeeList,requirementDueDate, numAcademicHours, numSocialHours} from '../constants/pledgeConstants';
 
-
+// Keep these specific imports from your constants:
+import {
+  requirementDueDate,
+  numAcademicHours,
+  numSocialHours
+} from '../constants/pledgeConstants'
 
 const PledgeTilePledgeView = ({ pledge }) => {
-  //array of brother emails who pledge has interviewed:
+  // array of brother emails who pledge has interviewed:
   const [interviews, setInterviews] = useState(pledge.interviews)
-  //array of brother firstname lastname who pledge has interviewed:
+  // array of brother firstname/lastname who pledge has interviewed:
   const [interviewedBrothers, setInterviewedBrothers] = useState([])
-  //num intervieed Brothers
-  const [numInterviews, setNumInterviews] = useState(0)
-  //number of pd requirements completed:
-  const [pd, setPD] = useState(0)
-  //array of pd sign offs key/val pairs where key corresponds to key of pdRequirementsList and value is bool:
-  const [pdSOs, setpdSOs] = useState([])
-  //number of committee sign offs
-  const [numCommitteeSOs, setnumCommitteeSOs] = useState(0)
-  //array of committee sign offs key/val pairs where key corresponds to key of committeeList and value is bool:
-  const [committeeSignOffs, SetCommitteeSignOffs] = useState([])
 
+  // number of PD signoffs completed
+  const [pdCompletedCount, setPDCompletedCount] = useState(0)
+  // all PD signoffs for this pledge (each row from Pledge_SignOffs + Pledge_Requirements)
+  const [pdSignOffs, setPDSignOffs] = useState([])
+  // all PD requirements from the DB
+  const [pdRequirements, setPDRequirements] = useState([])
+
+  // number of committee signoffs completed
+  const [committeeCompletedCount, setCommitteeCompletedCount] = useState(0)
+  // all committee signoffs for this pledge
+  const [committeeSignOffs, setCommitteeSignOffs] = useState([])
+  // all committee requirements from the DB
+  const [committeeRequirements, setCommitteeRequirements] = useState([])
+
+  // Pledge Info
   const [firstname, setFirstname] = useState('')
   const [userID, setUserID] = useState('')
-
   const [socialHours, setSocialHours] = useState(0)
   const [academicHours, setAcademicHours] = useState(0)
 
+  // interview counts
+  const [numInterviews, setNumInterviews] = useState(0)
+
+  // countdown to due date
   const [countdown, setCountdown] = useState('')
 
-
+  // ============================
+  //  Get user session + pledge details
+  // ============================
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -41,42 +55,49 @@ const PledgeTilePledgeView = ({ pledge }) => {
           setUserID(session.data.session?.user.email || '')
         }
       } catch (error) {
+        console.error('Error fetching session', error)
         setUserID('')
       }
     }
-
     fetchSession()
-  }, [userID])
+  }, [])
 
-  //Fetches the pledges details
-  async function fetchPledgeDetails () {
+  // Fetch the Pledge’s row from the “Pledges” table
+  async function fetchPledgeDetails() {
     try {
       const { data, error } = await supabase
         .from('Pledges')
         .select('*')
         .eq('uniqname', pledge)
-      if (error) {
-        throw error
-      }
+        .single()
+
+      if (error) throw error
       if (data) {
-        setFirstname(data[0].firstname)
-        setInterviews(data[0].interviews)
-        if (interviews) {
-          setNumInterviews(data[0].interviews.length)
-        }
-        setAcademicHours(data[0].academicHours)
-        setSocialHours(data[0].socialHours)
-      } else {
+        setFirstname(data.firstname)
+        setInterviews(data.interviews || [])
+        setNumInterviews(data.interviews ? data.interviews.length : 0)
+        setAcademicHours(data.academicHours || 0)
+        setSocialHours(data.socialHours || 0)
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error fetching pledge details:', error)
+    }
   }
 
-  async function fetchInterviewedBrothers () {
+  // ============================
+  //  Interview Brothers
+  // ============================
+  async function fetchInterviewedBrothers() {
+    if (!interviews || interviews.length === 0) {
+      setInterviewedBrothers([])
+      return
+    }
     try {
       const { data, error } = await supabase
         .from('Brothers')
         .select('firstname, lastname')
         .in('email', interviews)
+
       if (error) throw error
       if (data) {
         setInterviewedBrothers(data)
@@ -89,56 +110,104 @@ const PledgeTilePledgeView = ({ pledge }) => {
 
   useEffect(() => {
     fetchInterviewedBrothers()
-  }, [interviews, userID])
+  }, [interviews])
 
   useEffect(() => {
     fetchPledgeDetails()
   }, [userID])
 
-  //gets the committee sign offs
-  useEffect(() => {
-    const fetchCommitteeSignoffs = async () => {
+  // ============================
+  //  PD & Committee Requirements from DB
+  // ============================
+  async function fetchPDRequirements() {
+    try {
       const { data, error } = await supabase
-        .from('CommitteeSignOffs')
+        .from('Pledge_Requirements')
         .select('*')
-        .eq('pledge', pledge)
-
-      if (data && data.length > 0) {
-        const committeeSignOffCount = Object.values(data[0]).filter(
-          value => value == true
-        ).length
-        SetCommitteeSignOffs(data)
-        setnumCommitteeSOs(committeeSignOffCount)
-      } else {
-        console.log('error fetching data:', error)
-      }
+        .eq('type', 'pd')
+      if (error) throw error
+      setPDRequirements(data || [])
+    } catch (err) {
+      console.error('Error fetching PD requirements:', err)
     }
+  }
 
-    fetchCommitteeSignoffs()
-  }, [userID])
- 
-  //gets the pd sign offs
-  useEffect(() => {
-    const fetchPDSignoffs = async () => {
+  async function fetchCommitteeRequirements() {
+    try {
       const { data, error } = await supabase
-        .from('PDSignOffs')
+        .from('Pledge_Requirements')
         .select('*')
-        .eq('pledge', pledge)
-      if (data && data.length > 0) {
-        const pdSignOffCount = Object.values(data[0]).filter(
-          value => value == true
-        ).length
-        setpdSOs(data)
-        setPD(pdSignOffCount)
-      } else {
-        console.log('error fetching data:', error)
-      }
+        .eq('type', 'committee')
+      if (error) throw error
+      setCommitteeRequirements(data || [])
+    } catch (err) {
+      console.error('Error fetching committee requirements:', err)
     }
-    fetchPDSignoffs()
+  }
+
+  // ============================
+  //  Pledge SignOffs for PD / Committee
+  // ============================
+  async function fetchPledgePDSignoffs() {
+    try {
+      const { data, error } = await supabase
+        .from('Pledge_SignOffs')
+        .select(`
+          id,
+          completed,
+          Pledge_Requirements: Pledge_Requirements!inner(*)
+        `)
+        .eq('uniqname', pledge)
+        .eq('Pledge_Requirements.type', 'pd')
+
+      if (error) throw error
+
+      setPDSignOffs(data || [])
+      // Count how many are completed
+      const count = data.filter(item => item.completed).length
+      setPDCompletedCount(count)
+    } catch (err) {
+      console.error('Error fetching PD signoffs:', err)
+    }
+  }
+
+  async function fetchPledgeCommitteeSignoffs() {
+    try {
+      const { data, error } = await supabase
+        .from('Pledge_SignOffs')
+        .select(`
+          id,
+          completed,
+          Pledge_Requirements: Pledge_Requirements!inner(*)
+        `)
+        .eq('uniqname', pledge)
+        .eq('Pledge_Requirements.type', 'committee')
+
+      if (error) throw error
+
+      setCommitteeSignOffs(data || [])
+      // Count how many are completed
+      const count = data.filter(item => item.completed).length
+      setCommitteeCompletedCount(count)
+    } catch (err) {
+      console.error('Error fetching committee signoffs:', err)
+    }
+  }
+
+  // Kick off requirement + signoff fetches
+  useEffect(() => {
+    fetchPDRequirements()
+    fetchCommitteeRequirements()
+  }, [])
+
+  useEffect(() => {
+    fetchPledgePDSignoffs()
+    fetchPledgeCommitteeSignoffs()
   }, [userID])
 
-  //Sets the countdown till pledge requirements are do
-  //TODO EACH SEMESTER: Set due date
+  // ============================
+  //  Countdown to due date
+  // ============================
   useEffect(() => {
     const interval = setInterval(() => {
       const now = moment().tz('America/Detroit').startOf('day')
@@ -147,13 +216,15 @@ const PledgeTilePledgeView = ({ pledge }) => {
         .startOf('day')
 
       const remainingTime = eventDate.diff(now, 'days') // diff in days
-
       setCountdown(remainingTime)
     }, 1000)
 
     return () => clearInterval(interval)
   }, [])
 
+  // ============================
+  //  Render
+  // ============================
   return (
     <div className=' bg-gray-100 p-2 rounded-2xl mb-4 px-4 flex flex-col items-start flex-start'>
       <div className='flex font-bold text-4xl lg:text-6xl py-4'>
@@ -167,23 +238,24 @@ const PledgeTilePledgeView = ({ pledge }) => {
         days until pledge requirements are due.
       </div>
 
+      {/* INTERVIEWS */}
       <div className='pb-6 w-full'>
         <div className='text-lg'>
-          {numInterviews == 0 || interviews.length <= 30 ? (
+          {numInterviews < 30 ? (
             <>
               You have completed {numInterviews} interviews. You have{' '}
               {30 - numInterviews} interviews remaining.
             </>
           ) : (
             <>
-              You have completed {interviews?.length} interviews. You have 0
+              You have completed {numInterviews} interviews. You have 0
               interviews remaining.
             </>
           )}
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round(((numInterviews | 0) * 100) / 30)}
+          completed={Math.round((Math.min(numInterviews, 30) * 100) / 30)}
           bgColor='#22c55e'
           height='40px'
         />
@@ -199,75 +271,99 @@ const PledgeTilePledgeView = ({ pledge }) => {
           ))}
         </div>
       </div>
+
+      {/* COMMITTEE SIGNOFFS */}
       <div className='pb-6 w-full border-t-2 border-[#a3000020] pt-1'>
         <div className='text-lg'>
-          You have completed {numCommitteeSOs} committee sign offs. You have{' '}
-          {Object.keys(committeeList).length - numCommitteeSOs} sign offs remaining.
+          You have completed {committeeCompletedCount} committee sign offs. You have{' '}
+          {committeeRequirements.length - committeeCompletedCount} sign offs remaining.
         </div>
-
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round((numCommitteeSOs * 100) / Object.keys(committeeList).length)}
+          completed={Math.round(
+            (committeeCompletedCount * 100) / committeeRequirements.length
+          )}
           bgColor='#22c55e'
           height='40px'
         />
         <div className='pt-2'>
-          {' '}
           Sign Offs:
-          <div className=''>
-            {Object.keys(committeeList).map(key => (
-              <div key={key} className='flex items-center space-x-2'>
-                <input
-                  type='checkbox'
-                  checked={committeeSignOffs[0]?.[key]}
-                  readOnly
-                  className='rounded accent-[#8b0000] p-2'
-                />
-                <label>{committeeList[key]}</label>
-              </div>
-            ))}
+          <div>
+            {committeeRequirements.map((req) => {
+              // see if there's a signoff for this requirement
+              const signoff = committeeSignOffs.find(
+                (so) => so.Pledge_Requirements.id === req.id
+              )
+              const isCompleted = signoff?.completed || false
+
+              return (
+                <div key={req.id} className='flex items-center space-x-2'>
+                  <input
+                    type='checkbox'
+                    checked={isCompleted}
+                    readOnly
+                    className='rounded accent-[#8b0000] p-2'
+                  />
+                  <label>{req.requirement}</label>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
 
+      {/* PD SIGNOFFS */}
       <div className='w-full pb-6 border-t-2 border-[#a3000020] pt-1'>
         <div className='text-lg '>
-          You have completed {pd} professional development sign offs. You have{' '}
-          {Object.keys(pdRequirementList).length - pd} sign offs remaining.
+          You have completed {pdCompletedCount} professional development sign offs. You have{' '}
+          {pdRequirements.length - pdCompletedCount} sign offs remaining.
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round((pd * 100) / Object.keys(pdRequirementList).length)}
+          completed={Math.round(
+            (pdCompletedCount * 100) / pdRequirements.length
+          )}
           bgColor='#22c55e'
           height='40px'
         />
         <div className='pt-2'>
-          {' '}
           Sign Offs:
-          <div className=''>
-            {Object.keys(pdRequirementList).map(key => (
-              <div key={key} className='flex items-center space-x-2'>
-                <input
-                  type='checkbox'
-                  checked={pdSOs[0]?.[key]}
-                  readOnly
-                  className='rounded accent-[#8b0000] p-2'
-                />
-                <label>{pdRequirementList[key]}</label>
-              </div>
-            ))}
+          <div>
+            {pdRequirements.map((req) => {
+              const signoff = pdSignOffs.find(
+                (so) => so.Pledge_Requirements.id === req.id
+              )
+              const isCompleted = signoff?.completed || false
+
+              return (
+                <div key={req.id} className='flex items-center space-x-2'>
+                  <input
+                    type='checkbox'
+                    checked={isCompleted}
+                    readOnly
+                    className='rounded accent-[#8b0000] p-2'
+                  />
+                  <label>{req.requirement}</label>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
+
+      {/* HOURS */}
       <div className='w-full pb-6 border-t-2 border-[#a3000020] pt-1'>
         <div className='text-lg '>
           You have completed {socialHours} social hours and {academicHours}{' '}
-          academic hours. You have {numSocialHours + numAcademicHours - socialHours - academicHours} hours
-          remaining.
+          academic hours. You have{' '}
+          {numSocialHours + numAcademicHours - socialHours - academicHours} hours remaining.
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round(((academicHours + socialHours) * 100) / (numSocialHours+numAcademicHours))}
+          completed={Math.round(
+            ((academicHours + socialHours) * 100) /
+              (numSocialHours + numAcademicHours)
+          )}
           bgColor='#22c55e'
           height='40px'
         />
