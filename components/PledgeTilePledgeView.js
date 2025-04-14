@@ -99,6 +99,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
             setNumSocialHoursRequired(data.num_social_hours)
             setNumAcademicHoursRequired(data.num_academic_hours)
             setInterviewsRequired(data.num_interviews)
+            setRequirementDueDate(data.requirement_due_date)
           }
       } catch (error) {
         console.error('Error fetching pledge requirement details:', error)
