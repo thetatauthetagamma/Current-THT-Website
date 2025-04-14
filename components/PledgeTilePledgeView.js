@@ -6,11 +6,11 @@ import supabase from '../supabase'
 import moment from 'moment-timezone'
 
 // Keep these specific imports from your constants:
-import {
-  requirementDueDate,
-  numAcademicHours,
-  numSocialHours
-} from '../constants/pledgeConstants'
+// import {
+//   requirementDueDate,
+//   numAcademicHours,
+//   numSocialHours
+// } from '../constants/pledgeConstants'
 
 const PledgeTilePledgeView = ({ pledge }) => {
   // array of brother emails who pledge has interviewed:
@@ -38,6 +38,10 @@ const PledgeTilePledgeView = ({ pledge }) => {
   const [socialHours, setSocialHours] = useState(0)
   const [academicHours, setAcademicHours] = useState(0)
 
+  const [requirementDueDate, setRequirementDueDate] = useState('')
+  const [numSocialHoursRequired, setNumSocialHoursRequired] = useState(0)
+  const [numAcademicHoursRequired, setNumAcademicHoursRequired] = useState(0) 
+  const [interviewsRequired, setInterviewsRequired] = useState(0)
   // interview counts
   const [numInterviews, setNumInterviews] = useState(0)
 
@@ -84,6 +88,25 @@ const PledgeTilePledgeView = ({ pledge }) => {
     }
   }
 
+  useEffect(() => {
+    const fetchPledgeDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('Pledge_Info')
+          .select('*')
+          .single()
+          if (data) {
+            setNumSocialHoursRequired(data.num_social_hours)
+            setNumAcademicHoursRequired(data.num_academic_hours)
+            setInterviewsRequired(data.num_interviews)
+          }
+      } catch (error) {
+        console.error('Error fetching pledge requirement details:', error)
+      }
+      
+    }
+    fetchPledgeDetails()
+  }, [])
   // ============================
   //  Interview Brothers
   // ============================
@@ -241,10 +264,10 @@ const PledgeTilePledgeView = ({ pledge }) => {
       {/* INTERVIEWS */}
       <div className='pb-6 w-full'>
         <div className='text-lg'>
-          {numInterviews < 30 ? (
+          {numInterviews < interviewsRequired ? (
             <>
               You have completed {numInterviews} interviews. You have{' '}
-              {30 - numInterviews} interviews remaining.
+              {interviewsRequired - numInterviews} interviews remaining.
             </>
           ) : (
             <>
@@ -255,7 +278,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round((Math.min(numInterviews, 30) * 100) / 30)}
+          completed={Math.round((Math.min(numInterviews, interviewsRequired) * 100) / interviewsRequired)}
           bgColor='#22c55e'
           height='40px'
         />
@@ -356,13 +379,13 @@ const PledgeTilePledgeView = ({ pledge }) => {
         <div className='text-lg '>
           You have completed {socialHours} social hours and {academicHours}{' '}
           academic hours. You have{' '}
-          {numSocialHours + numAcademicHours - socialHours - academicHours} hours remaining.
+          {numSocialHoursRequired + numAcademicHoursRequired - socialHours - academicHours} hours remaining.
         </div>
         <ProgressBar
           className='w-full py-2'
           completed={Math.round(
             ((academicHours + socialHours) * 100) /
-              (numSocialHours + numAcademicHours)
+              (numSocialHoursRequired + numAcademicHoursRequired)
           )}
           bgColor='#22c55e'
           height='40px'

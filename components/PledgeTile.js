@@ -50,6 +50,9 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   // Requirements fetched from DB
   const [pdRequirements, setPDRequirements] = useState([]) // all PD requirements
   const [committeeRequirements, setCommitteeRequirements] = useState([]) // all committee requirements
+  const [socialHoursRequired, setSocialHoursRequired] = useState(0)
+  const [academicHoursRequired, setAcademicHoursRequired] = useState(0)
+  const [interviewsRequired, setInterviewsRequired] = useState(0)
 
   // Editable fields
   const [editableFields, setEditableFields] = useState({
@@ -81,6 +84,9 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   }, [userID, editableFields])
 
   useEffect(() => {
+    if (!userID) {
+      return
+    }
     const fetchAdminRole = async () => {
       try {
         const { data, error } = await supabase
@@ -142,6 +148,25 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     fetchPledgeImage()
   }, [pledge])
 
+  useEffect(() => {
+    const fetchPledgeDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('Pledge_Info')
+          .select('*')
+          .single()
+          if (data) {
+            setSocialHoursRequired(data.num_social_hours)
+            setAcademicHoursRequired(data.num_academic_hours)
+            setInterviewsRequired(data.num_interviews)
+          }
+      } catch (error) {
+        console.error('Error fetching pledge requirement details:', error)
+      }
+      
+    }
+    fetchPledgeDetails()
+  }, [])
   // ==========================================================
   // INTERVIEWS
   // ==========================================================
@@ -341,8 +366,6 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
 
       setCommitteeSignOffs(data)
       setnumCommitteeSOs(signOffCount)
-      console.log('Committee signoffs:', data)
-      console.log
     } catch (err) {
       console.error('Error fetching committee signoffs:', err)
     }
@@ -368,7 +391,6 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
       const pdSignOffCount = data.filter(item => item.completed).length
       setpdSOs(data)
       setPD(pdSignOffCount)
-      console.log('PD signoffs:', data)
     } catch (err) {
       console.error('Error fetching PD signoffs:', err)
     }
@@ -463,10 +485,11 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     const calculateProgress = () => {
       // For example, you might still want to cap at 30 interviews or 40 total hours:
       let interviewNum = interviews?.length || 0
-      if (interviewNum > 30) interviewNum = 30
+      if (interviewNum > interviewsRequired) interviewNum = interviewsRequired
 
       let hoursNum = socialHours + academicHours
-      if (hoursNum > 40) hoursNum = 40
+      if (hoursNum > socialHoursRequired + academicHoursRequired)
+        hoursNum = socialHoursRequired + academicHoursRequired
 
       // Completed PD signoffs
       const pdCompleted = pd
@@ -479,7 +502,12 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
       const committeeTotalReqs = committeeRequirements.length
 
       // For example, total denominator = 30 interviews + 40 hours + # PD reqs + # committee reqs
-      const denominator = 30 + 40 + pdTotalReqs + committeeTotalReqs
+      const denominator =
+        interviewsRequired +
+        academicHoursRequired +
+        socialHoursRequired +
+        pdTotalReqs +
+        committeeTotalReqs
       const numerator =
         interviewNum + hoursNum + pdCompleted + committeeCompleted
 
@@ -749,7 +777,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                     : 'Select PD Activity ▼'}
                 </button>
               </DropdownTrigger>
-              <DropdownMenu className="bg-white shadow-lg rounded-md z-50">
+              <DropdownMenu className='bg-white shadow-lg rounded-md z-50'>
                 {pdRequirements.map(req => {
                   const signoff = pdSOs.find(
                     so => so.Pledge_Requirements.id === req.id
@@ -790,7 +818,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                     : 'Select Committee ▼'}
                 </button>
               </DropdownTrigger>
-              <DropdownMenu className="bg-white shadow-lg rounded-md z-50">
+              <DropdownMenu className='bg-white shadow-lg rounded-md z-50'>
                 {committeeRequirements.map(req => {
                   const signoff = committeeSignOffs.find(
                     so => so.Pledge_Requirements.id === req.id

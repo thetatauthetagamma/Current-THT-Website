@@ -5,7 +5,9 @@ import Select from 'react-select';
 import RushAdminPanel from '@/components/admin/RushAdminPanel';
 import BLPairAdder from '@/components/admin/BLPairAdder';
 import PledgeCommitteeManager from "@/components/admin/PledgeCommitteeUpdate";
+import PledgeAdminPanel from '@/components/admin/PledgeAdminPanel';
 import PledgeRequirementsManager from "@/components/admin/PledgeRequirementsManager";
+
 
 interface RoleAssignments {
   [key: string]: string;
@@ -526,9 +528,13 @@ export default function Admin() {
                 </button>
               </div>
             )}
-
+            {(adminRole === 'dev' || adminRole === 'parent') && (
+              <div className="mt-8">
+              <PledgeAdminPanel />
+            </div>
+            )}
              {/* Big Little Pairing */}
-             {(adminRole === 'dev' || adminRole === 'parent') && (
+            {(adminRole === 'dev' || adminRole === 'parent') && (
               <div className="mt-8">
               <BLPairAdder />
             </div>

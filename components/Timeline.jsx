@@ -69,7 +69,7 @@ const Timeline = () => {
     }
 
     return (
-        <div className="bg-slate-200 m-2 flex flex-col justify-center items-center">
+        <div className=" m-2 flex flex-col justify-center items-center">
             <h1 className="text-5xl font-bold z-3 pb-1 m-10 text-[#8b0000]"> Open Rush Events! </h1>
             <VerticalTimeline >
                 {events.map((event, idx) => {
