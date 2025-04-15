@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import ProgressBar from '@ramonak/react-progress-bar'
 import Image from 'next/image'
-import imageCompression from 'browser-image-compression' // 1) IMPORT
+import imageCompression from 'browser-image-compression'
 import supabase from '../supabase'
 import thtlogo from '../public/tht-logo.png'
 import trash from '../public/trash-can.png'
 
-import { pdRequirementList, committeeList, numAcademicHours, numSocialHours } from '../constants/pledgeConstants'
+// [Optional] If you still want these for default or static uses
+
+// NextUI imports
 import {
   Dropdown,
   DropdownTrigger,
@@ -14,7 +16,6 @@ import {
   DropdownSection,
   DropdownItem
 } from '@nextui-org/react'
-
 const PledgeTile = ({ pledge, fetchPledges }) => {
   const [interviews, setInterviews] = useState(pledge.interviews)
   const [interviewedBrothers, setInterviewedBrothers] = useState([])
@@ -30,7 +31,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   const [year, setYear] = useState('')
 
   // PD & Committee signoffs
-  const [pd, setPD] = useState(0)
+  const [pd, setPD] = useState(0) // how many PD signoffs completed
   const [pdSOs, setpdSOs] = useState([])
   const [committeeSignOffs, setCommitteeSignOffs] = useState([])
   const [numCommitteeSOs, setnumCommitteeSOs] = useState(0)
@@ -39,12 +40,20 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   const [socialHours, setSocialHours] = useState(0)
   const [academicHours, setAcademicHours] = useState(0)
   const [completed, setCompleted] = useState(0)
+  // Instead of storing requirement strings for selected, we store the "id" of the selected requirement
   const [selectedCommittee, setSelectedCommittee] = useState('')
   const [selectedPDSO, setselectedPDSO] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [userID, setUserID] = useState('')
 
-  // Which fields are editable?
+  // Requirements fetched from DB
+  const [pdRequirements, setPDRequirements] = useState([]) // all PD requirements
+  const [committeeRequirements, setCommitteeRequirements] = useState([]) // all committee requirements
+  const [socialHoursRequired, setSocialHoursRequired] = useState(0)
+  const [academicHoursRequired, setAcademicHoursRequired] = useState(0)
+  const [interviewsRequired, setInterviewsRequired] = useState(0)
+
+  // Editable fields
   const [editableFields, setEditableFields] = useState({
     academicHours: false,
     socialHours: false,
@@ -74,6 +83,9 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   }, [userID, editableFields])
 
   useEffect(() => {
+    if (!userID) {
+      return
+    }
     const fetchAdminRole = async () => {
       try {
         const { data, error } = await supabase
@@ -93,7 +105,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     fetchAdminRole()
   }, [userID])
 
-  async function fetchPledgeDetails() {
+  async function fetchPledgeDetails () {
     try {
       const { data, error } = await supabase
         .from('Pledges')
@@ -135,6 +147,25 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     fetchPledgeImage()
   }, [pledge])
 
+  useEffect(() => {
+    const fetchPledgeDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('Pledge_Info')
+          .select('*')
+          .single()
+          if (data) {
+            setSocialHoursRequired(data.num_social_hours)
+            setAcademicHoursRequired(data.num_academic_hours)
+            setInterviewsRequired(data.num_interviews)
+          }
+      } catch (error) {
+        console.error('Error fetching pledge requirement details:', error)
+      }
+      
+    }
+    fetchPledgeDetails()
+  }, [])
   // ==========================================================
   // INTERVIEWS
   // ==========================================================
@@ -142,7 +173,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     fetchInterviewedBrothers()
   }, [interviews, userID])
 
-  async function fetchInterviewedBrothers() {
+  async function fetchInterviewedBrothers () {
     try {
       if (!interviews || interviews.length === 0) {
         setInterviewedBrothers([])
@@ -161,7 +192,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     }
   }
 
-  async function checkBrotherInPledge() {
+  async function checkBrotherInPledge () {
     if (!pledge) return
     try {
       const { data, error } = await supabase
@@ -208,10 +239,9 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
       // update DB
       await supabase
         .from('Pledges')
-        .upsert(
-          [{ uniqname: pledge, interviews: updatedInterviews }],
-          { onConflict: 'uniqname' }
-        )
+        .upsert([{ uniqname: pledge, interviews: updatedInterviews }], {
+          onConflict: 'uniqname'
+        })
 
       setInterviews(updatedInterviews)
     } catch (error) {
@@ -274,127 +304,178 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   }
 
   // ==========================================================
-  // PD & COMMITTEE SIGNOFFS
+  // PD & COMMITTEE REQUIREMENTS + SIGNOFFS
   // ==========================================================
   useEffect(() => {
-    fetchCommitteeSignoffs()
-    fetchPDSignoffs()
+    // 1) Get all PD requirements
+    fetchPDSignOffRequirements()
+    // 2) Get all committee requirements
+    fetchCommitteeSignoffRequirements()
+  }, [])
+
+  // Re-fetch signoffs whenever the user picks a new requirement to sign off
+  useEffect(() => {
+    fetchPledgePDSignoffs()
+    fetchPledgeCommitteeSignoffs()
   }, [selectedCommittee, selectedPDSO])
 
-  async function fetchCommitteeSignoffs() {
+  async function fetchCommitteeSignoffRequirements () {
     try {
       const { data, error } = await supabase
-        .from('CommitteeSignOffs')
+        .from('Pledge_Requirements')
         .select('*')
-        .eq('pledge', pledge)
+        .eq('type', 'committee')
+      if (error) throw error
+      setCommitteeRequirements(data || [])
+    } catch (err) {
+      console.error('Error fetching committee requirements:', err)
+    }
+  }
 
-      if (data && data.length > 0) {
-        const signOffCount = Object.values(data[0]).filter(val => val === true).length
-        setCommitteeSignOffs(data)
-        setnumCommitteeSOs(signOffCount)
-      }
+  async function fetchPDSignOffRequirements () {
+    try {
+      const { data, error } = await supabase
+        .from('Pledge_Requirements')
+        .select('*')
+        .eq('type', 'pd')
+      if (error) throw error
+      setPDRequirements(data || [])
+    } catch (err) {
+      console.error('Error fetching PD requirements:', err)
+    }
+  }
+
+  // Fetch the pledge's signoffs for committees
+  async function fetchPledgeCommitteeSignoffs () {
+    try {
+      const { data, error } = await supabase
+        .from('Pledge_SignOffs')
+        .select(
+          `
+          id,
+          completed,
+          Pledge_Requirements: Pledge_Requirements!inner(*)
+        `
+        )
+        .eq('uniqname', pledge)
+        .eq('Pledge_Requirements.type', 'committee')
+
+      if (error) throw error
+
+      // data is an array of signoff records
+      const signOffCount = data.filter(item => item.completed).length
+
+      setCommitteeSignOffs(data)
+      setnumCommitteeSOs(signOffCount)
     } catch (err) {
       console.error('Error fetching committee signoffs:', err)
     }
   }
 
-  async function fetchPDSignoffs() {
+  // Fetch the pledge's signoffs for PD
+  async function fetchPledgePDSignoffs () {
     try {
       const { data, error } = await supabase
-        .from('PDSignOffs')
-        .select('*')
-        .eq('pledge', pledge)
+        .from('Pledge_SignOffs')
+        .select(
+          `
+          id,
+          completed,
+          Pledge_Requirements: Pledge_Requirements!inner(*)
+        `
+        )
+        .eq('uniqname', pledge)
+        .eq('Pledge_Requirements.type', 'pd')
 
-      if (data && data.length > 0) {
-        const pdSignOffCount = Object.values(data[0]).filter(val => val === true).length
-        setpdSOs(data)
-        setPD(pdSignOffCount)
-      }
+      if (error) throw error
+
+      const pdSignOffCount = data.filter(item => item.completed).length
+      setpdSOs(data)
+      setPD(pdSignOffCount)
     } catch (err) {
       console.error('Error fetching PD signoffs:', err)
     }
   }
 
-  const handleCommitteeSignOffSubmit = async () => {
+  // ==========================================================
+  // PD & COMMITTEE SIGNOFF SUBMITS
+  // ==========================================================
+  async function handlePDSignOff () {
     try {
-      if (!selectedCommittee) {
-        console.error('Please select a committee')
+      if (!selectedPDSO) {
+        console.error('Please select a PD requirement first.')
         return
       }
 
-      // Upsert the relevant committee field to true
-      const { error } = await supabase
-        .from('CommitteeSignOffs')
+      // Upsert the signoff
+      const { error: upsertError } = await supabase
+        .from('Pledge_SignOffs')
         .upsert(
-          [{ pledge, [selectedCommittee]: true }],
-          { onConflict: ['pledge'] }
-        )
-      if (error) throw error
-
-      // Now add the brother to the sign-off array
-      const { data: existing, error: existingError } = await supabase
-        .from('CommitteeSignOffs')
-        .select('brotherSO')
-        .eq('pledge', pledge)
-        .single()
-
-      const currentCommitteeBros = existing?.brotherSO || []
-      const updatedCommitteeBros = [...currentCommitteeBros, userID]
-
-      await supabase
-        .from('CommitteeSignOffs')
-        .upsert(
-          [{ pledge, brotherSO: updatedCommitteeBros }],
-          { onConflict: ['pledge'] }
+          [
+            {
+              uniqname: pledge,
+              id: selectedPDSO,
+              completed: true
+            }
+          ],
+          { onConflict: ['uniqname', 'id'] }
         )
 
-      alert(
-        `You have signed off ${pledge} for their ${committeeList[selectedCommittee]} committee sign off.`
-      )
-      setSelectedCommittee('')
+      if (upsertError) throw upsertError
+
+      // Look up the actual requirement text from the DB
+      const pdReqItem = pdRequirements.find(r => r.id === selectedPDSO)
+      const reqTitle = pdReqItem
+        ? pdReqItem.requirement
+        : `Req #${selectedPDSO}`
+
+      alert(`You have signed off ${pledge} for: ${reqTitle}.`)
+
+      setselectedPDSO('')
+      fetchPledgePDSignoffs()
     } catch (err) {
-      console.error('Error with committee sign-off:', err)
+      console.error('Error with PD sign-off:', err)
     }
   }
 
-  const handlePDSignOff = async () => {
+  async function handleCommitteeSignOffSubmit () {
     try {
-      if (!selectedPDSO) {
-        console.error('Please select a PD requirement')
+      if (!selectedCommittee) {
+        console.error('Please select a committee requirement first.')
         return
       }
-      // Upsert the relevant PD field to true
-      const { error } = await supabase
-        .from('PDSignOffs')
+
+      const { error: upsertError } = await supabase
+        .from('Pledge_SignOffs')
         .upsert(
-          [{ pledge, [selectedPDSO]: true }],
-          { onConflict: ['pledge'] }
-        )
-      if (error) throw error
-
-      // Add brother to the sign-off array
-      const { data: existing, error: existingError } = await supabase
-        .from('PDSignOffs')
-        .select('brotherSO')
-        .eq('pledge', pledge)
-        .single()
-
-      const currentPDBros = existing?.brotherSO || []
-      const updatedPDBros = [...currentPDBros, userID]
-
-      await supabase
-        .from('PDSignOffs')
-        .upsert(
-          [{ pledge, brotherSO: updatedPDBros }],
-          { onConflict: ['pledge'] }
+          [
+            {
+              uniqname: pledge,
+              id: selectedCommittee,
+              completed: true
+            }
+          ],
+          {
+            onConflict: ['uniqname', 'id']
+          }
         )
 
-      alert(
-        `You have signed off ${pledge} for their ${pdRequirementList[selectedPDSO]} activity.`
+      if (upsertError) throw upsertError
+
+      // Look up the requirement text from the DB
+      const committeeReqItem = committeeRequirements.find(
+        r => r.id === selectedCommittee
       )
-      setselectedPDSO('')
+      const reqTitle = committeeReqItem
+        ? committeeReqItem.requirement
+        : `Req #${selectedCommittee}`
+
+      alert(`You have signed off pledge ${pledge} for: ${reqTitle}.`)
+
+      setSelectedCommittee('')
+      fetchPledgeCommitteeSignoffs()
     } catch (err) {
-      console.error('Error with PD sign-off:', err)
+      console.error('Error with committee sign-off:', err)
     }
   }
 
@@ -403,27 +484,47 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   // ==========================================================
   useEffect(() => {
     const calculateProgress = () => {
+      // For example, you might still want to cap at 30 interviews or 40 total hours:
       let interviewNum = interviews?.length || 0
-      if (interviewNum > 30) interviewNum = 30
+      if (interviewNum > interviewsRequired) interviewNum = interviewsRequired
 
       let hoursNum = socialHours + academicHours
-      if (hoursNum > 40) hoursNum = 40
+      if (hoursNum > socialHoursRequired + academicHoursRequired)
+        hoursNum = socialHoursRequired + academicHoursRequired
 
-      const pdLength = pd
-      const committeeLength = numCommitteeSOs
+      // Completed PD signoffs
+      const pdCompleted = pd
+      // Completed committee signoffs
+      const committeeCompleted = numCommitteeSOs
 
-      const pdReqListLength = Object.keys(pdRequirementList).length
-      const committeeListLength = Object.keys(committeeList).length
+      // The total number of PD requirements
+      const pdTotalReqs = pdRequirements.length
+      // The total number of committee requirements
+      const committeeTotalReqs = committeeRequirements.length
 
-      // Denominator => 30 interviews + 40 hours + #PD + #committee
-      const denominator = 30 + numAcademicHours + numSocialHours + pdReqListLength + committeeListLength
-      const numerator = interviewNum + hoursNum + pdLength + committeeLength
+      // For example, total denominator = 30 interviews + 40 hours + # PD reqs + # committee reqs
+      const denominator =
+        interviewsRequired +
+        academicHoursRequired +
+        socialHoursRequired +
+        pdTotalReqs +
+        committeeTotalReqs
+      const numerator =
+        interviewNum + hoursNum + pdCompleted + committeeCompleted
 
       const totalProgress = Math.round((numerator / denominator) * 100)
       setCompleted(totalProgress)
     }
     calculateProgress()
-  }, [interviews, pd, numCommitteeSOs, socialHours, academicHours])
+  }, [
+    interviews,
+    pd,
+    numCommitteeSOs,
+    socialHours,
+    academicHours,
+    pdRequirements,
+    committeeRequirements
+  ])
 
   // ==========================================================
   // EDIT / SAVE ADMIN
@@ -469,15 +570,15 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     if (!isConfirmed) return
 
     try {
+      // Delete from main Pledges table
       const { error } = await supabase
         .from('Pledges')
         .delete()
         .eq('uniqname', pledge)
       if (error) throw error
 
-      // Also remove PDSignOffs + CommitteeSignOffs
-      await supabase.from('PDSignOffs').delete().eq('pledge', pledge)
-      await supabase.from('CommitteeSignOffs').delete().eq('pledge', pledge)
+      // Also remove signoffs from Pledge_SignOffs
+      await supabase.from('Pledge_SignOffs').delete().eq('uniqname', pledge)
 
       fetchPledges()
     } catch (err) {
@@ -489,41 +590,41 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   // RENDER
   // ==========================================================
   return (
-    <div className="flex flex-col md:flex-row items-center bg-gray-100 p-2 rounded-2xl mb-4">
+    <div className='flex flex-col md:flex-row items-center bg-gray-100 p-2 rounded-2xl mb-4'>
       {/* LEFT COLUMN: IMAGE + BASIC INFO + ADMIN EDIT */}
-      <div className="flex flex-col items-center md:w-3/12">
+      <div className='flex flex-col items-center md:w-3/12'>
         {/* Profile image */}
-        <div className="mb-2 w-40 h-40">
+        <div className='mb-2 w-40 h-40'>
           {imageUrl ? (
             <img
               src={imageUrl}
-              alt="Pledge"
-              className="rounded-full w-full h-full object-cover"
+              alt='Pledge'
+              className='rounded-full w-full h-full object-cover'
             />
           ) : (
             <Image
               src={thtlogo}
-              alt="logo"
-              className="rounded-full w-full h-full object-cover"
+              alt='logo'
+              className='rounded-full w-full h-full object-cover'
             />
           )}
         </div>
 
         {/* Admin can upload & save image */}
         {isAdmin && editableFields.imageUrl && (
-          <div className="w-full flex justify-center">
-            <label className="cursor-pointer bg-[#8b000070] py-1 text-white mx-1 rounded-md text-center px-2">
+          <div className='w-full flex justify-center'>
+            <label className='cursor-pointer bg-[#8b000070] py-1 text-white mx-1 rounded-md text-center px-2'>
               Upload photo (JPEG only)
               <input
-                type="file"
-                accept="image/*"
+                type='file'
+                accept='image/*'
                 onChange={handleImageChange}
-                className="hidden"
+                className='hidden'
               />
             </label>
             {newImage && (
               <button
-                className="bg-green-500 text-white py-1 px-3 rounded-md hover:scale-105 ml-2"
+                className='bg-green-500 text-white py-1 px-3 rounded-md hover:scale-105 ml-2'
                 onClick={handleImageSave}
               >
                 Save Image
@@ -533,8 +634,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         )}
 
         {/* Basic info */}
-        <div className="text-center mt-2">
-          <p className="font-bold">
+        <div className='text-center mt-2'>
+          <p className='font-bold'>
             {firstname} {lastname}
           </p>
           <p>
@@ -543,34 +644,34 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
 
           {/* Admin Edit / Delete / Save Buttons */}
           {isAdmin && (
-            <div className="flex flex-col md:flex-row items-center justify-evenly w-full">
+            <div className='flex flex-col md:flex-row items-center justify-evenly w-full'>
               {!Object.values(editableFields).some(field => field) ? (
                 <button
-                  className="font-bold m-2 text-md bg-[#8b000070] p-2 rounded-md text-center"
+                  className='font-bold m-2 text-md bg-[#8b000070] p-2 rounded-md text-center'
                   onClick={handleFieldEdit}
                 >
                   Edit
                 </button>
               ) : (
-                <div className="flex flex-row m-2 items-center">
+                <div className='flex flex-row m-2 items-center'>
                   <button
-                    className="font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center h-10"
+                    className='font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center h-10'
                     onClick={handleDeletePledge}
                   >
                     <Image
                       src={trash}
-                      alt="Delete"
-                      className="rounded-full w-full h-full object-cover"
+                      alt='Delete'
+                      className='rounded-full w-full h-full object-cover'
                     />
                   </button>
                   <button
-                    className="font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center"
+                    className='font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center'
                     onClick={handleFieldEdit}
                   >
                     Cancel
                   </button>
                   <button
-                    className="font-bold text-md bg-[#8b000070] p-2 rounded-md text-center"
+                    className='font-bold text-md bg-[#8b000070] p-2 rounded-md text-center'
                     onClick={handleSave}
                   >
                     Save
@@ -583,51 +684,57 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
       </div>
 
       {/* RIGHT COLUMN: STATS, SIGNOFFS, PROGRESS BAR, ETC. */}
-      <div className="flex flex-col items-center w-9/12">
+      <div className='flex flex-col items-center w-9/12'>
         {/* Stats Row */}
-        <div className="flex flex-col md:flex-row items-center justify-evenly w-full pb-2">
-          <div className="flex flex-col items-center p-2">
-            <p className="text-sm font-bold mb-1"># of Interviews</p>
-            <p className="text-sm">{interviews?.length || 0}</p>
+        <div className='flex flex-col md:flex-row items-center justify-evenly w-full pb-2'>
+          <div className='flex flex-col items-center p-2'>
+            <p className='text-sm font-bold mb-1'># of Interviews</p>
+            <p className='text-sm'>{interviews?.length || 0}</p>
           </div>
-          <div className="flex flex-col items-center md:border-x-2 border-black p-2">
-            <p className="text-sm text-center font-bold mb-1"># of PD Activities</p>
-            <p className="text-sm">{pd}</p>
+          <div className='flex flex-col items-center md:border-x-2 border-black p-2'>
+            <p className='text-sm text-center font-bold mb-1'>
+              # of PD Activities
+            </p>
+            <p className='text-sm'>{pd}</p>
           </div>
-          <div className="flex flex-col items-center p-2">
-            <p className="text-sm text-center font-bold mb-1">
+          <div className='flex flex-col items-center p-2'>
+            <p className='text-sm text-center font-bold mb-1'>
               # of Committee Signoffs
             </p>
-            <p className="text-sm">{numCommitteeSOs}</p>
+            <p className='text-sm'>{numCommitteeSOs}</p>
           </div>
-          <div className="flex flex-col items-center md:border-x-2 border-black p-2">
-            <p className="text-sm text-center font-bold mb-1"># of Social Hours</p>
-            <p className="text-sm">
+          <div className='flex flex-col items-center md:border-x-2 border-black p-2'>
+            <p className='text-sm text-center font-bold mb-1'>
+              # of Social Hours
+            </p>
+            <p className='text-sm'>
               {editableFields.socialHours && isAdmin ? (
                 <input
-                  type="text"
+                  type='text'
                   placeholder={socialHours}
                   value={socialHours}
                   onChange={e => setSocialHours(parseInt(e.target.value) || 0)}
-                  className="whitespace-nowrap w-20 text-center border-2 border-[#8b000070]"
+                  className='whitespace-nowrap w-20 text-center border-2 border-[#8b000070]'
                 />
               ) : (
                 socialHours
               )}
             </p>
           </div>
-          <div className="flex flex-col items-center p-2">
-            <p className="text-sm text-center font-bold mb-1">
+          <div className='flex flex-col items-center p-2'>
+            <p className='text-sm text-center font-bold mb-1'>
               # of Academic Hours
             </p>
-            <p className="text-sm">
+            <p className='text-sm'>
               {editableFields.academicHours && isAdmin ? (
                 <input
-                  type="text"
+                  type='text'
                   placeholder={academicHours}
                   value={academicHours}
-                  onChange={e => setAcademicHours(parseInt(e.target.value) || 0)}
-                  className="whitespace-nowrap w-20 text-center border-2 border-[#8b000070]"
+                  onChange={e =>
+                    setAcademicHours(parseInt(e.target.value) || 0)
+                  }
+                  className='whitespace-nowrap w-20 text-center border-2 border-[#8b000070]'
                 />
               ) : (
                 academicHours
@@ -637,17 +744,17 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         </div>
 
         {/* Progress Bar */}
-        <div className="flex flex-col items-center w-full p-2">
+        <div className='flex flex-col items-center w-full p-2'>
           <ProgressBar
-            className="w-full"
+            className='w-full'
             completed={completed}
-            bgColor="#22c55e"
-            height="40px"
+            bgColor='#22c55e'
+            height='40px'
           />
         </div>
 
         {/* Buttons for Interviews, PD, Committee Signoffs */}
-        <div className="flex flex-col md:flex-row items-center m-4 w-full justify-evenly">
+        <div className='flex flex-col md:flex-row items-center m-4 w-full justify-evenly'>
           <button
             onClick={handleInterviewClick}
             className={`flex-start ${
@@ -660,70 +767,83 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
           </button>
 
           {/* PD Signoff */}
-          <div className="flex items-center justify-center m-2 md:w-1/3">
+          <div className='flex items-center justify-center m-2 md:w-1/3'>
             <Dropdown>
               <DropdownTrigger>
-                <button className="bg-gray-500 text-white p-2 rounded-md">
-                  {pdRequirementList[selectedPDSO] || 'Select PD Activity ▼'}
+                <button className='bg-gray-500 text-white p-2 rounded-md'>
+                  {selectedPDSO
+                    ? // Show the text of the currently‐selected requirement
+                      pdRequirements.find(r => r.id === selectedPDSO)
+                        ?.requirement || `Req #${selectedPDSO}`
+                    : 'Select PD Activity ▼'}
                 </button>
               </DropdownTrigger>
-              <DropdownMenu className="bg-gray-200 rounded-md">
-                <DropdownSection>
-                  {Object.keys(pdRequirementList).map(
-                    key =>
-                      pdSOs.length &&
-                      !pdSOs[0][key] && (
-                        <DropdownItem
-                          key={key}
-                          onClick={() => setselectedPDSO(key)}
-                          className="hover:bg-gray-300 cursor-pointer"
-                        >
-                          {pdRequirementList[key]}
-                        </DropdownItem>
-                      )
-                  )}
-                </DropdownSection>
+              <DropdownMenu className='bg-white shadow-lg rounded-md z-50'>
+                {pdRequirements.map(req => {
+                  const signoff = pdSOs.find(
+                    so => so.Pledge_Requirements.id === req.id
+                  )
+                  if (signoff && signoff.completed) {
+                    return null
+                  }
+                  return (
+                    <DropdownItem
+                      key={req.id}
+                      onClick={() => setselectedPDSO(req.id)}
+                      className='bg-gray-100 hover:bg-gray-200 p-2 rounded-md transition-colors'
+                    >
+                      {req.requirement || `Req #${req.id}`}
+                    </DropdownItem>
+                  )
+                })}
               </DropdownMenu>
             </Dropdown>
 
             <button
               onClick={handlePDSignOff}
-              className="ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105"
+              className='ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105'
             >
               Submit
             </button>
           </div>
 
           {/* Committee Signoff */}
-          <div className="flex items-center justify-center m-2 md:w-1/3">
+          <div className='flex items-center justify-center m-2 md:w-1/3'>
             <Dropdown>
               <DropdownTrigger>
-                <button className="bg-gray-500 text-white p-2 rounded-md">
-                  {committeeList[selectedCommittee] || 'Select Committee ▼'}
+                <button className='bg-gray-500 text-white p-2 rounded-md'>
+                  {selectedCommittee
+                    ? committeeRequirements.find(
+                        r => r.id === selectedCommittee
+                      )?.requirement || `Req #${selectedCommittee}`
+                    : 'Select Committee ▼'}
                 </button>
               </DropdownTrigger>
-              <DropdownMenu className="bg-gray-200 rounded-md">
-                <DropdownSection>
-                  {Object.keys(committeeList).map(
-                    key =>
-                      committeeSignOffs.length &&
-                      !committeeSignOffs[0][key] && (
-                        <DropdownItem
-                          key={key}
-                          onClick={() => setSelectedCommittee(key)}
-                          className="hover:bg-gray-300 cursor-pointer"
-                        >
-                          {committeeList[key]}
-                        </DropdownItem>
-                      )
-                  )}
-                </DropdownSection>
+              <DropdownMenu className='bg-white shadow-lg rounded-md z-50'>
+                {committeeRequirements.map(req => {
+                  const signoff = committeeSignOffs.find(
+                    so => so.Pledge_Requirements.id === req.id
+                  )
+                  if (signoff && signoff.completed) {
+                    return null
+                  }
+
+                  return (
+                    <DropdownItem
+                      key={req.id}
+                      onClick={() => setSelectedCommittee(req.id)}
+                      className='bg-gray-100 hover:bg-gray-200 p-2 rounded-md transition-colors'
+                    >
+                      {req.requirement || `Req #${req.id}`}
+                    </DropdownItem>
+                  )
+                })}
               </DropdownMenu>
             </Dropdown>
 
             <button
               onClick={handleCommitteeSignOffSubmit}
-              className="ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105"
+              className='ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105'
             >
               Submit
             </button>
@@ -732,13 +852,13 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
 
         {/* Brothers Interviewed (Admin Only) */}
         {isAdmin && interviewedBrothers && (
-          <div className="flex flex-col items-start w-full mt-2">
-            <div className="text-base font-semibold">Brothers Interviewed:</div>
-            <div className="flex flex-wrap gap-2 mt-2">
+          <div className='flex flex-col items-start w-full mt-2'>
+            <div className='text-base font-semibold'>Brothers Interviewed:</div>
+            <div className='flex flex-wrap gap-2 mt-2'>
               {interviewedBrothers.map((brother, idx) => (
                 <div
                   key={idx}
-                  className="border-2 border-gray-400 rounded p-1 text-center transition-transform transform-gpu hover:scale-105 hover:border-[#8b0000]"
+                  className='border-2 border-gray-400 rounded p-1 text-center transition-transform transform-gpu hover:scale-105 hover:border-[#8b0000]'
                 >
                   {brother.firstname} {brother.lastname}
                 </div>
