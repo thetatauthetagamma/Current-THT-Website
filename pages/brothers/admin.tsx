@@ -49,7 +49,7 @@ export default function Admin() {
     { role: "treasurer", label: "Treasurer" },
     { role: "corsec", label: "Corsec" },
   ];
-  
+
   interface PledgeData {
     uniqname: string;
     firstname: string;
@@ -320,7 +320,7 @@ export default function Admin() {
       .from('Pledge_SignOffs')
       .delete()
       .eq('pledge', uniqname)
-   
+
   }
 
   useEffect(() => {
@@ -381,137 +381,152 @@ export default function Admin() {
           {/* COLUMN 2: Additional Settings */}
           <div className="flex flex-col space-y-6">
             {/* Update Statuses (regent, scribe, dev) */}
-            {(adminRole === 'regent' || adminRole === 'scribe' || adminRole === 'dev') && (
-              <div className="bg-white rounded-md shadow-md p-4">
-                <h2 className="text-xl font-semibold text-[#8B0000] mb-2">Update Statuses</h2>
 
-                {/* Roll-Editing Mode */}
-                {rollEditingMode ? (
-                  <div className="bg-[#fff0f0] p-4 rounded-md">
-                    <h3 className="text-lg font-bold mb-2">
-                      Assign pledges roll numbers
-                    </h3>
-                    {pledges.map((pledge) => (
-                      <div
-                        key={pledge.uniqname}
-                        className="flex flex-col sm:flex-row mb-2 w-full items-center"
-                      >
-                        <p className="sm:w-2/5 font-semibold">
-                          {pledge.firstname} {pledge.lastname}
-                        </p>
-                        <input
-                          type="text"
-                          placeholder="Assign Roll Number"
-                          className="border-2 border-[#8b000070] rounded ml-2 p-1"
-                          onChange={(e) =>
-                            handleRoleNumberChange(pledge.uniqname, e.target.value)
-                          }
+            <div className="bg-white rounded-md shadow-md p-4">
+
+              <h2 className="text-xl font-semibold text-[#8B0000] mb-2">Update Statuses</h2>
+
+              {/* Roll-Editing Mode */}
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
+                <div>
+                  {rollEditingMode ? (
+                    <div className="bg-[#fff0f0] p-4 rounded-md">
+                      <h3 className="text-lg font-bold mb-2">
+                        Assign pledges roll numbers
+                      </h3>
+                      {pledges.map((pledge) => (
+                        <div
+                          key={pledge.uniqname}
+                          className="flex flex-col sm:flex-row mb-2 w-full items-center"
+                        >
+                          <p className="sm:w-2/5 font-semibold">
+                            {pledge.firstname} {pledge.lastname}
+                          </p>
+                          <input
+                            type="text"
+                            placeholder="Assign Roll Number"
+                            className="border-2 border-[#8b000070] rounded ml-2 p-1"
+                            onChange={(e) =>
+                              handleRoleNumberChange(pledge.uniqname, e.target.value)
+                            }
+                          />
+                        </div>
+                      ))}
+                      <div className="flex space-x-2 mt-4">
+                        <button
+                          onClick={handleCancel}
+                          className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSubmit}
+                          className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
+                        >
+                          Submit
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleInitiatePledges}
+                      className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+                    >
+                      Initiate Pledges
+                    </button>
+                  )}
+                </div>)}
+
+
+              {/* Eboard Editing */}
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe') && (
+                <div>
+                  {eboardEditingMode ? (
+                    <div className="bg-[#fff0f0] p-4 rounded-md mt-4">
+                      <h3 className="text-lg font-bold mb-2">
+                        Update Eboard and Committee Heads
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        (Update yourself last to avoid losing admin access)
+                      </p>
+                      {/* Choose Role */}
+                      <div className="mb-4">
+                        <Select
+                          options={eboardPositions.map(({ role, label }) => ({
+                            value: role,
+                            label,
+                          }))}
+                          onChange={handleRoleChange}
+                          placeholder="Select role to update"
+                          isClearable
                         />
                       </div>
-                    ))}
-                    <div className="flex space-x-2 mt-4">
-                      <button
-                        onClick={handleCancel}
-                        className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSubmit}
-                        className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
-                      >
-                        Submit
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleInitiatePledges}
-                    className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
-                  >
-                    Initiate Pledges
-                  </button>
-                )}
 
-                {/* Eboard Editing */}
-                {eboardEditingMode ? (
-                  <div className="bg-[#fff0f0] p-4 rounded-md mt-4">
-                    <h3 className="text-lg font-bold mb-2">
-                      Update Eboard and Committee Heads
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      (Update yourself last to avoid losing admin access)
-                    </p>
-                    {/* Choose Role */}
-                    <div className="mb-4">
-                      <Select
-                        options={eboardPositions.map(({ role, label }) => ({
-                          value: role,
-                          label,
-                        }))}
-                        onChange={handleRoleChange}
-                        placeholder="Select role to update"
-                        isClearable
-                      />
-                    </div>
-
-                    {selectedRole && (
-                      <div className="mb-4">
-                        <p className="mb-1 text-sm text-gray-700">
-                          Current {eboardPositions.find((pos) => pos.role === selectedRole)?.label}:{' '}
-                          {currentMember
-                            ? `${currentMember.firstname} ${currentMember.lastname}`
-                            : 'None'}
-                        </p>
-                        <div className="flex flex-col sm:flex-row items-center">
-                          <div className="w-full sm:w-2/3 mb-2 sm:mb-0 sm:mr-2">
-                            <Select
-                              options={searchResults.map((brother) => ({
-                                value: brother.userid,
-                                label: `${brother.firstname} ${brother.lastname}`,
-                              }))}
-                              onInputChange={(newValue) =>
-                                handleInputChange(newValue, selectedRole)
-                              }
-                              onChange={(selectedOption) =>
-                                setNewRoleNames((prev) => ({
-                                  ...prev,
-                                  [selectedRole]: selectedOption ? selectedOption.value : '',
-                                }))
-                              }
-                              placeholder={`Search new ${eboardPositions.find((pos) => pos.role === selectedRole)?.label}`}
-                              isClearable
-                            />
+                      {selectedRole && (
+                        <div className="mb-4">
+                          <p className="mb-1 text-sm text-gray-700">
+                            Current {eboardPositions.find((pos) => pos.role === selectedRole)?.label}:{' '}
+                            {currentMember
+                              ? `${currentMember.firstname} ${currentMember.lastname}`
+                              : 'None'}
+                          </p>
+                          <div className="flex flex-col sm:flex-row items-center">
+                            <div className="w-full sm:w-2/3 mb-2 sm:mb-0 sm:mr-2">
+                              <Select
+                                options={searchResults.map((brother) => ({
+                                  value: brother.userid,
+                                  label: `${brother.firstname} ${brother.lastname}`,
+                                }))}
+                                onInputChange={(newValue) =>
+                                  handleInputChange(newValue, selectedRole)
+                                }
+                                onChange={(selectedOption) =>
+                                  setNewRoleNames((prev) => ({
+                                    ...prev,
+                                    [selectedRole]: selectedOption ? selectedOption.value : '',
+                                  }))
+                                }
+                                placeholder={`Search new ${eboardPositions.find((pos) => pos.role === selectedRole)?.label}`}
+                                isClearable
+                              />
+                            </div>
+                            <button
+                              onClick={() => handleEboardSubmit(selectedRole)}
+                              className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
+                            >
+                              Submit
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleEboardSubmit(selectedRole)}
-                            className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
-                          >
-                            Submit
-                          </button>
                         </div>
-                      </div>
-                    )}
+                      )}
+                      <button
+                        onClick={handleCancelEBoard}
+                        className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full sm:w-auto"
+                      >
+                        Done Updating
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={handleCancelEBoard}
-                      className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full sm:w-auto"
+                      onClick={handleUpdateEboard}
+                      className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full"
                     >
-                      Done Updating
+                      Update EBoard
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleUpdateEboard}
-                    className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full"
-                  >
-                    Update EBoard
-                  </button>
-                )}
-                {rushEditingMode ? <RushCommitteeManager setRushEditingMode={setRushEditingMode} /> : (<button onClick={() => setRushEditingMode(!rushEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Rush Committee</button>)}
+                  )}</div>
+              )}
 
-                {pledgeEditingMode ? <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} /> : (<button onClick={() => setPledgeEditingMode(!pledgeEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Pledge Committee</button>)}
-              </div>
-            )}
+
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'vice' || adminRole === 'rush') && (
+                <div>
+                  {rushEditingMode ? <RushCommitteeManager setRushEditingMode={setRushEditingMode} /> : (<button onClick={() => setRushEditingMode(!rushEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Rush Committee</button>)}
+                </div>)}
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
+                <div>
+                  {pledgeEditingMode ? <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} /> : (<button onClick={() => setPledgeEditingMode(!pledgeEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Pledge Committee</button>)}
+                </div>)}
+            </div>
+
 
             {/* Misc Settings (academic, dev) */}
             {(adminRole === 'academic' || adminRole === 'dev') && (
@@ -529,14 +544,14 @@ export default function Admin() {
             )}
             {(adminRole === 'dev' || adminRole === 'parent') && (
               <div className="mt-8">
-              <PledgeAdminPanel />
-            </div>
+                <PledgeAdminPanel />
+              </div>
             )}
-             {/* Big Little Pairing */}
+            {/* Big Little Pairing */}
             {(adminRole === 'dev' || adminRole === 'parent') && (
               <div className="mt-8">
-              <BLPairAdder />
-            </div>
+                <BLPairAdder />
+              </div>
             )}
             {/* Show the PledgeRequirementsManager if adminrole is dev or parent */}
 
@@ -599,19 +614,19 @@ function RushCommitteeManager({
       setSearchResults([]);
       return;
     }
-  
+
     // Fetch data asynchronously but don't return a promise to the Select component
     fetchBrothers(inputValue);
   };
-  
+
   const fetchBrothers = async (query: string) => {
     try {
       const { data, error } = await supabase
         .from("Brothers")
         .select("userid, firstname, lastname, major, year, pronouns, email, phone, linkedin, roll, adminrole, classes, archivedclasses")
         .or(`firstname.ilike.%${query}%,lastname.ilike.%${query}%`)
-        
-  
+
+
       if (error) throw error;
       setSearchResults(data as BrotherData[] || []);
     } catch (error) {
