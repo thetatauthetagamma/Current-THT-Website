@@ -167,7 +167,7 @@ export default function BroResources() {
                 {res.title}
               </a>
               {/* Only show delete/edit for certain admin roles */}
-              {(adminRole === "dev" || adminRole === "parent" || adminRole === "webhead") && (
+              {(adminRole === "dev" || adminRole === "parent" || adminRole === "regent" || adminRole ==="vice" || adminRole === "scribe" || adminRole === "treasurer") && (
                 <div className="flex space-x-2">
                   <button
                     onClick={() => beginEdit(res)}
