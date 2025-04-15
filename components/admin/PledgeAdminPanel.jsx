@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import supabase from '@/supabase'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import PledgeRequirementsManager from '@/components/admin/PledgeRequirementsManager';
 
 export default function PledgeAdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false)
@@ -284,6 +285,7 @@ export default function PledgeAdminPanel() {
           >
             Save Pledge Info
           </button>
+          <PledgeRequirementsManager/>
         </div>
       )}
     </div>

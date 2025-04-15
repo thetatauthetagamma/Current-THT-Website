@@ -6,7 +6,6 @@ import RushAdminPanel from '@/components/admin/RushAdminPanel';
 import BLPairAdder from '@/components/admin/BLPairAdder';
 import PledgeCommitteeManager from "@/components/admin/PledgeCommitteeUpdate";
 import PledgeAdminPanel from '@/components/admin/PledgeAdminPanel';
-import PledgeRequirementsManager from "@/components/admin/PledgeRequirementsManager";
 
 
 interface RoleAssignments {
@@ -540,9 +539,7 @@ export default function Admin() {
             </div>
             )}
             {/* Show the PledgeRequirementsManager if adminrole is dev or parent */}
-        {(adminRole === 'dev' || adminRole === 'parent') && (
-          <PledgeRequirementsManager />
-        )}
+
           </div>
         </div>
       </div>

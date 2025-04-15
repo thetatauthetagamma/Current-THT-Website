@@ -12,6 +12,9 @@ export default function PledgeRequirementsManager() {
   // State to hold all rows from the DB
   const [requirements, setRequirements] = useState<PledgeRequirement[]>([])
 
+  // Track whether we are showing the editor
+  const [showEditor, setShowEditor] = useState(false)
+
   // State for new row inputs
   const [newType, setNewType] = useState<'pd' | 'committee'>('pd')
   const [newRequirement, setNewRequirement] = useState('')
@@ -135,9 +138,7 @@ export default function PledgeRequirementsManager() {
     setRequirements(prev => prev.filter(row => row.id !== id))
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Separate PD & Committee requirements
-  // ─────────────────────────────────────────────────────────
+  // Separate PD & Committee requirements for easy display
   const pdRequirements = requirements.filter(r => r.type === 'pd')
   const committeeRequirements = requirements.filter(r => r.type === 'committee')
 
@@ -147,7 +148,10 @@ export default function PledgeRequirementsManager() {
 
     if (isEditing) {
       return (
-        <li key={item.id} className="flex flex-col md:flex-row items-start md:items-center gap-2 mb-2">
+        <li
+          key={item.id}
+          className="flex flex-col md:flex-row items-start md:items-center gap-2 mb-2"
+        >
           <select
             value={editType}
             onChange={e => setEditType(e.target.value as 'pd' | 'committee')}
@@ -187,7 +191,10 @@ export default function PledgeRequirementsManager() {
 
     // Not editing
     return (
-      <li key={item.id} className="flex flex-col md:flex-row items-start md:items-center gap-2 mb-1">
+      <li
+        key={item.id}
+        className="flex flex-col md:flex-row items-start md:items-center gap-2 mb-1"
+      >
         <span className="flex-1">{item.requirement}</span>
 
         <div className="flex gap-2">
@@ -211,11 +218,35 @@ export default function PledgeRequirementsManager() {
   // ─────────────────────────────────────────────────────────
   // Rendering
   // ─────────────────────────────────────────────────────────
+
+  // If not in editing mode, just show a button
+  if (!showEditor) {
+    return (
+      <div className="mt-8">
+        <button
+          onClick={() => setShowEditor(true)}
+          className="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded"
+        >
+          Update Committee/PD Requirements
+        </button>
+      </div>
+    )
+  }
+
+  // Otherwise, show the entire editor
   return (
     <div className="bg-white p-4 rounded shadow mt-8">
-      <h2 className="text-xl font-semibold text-[#8B0000] mb-4">
-        Pledge Requirements Manager
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-[#8B0000]">
+          Committee/PD Requirements Editor
+        </h2>
+        <button
+          onClick={() => setShowEditor(false)}
+          className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded"
+        >
+          Close Editor
+        </button>
+      </div>
 
       {/* ADD NEW Requirement */}
       <div className="flex flex-col md:flex-row items-center gap-2 mb-6">
