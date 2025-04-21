@@ -2,12 +2,15 @@ import Head from 'next/head'
 import Typewriter from '@/components/Typewriter';
 // pages/index.tsx
 import { NextPage} from 'next';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 
 const Home: NextPage = ({}) => {
   const words = ["brotherhood", "philanthropy organization", "professional community", "society of engineers", "family",];
-
+  const isAprilFools = useMemo(() => {
+    const today = new Date();
+    return today.getMonth() === 3 - 1 && today.getDate() === 1; // month is 0-indexed
+  }, []);
   // Your component logic
   return (
     <div className='flex flex-col flex-grow h-full'>
@@ -21,14 +24,14 @@ const Home: NextPage = ({}) => {
     
     <div className='bg-gray-50  border-b-2 border-[#8b000050]'>
 
-      <div className="bg-cover bg-[url('/fratphoto1.jpg')] flex w-full">
+    <div className={`bg-cover flex w-full ${isAprilFools ? "bg-[url('/aprilfools.JPG')]" : "bg-[url('/fratphoto1.jpg')]"}`}>
 
 
 
         <div className="bg-[#8b000070] inset-0 flex flex-col flex-grow justify-center text-white w-full h-[200px] md:h-[600px]">
           <div className='justify-center items-center text-center'>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold  mt-2" >THETA TAU</h1>
-            <h1 className="text-1xl sm:text-2xl md:text-3xl lg:text-5xl font-bold " >THETA GAMMA</h1>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold  mt-2" >{isAprilFools ? "FIDGET FAM" : "THETA TAU"}</h1>
+            <h1 className="text-1xl sm:text-2xl md:text-3xl lg:text-5xl font-bold " >{isAprilFools ? "FOREVER" : "THETA GAMMA"}</h1>
           </div>
           <h2 className="text-md sm:text-lg md:text-1xl lg:text-2xl font-semibold mt-2 text-center pl-6 pr-6" >
             More than a fraternity, we are a{' '}
