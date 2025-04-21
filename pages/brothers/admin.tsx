@@ -230,11 +230,12 @@ export default function Admin() {
       [uniqname]: roleNumber,
     }));
     console.log(roleAssignments);
+    console.log(pledges)
   };
 
   const fetchPledges = async () => {
     try {
-      const { data, error } = await supabase.from('Pledges').select('uniqname, firstname, lastname, major, year, pronouns, email, phone, linkedin');
+      const { data, error } = await supabase.from('Pledges').select('uniqname, firstname, lastname, major, year, pronouns, email, phone, linkedin, classes, archivedclasses');
 
       if (error) {
         throw error;
@@ -266,11 +267,12 @@ export default function Admin() {
     const isConfirmed = window.confirm(
       'Are you sure you want to initiate these pledges? All of their pledging data will be deleted and they will be added to the brother database.'
     )
+    
 
     if (isConfirmed) {
       try {
         const assignedPledges = pledges.filter((pledge) => roleAssignments[pledge.uniqname]);
-
+        console.log(assignedPledges)
         const brothersData: BrotherData[] = assignedPledges.map((pledge) => ({
           userid: pledge.uniqname,
           firstname: pledge.firstname,
