@@ -37,6 +37,7 @@ export default function RushBook() {
       }
     };
     fetchSession();
+    console.log("Fidget Fam == Best Fam")
   }, []);
   const fetchRushees = async () => {
     const { data: rusheesData, error } = await supabase

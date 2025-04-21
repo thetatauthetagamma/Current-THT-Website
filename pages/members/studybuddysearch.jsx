@@ -78,6 +78,7 @@ export default function StudyBuddySearch() {
 
     checkIfBrother();
     checkIfPledge();
+    console.log("Fidget Fam == Best Fam")
   }, [userEmail]);
 
   const normalizedQuery = searchQuery.toLowerCase();

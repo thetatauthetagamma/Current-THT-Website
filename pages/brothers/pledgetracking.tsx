@@ -49,6 +49,7 @@ export default function pledgetracking() {
   };
 
   useEffect(() => {
+    console.log("Fidget Fam == Best Fam")
     const fetchSession = async () => {
       try {
         const session = await supabase.auth.getSession()

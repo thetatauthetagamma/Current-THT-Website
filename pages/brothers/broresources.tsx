@@ -51,6 +51,7 @@ export default function BroResources() {
       }
     };
     getSessionAndAdmin();
+    console.log("Fidget Fam == Best Fam")
   }, []);
 
   // --- 2) Fetch resources (only broResource = true)

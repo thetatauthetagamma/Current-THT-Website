@@ -73,6 +73,7 @@ export default function Profile () {
     }
     checkIfBrother()
     checkIfPledge()
+    console.log("Fidget Fam == Best Fam")
   }, [currentEmail])
 
   // 3) Fetch session and load user data (Brother or Pledge)

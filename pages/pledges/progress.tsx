@@ -28,6 +28,7 @@ export default function progress() {
     };
 
     fetchSession();
+    console.log("Fidget Fam == Best Fam")
   }, []);
 
   //fetches the uniqname of the pledge

@@ -89,6 +89,7 @@ export default function Profile () {
 
     fetchBrotherData()
     fetchSession()
+    console.log("Fidget Fam == Best Fam")
   }, [userid, currentEmail, editableFields])
   // Fetches profile image from storage based on userid
   useEffect(() => {

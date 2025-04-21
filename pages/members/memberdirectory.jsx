@@ -55,6 +55,7 @@ export default function MemberDirectory() {
     }
 
     fetchData()
+    console.log("Fidget Fam == Best Fam")
   }, [userEmail])
 
   useEffect(() => {

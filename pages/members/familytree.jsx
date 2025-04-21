@@ -92,6 +92,7 @@ export default function OrgChartTree() {
   }, []);
 
   useEffect(() => {
+    console.log("Fidget fam on top")
     const checkIfBrother = async () => {
       const { data, error } = await supabase
         .from("Brothers")

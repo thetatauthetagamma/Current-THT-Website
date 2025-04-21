@@ -336,6 +336,7 @@ export default function Admin() {
     }
 
     fetchSession()
+    console.log("Fidget Fam == Best Fam")
   }, [])
 
   useEffect(() => {
