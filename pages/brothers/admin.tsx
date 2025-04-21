@@ -370,6 +370,7 @@ export default function Admin() {
         <h1 className="text-3xl font-bold text-[#8B0000] mb-4">
           Admin Dashboard
         </h1>
+        <h2> your admin role : {adminRole}</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
           {/* COLUMN 1: Rush Admin Panel (if user is rush or dev) */}
           {(adminRole === 'rush' || adminRole === 'dev') && (
