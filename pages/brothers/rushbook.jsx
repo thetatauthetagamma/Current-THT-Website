@@ -132,7 +132,7 @@ export default function RushBook() {
       likes: rushee.likes?.length || 0,
       dislikes: rushee.dislikes?.length || 0,
       stars: rushee.stars?.length || 0,
-      
+      score: getNetScore(rushee) || 0,
     }));
   };
 
