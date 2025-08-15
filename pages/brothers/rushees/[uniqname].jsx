@@ -339,7 +339,6 @@ export default function RusheeProfile() {
         {
           rushee: uniqname,
           brother: brotherID,
-          comment: text,
           value: { text },
           value_type: 'comment',
           time: new Date(),
@@ -389,6 +388,7 @@ export default function RusheeProfile() {
     } else {
       newEmphasis = [...oldEmphasis, brotherID]
     }
+
 
     const { data, error } = await supabase
       .from('Application_Feedback')
