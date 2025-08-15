@@ -7,7 +7,30 @@ import thtlogo from '../../../public/tht-logo.png'
 import ReactionBar from '@/components/rush/ReactionBar'
 import { FaExclamation } from 'react-icons/fa'
 
-export default function RusheeProfile () {
+
+const RusheeStatus = Object.freeze({
+  STRONG_YES: 'Strong Bid',
+  WEAK_YES: 'Weak Bid',
+  NEUTRAL: 'Neutral',
+  WEAK_NO: 'Weak No Bid',
+  STRONG_NO: 'Strong No Bid'
+})
+
+const textOf = (row) => {
+  const v = row?.value;
+
+  // jsonb object like { text: "..." }
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    // Defensive: ensure it's a string
+    return typeof v.text === 'string' ? v.text : JSON.stringify(v.text ?? '');
+  }
+
+  if (typeof v === 'string') return v;
+
+};
+
+
+export default function RusheeProfile() {
   const router = useRouter()
   const { uniqname } = router.query
   const [brotherID, setBrotherID] = useState('')
@@ -20,6 +43,15 @@ export default function RusheeProfile () {
   // Comments
   const [feedback, setFeedback] = useState([])
   const [newComment, setNewComment] = useState('')
+
+  // Coffee Chats
+  const [coffeeChatFeedback, setCoffeeChatFeedback] = useState('')
+  const [diversityChatFeedback, setDiversityChatFeedback] = useState('')
+
+  const [coffeeChatRating, setCoffeeChatRating] = useState(RusheeStatus.NEUTRAL)
+  const [diversityChatRating, setDiversityChatRating] = useState(RusheeStatus.NEUTRAL)
+
+  const [rusheeSummary, setRusheeSummary] = useState('')
 
   // For per-comment reply text
   const [replyTexts, setReplyTexts] = useState({})
@@ -126,6 +158,7 @@ export default function RusheeProfile () {
         `
         )
         .eq('rushee', uniqname)
+        .eq('value_type', 'comment')
         .order('time', { ascending: true })
       if (!error && data) {
         setFeedback(data)
@@ -135,7 +168,7 @@ export default function RusheeProfile () {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // 6) Fetch Q&A
+  // 6a) Fetch Q&A
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -161,11 +194,96 @@ export default function RusheeProfile () {
     }
     fetchAnswers()
   }, [uniqname])
+  // ─────────────────────────────────────────────────────────
+  // 6b) Fetch feedback
+  // ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!uniqname) {
+      return
+    }
+    const fetchChatFeedback = async () => {
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .select('value, value_type')
+        .eq('rushee', uniqname)
+        .in('value_type', ['diversity_chat_feedback', 'coffee_chat_feedback'])
+        .order('time', { ascending: false });
+      if (data && !error) {
+        const diversity = data.find(f => f.value_type === 'diversity_chat_feedback');
+        const coffee = data.find(f => f.value_type === 'coffee_chat_feedback');
+        if (diversity?.value?.text) {
+          setDiversityChatFeedback(diversity.value.text);
+        }
+        if (coffee?.value?.text) {
+          setCoffeeChatFeedback(coffee.value.text);
+        }
+      }
+    }
+
+    fetchChatFeedback()
+  }, [uniqname])
+
+
+  useEffect(() => {
+    if (!uniqname) return
+    const fetchAnswers = async () => {
+      const { data, error } = await supabase
+        .from('Application_Answers')
+        .select('*')
+        .eq('uniqname', uniqname)
+      if (!error && data) {
+        setAnswers(data)
+      }
+    }
+    fetchAnswers()
+  }, [uniqname])
+
+
+  // ─────────────────────────────────────────────────────────
+  // 6c) Populate Old ratings
+  //  ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!uniqname || !brotherID) return;
+
+    const fetchOldRatings = async () => {
+      const [{ data: divRows, error: divErr }, { data: cofRows, error: cofErr }] = await Promise.all([
+        supabase
+          .from('Application_Feedback')
+          .select('value, time')
+          .eq('rushee', uniqname)
+          .eq('brother', brotherID)
+          .eq('value_type', 'diversity_chat_decision')
+          .order('time', { ascending: false })
+          .limit(1),
+        supabase
+          .from('Application_Feedback')
+          .select('value, time')
+          .eq('rushee', uniqname)
+          .eq('brother', brotherID)
+          .eq('value_type', 'coffee_chat_decision')
+          .order('time', { ascending: false })
+          .limit(1),
+      ]);
+
+      if (!divErr && divRows?.length) {
+        const r = divRows[0]?.value?.rating;
+        if (r && Object.values(RusheeStatus).includes(r)) setDiversityChatRating(r);
+      }
+      if (!cofErr && cofRows?.length) {
+        const r = cofRows[0]?.value?.rating;
+        if (r && Object.values(RusheeStatus).includes(r)) setCoffeeChatRating(r);
+      }
+    };
+
+    fetchOldRatings();
+  }, [uniqname, brotherID]);
+
+
 
   // ─────────────────────────────────────────────────────────
   // 7) Add top-level comment
   // ─────────────────────────────────────────────────────────
-  async function handleAddComment () {
+  async function handleAddComment() {
     if (!brotherID) {
       alert('You must be logged in to comment!')
       return
@@ -178,7 +296,8 @@ export default function RusheeProfile () {
         {
           rushee: uniqname,
           brother: brotherID,
-          comment: newComment,
+          value_type: 'comment',
+          value: { text: newComment },
           time: new Date(),
           parent_id: null,
           emphasis: []
@@ -206,7 +325,7 @@ export default function RusheeProfile () {
   // ─────────────────────────────────────────────────────────
   // 8) Add REPLY
   // ─────────────────────────────────────────────────────────
-  async function handleAddReply (parentId) {
+  async function handleAddReply(parentId) {
     if (!brotherID) {
       alert('You must be logged in!')
       return
@@ -221,6 +340,8 @@ export default function RusheeProfile () {
           rushee: uniqname,
           brother: brotherID,
           comment: text,
+          value: { text },
+          value_type: 'comment',
           time: new Date(),
           parent_id: parentId,
           emphasis: []
@@ -244,14 +365,14 @@ export default function RusheeProfile () {
       setReplyTexts(prev => ({ ...prev, [parentId]: '' }))
       // Optionally auto-expand the replies
       setExpandedReplies(prev => ({ ...prev, [parentId]: true }))
-      showReplyBox[parentId] = false
+      setShowReplyBox(prev => ({ ...prev, [parentId]: false }))
     }
   }
 
   // ─────────────────────────────────────────────────────────
   // 9) Toggle emphasis
   // ─────────────────────────────────────────────────────────
-  async function handleToggleEmphasis (commentId) {
+  async function handleToggleEmphasis(commentId) {
     const comment = feedback.find(f => f.id === commentId)
     if (!comment) return
 
@@ -299,14 +420,14 @@ export default function RusheeProfile () {
   // ─────────────────────────────────────────────────────────
   const topLevelComments = feedback.filter(f => !f.parent_id)
 
-  function getRepliesFor (commentId) {
+  function getRepliesFor(commentId) {
     return feedback
       .filter(f => f.parent_id === commentId)
       .sort((a, b) => new Date(a.time) - new Date(b.time))
   }
 
   // Expand/collapse replies
-  function handleToggleExpand (parentId) {
+  function handleToggleExpand(parentId) {
     setExpandedReplies(prev => ({
       ...prev,
       [parentId]: !prev[parentId]
@@ -314,11 +435,184 @@ export default function RusheeProfile () {
   }
 
   // Show/hide reply box
-  function handleToggleReplyBox (parentId) {
+  function handleToggleReplyBox(parentId) {
     setShowReplyBox(prev => ({
       ...prev,
       [parentId]: !prev[parentId]
     }))
+  }
+
+
+  // ─────────────────────────────────────────────────────────
+  // Add Feedback
+  // ─────────────────────────────────────────────────────────
+  async function handleAddFeedback(text, type_name, field) {
+    if (!brotherID) {
+      alert('You must be logged in!');
+      return;
+    }
+    const { data: existing, error: fetchError } = await supabase
+      .from('Application_Feedback')
+      .select('id')
+      .eq('rushee', uniqname)
+      .eq('value_type', type_name)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') { // Ignore "no rows" error
+      console.error('Error fetching existing feedback:', fetchError);
+      return;
+    }
+
+    let result;
+
+    if (existing) {
+      // Update existing feedback
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .update({ value: { text } })
+        .eq('id', existing.id)
+        .select(`
+          *,
+          brotherDetails:Brothers(
+            firstname,
+            lastname
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error updating feedback:', error);
+        return;
+      }
+
+      result = data;
+    } else {
+      // Insert new feedback
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .insert([
+          {
+            rushee: uniqname,
+            brother: brotherID,
+            value: { text },
+            value_type: type_name,
+            time: new Date(),
+            parent_id: null,
+            emphasis: []
+          }
+        ])
+        .select(`
+      *,
+      brotherDetails:Brothers(
+        firstname,
+        lastname
+      )
+    `)
+        .single();
+
+      if (error) {
+        console.error('Error adding feedback:', error);
+        return;
+      }
+
+      // Always update the main feedback list
+      if (data.value_type === 'comment') {
+        setFeedback(prev => [...prev, data]);
+      }
+
+      // Reset the correct text state based on the field flag
+      if (field === 'diversity') {
+        setDiversityChatFeedback(text);
+      } else if (field === 'coffee') {
+        setCoffeeChatFeedback(text);
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Add Rating
+  // ─────────────────────────────────────────────────────────
+  async function handleAddRating(rating, type_name) {
+    if (!brotherID) {
+      alert('You must be logged in!');
+      return;
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('Application_Feedback')
+      .select('*')
+      .eq('rushee', uniqname)
+      .eq('value_type', type_name)
+      .single();
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error('Error fetching existing rating:', fetchError);
+      return;
+    }
+    console.log(existing)
+    console.log(rating)
+    if (existing) {
+      // Update existing rating
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .update({ value: { rating } })
+        .eq('id', existing.id)
+        .select(`
+          *,
+          brotherDetails:Brothers(
+            firstname,
+            lastname
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error updating rating:', error);
+        return;
+      }
+
+      // Update local state
+      setFeedback(prev => {
+        const index = prev.findIndex(f => f.id === existing.id);
+        if (index !== -1) {
+          const updated = { ...prev[index], ...data };
+          return [...prev.slice(0, index), updated, ...prev.slice(index + 1)];
+        }
+        return prev;
+      });
+    } else {
+      // Insert new rating
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .insert([
+          {
+            rushee: uniqname,
+            brother: brotherID,
+            value: { rating },
+            value_type: type_name,
+            time: new Date(),
+            parent_id: null,
+            emphasis: []
+          }
+        ])
+        .select(`
+          *,
+          brotherDetails:Brothers(
+            firstname,
+            lastname
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error adding rating:', error);
+        return;
+      }
+
+      // Always update the main feedback list
+      if (data.value_type in ['comment', 'diversity_chat_decision', 'coffee_chat_decision']) {
+        setFeedback(prev => [...prev, data]);
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -444,18 +738,17 @@ export default function RusheeProfile () {
                           </span>
                         </p>
                         <p className='text-sm text-gray-800 mb-1'>
-                          {parent.comment}
+                          {textOf(parent)}
                         </p>
                       </div>
 
                       {/* Emphasis with a custom tooltip (no default browser delay) */}
                       <div
                         // NEW: group + relative for the hover-based custom tooltip
-                        className={`relative group flex items-center space-x-1 ${
-                          canClickEmphasis
-                            ? 'cursor-pointer'
-                            : 'cursor-not-allowed'
-                        }`}
+                        className={`relative group flex items-center space-x-1 ${canClickEmphasis
+                          ? 'cursor-pointer'
+                          : 'cursor-not-allowed'
+                          }`}
                         onClick={() => {
                           if (!canClickEmphasis) return
                           handleToggleEmphasis(parent.id)
@@ -558,17 +851,16 @@ export default function RusheeProfile () {
                                   </span>
                                 </p>
                                 <p className='text-sm text-gray-800 mb-1'>
-                                  {child.comment}
+                                  {textOf(child)}
                                 </p>
                               </div>
 
                               {/* Child emphasis with custom tooltip */}
                               <div
-                                className={`relative group flex items-center space-x-1 ${
-                                  canClickChild
-                                    ? 'cursor-pointer'
-                                    : 'cursor-not-allowed'
-                                }`}
+                                className={`relative group flex items-center space-x-1 ${canClickChild
+                                  ? 'cursor-pointer'
+                                  : 'cursor-not-allowed'
+                                  }`}
                                 onClick={() => {
                                   if (!canClickChild) return
                                   handleToggleEmphasis(child.id)
@@ -659,7 +951,107 @@ export default function RusheeProfile () {
             </button>
           </div>
         </div>
+        {/* Diversity + Coffee Chat Feedback */}
+        <div className="p-4 rounded-lg shadow-md bg-white mt-4">
+          <h3 className="text-lg font-semibold mb-4">Diversity Chat Feedback</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Textarea */}
+            <div className="md:col-span-3">
+              <textarea
+                value={diversityChatFeedback}
+                onChange={(e) => setDiversityChatFeedback(e.target.value)}
+                className="w-full p-2 border rounded min-h-[150px] mb-2"
+              />
+            </div>
+
+            {/* Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Select Rating</label>
+              <select
+                value={diversityChatRating}
+                onChange={(e) => {
+                  const selected = e.target.value;
+                  setDiversityChatRating(selected);
+                  handleAddRating(selected, 'diversity_chat_decision');
+                }}
+                className="w-full p-2 border rounded"
+              >
+                {Object.entries(RusheeStatus).map(([key, label]) => (
+                  <option key={key} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (diversityChatFeedback.trim()) {
+                handleAddFeedback(
+                  diversityChatFeedback,
+                  'diversity_chat_feedback',
+                  'diversity'
+                );
+              }
+            }}
+            className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+          >
+            Save Diversity Chat Feedback
+          </button>
+        </div>
+
+        {/* Coffee Chat Feedback */}
+        <div className="p-4 rounded-lg shadow-md bg-white mt-4">
+          <h3 className="text-lg font-semibold mb-4">Coffee Chat Feedback</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Textarea */}
+            <div className="md:col-span-3">
+              <textarea
+                value={coffeeChatFeedback}
+                onChange={(e) => setCoffeeChatFeedback(e.target.value)}
+                className="w-full p-2 border rounded min-h-[150px] mb-2"
+              />
+            </div>
+
+            {/* Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Select Rating</label>
+              <select
+                value={coffeeChatRating}
+                onChange={
+                  (e) => {
+                    const selected = e.target.value;
+                    setCoffeeChatRating(selected);
+                    handleAddRating(selected, 'coffee_chat_decision');
+                  }
+                }
+                className="w-full p-2 border rounded"
+              >
+                {Object.entries(RusheeStatus).map(([key, label]) => (
+                  <option key={key} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (coffeeChatFeedback.trim()) {
+                handleAddFeedback(
+                  coffeeChatFeedback,
+                  'coffee_chat_feedback',
+                  'coffee'
+                );
+              }
+            }}
+            className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+          >
+            Save Coffee Chat Feedback
+          </button>
+        </div>
       </div>
-    </div>
+    </div >
   )
 }

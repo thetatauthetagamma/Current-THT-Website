@@ -5,8 +5,7 @@ import supabase from '../../supabase'
 import Cookies from 'js-cookie'
 
 /*
-This page displays a member directory. It displays first all of the pledges then the brothers 
-in reverse roll order. 
+This page displays a member directory. It displays the brothers in reverse roll order. 
 To limit egress, only 10 members are shown at a time.
 */
 
@@ -18,6 +17,7 @@ export default function MemberDirectory() {
   const [isPledge, setIsPledge] = useState(true)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageLoading, setPageLoading] = useState(false)
 
   const brothersPerPage = 10
 
@@ -114,25 +114,25 @@ export default function MemberDirectory() {
   // Filter by selected major if one is chosen
   const majorFilteredBrothers = selectedMajor
     ? filteredBrothers.filter((brother) => {
-        if (brother.major) {
-          const normalizedMajor = brother.major.toLowerCase()
-          const normalizedSelectedMajor = selectedMajor.toLowerCase()
+      if (brother.major) {
+        const normalizedMajor = brother.major.toLowerCase()
+        const normalizedSelectedMajor = selectedMajor.toLowerCase()
 
-          // Special check for exact matches "CE"/"CEE" or "EE"/"CEE"
-          if (normalizedSelectedMajor === 'ce' && normalizedMajor === 'ce') {
-            return true
-          } else if (normalizedSelectedMajor === 'ce' && normalizedMajor === 'cee') {
-            return false
-          }
-          if (normalizedSelectedMajor === 'ee' && normalizedMajor === 'ee') {
-            return true
-          } else if (normalizedSelectedMajor === 'ee' && normalizedMajor === 'cee') {
-            return false
-          }
-          return normalizedMajor.includes(normalizedSelectedMajor)
+        // Special check for exact matches "CE"/"CEE" or "EE"/"CEE"
+        if (normalizedSelectedMajor === 'ce' && normalizedMajor === 'ce') {
+          return true
+        } else if (normalizedSelectedMajor === 'ce' && normalizedMajor === 'cee') {
+          return false
         }
-        return false
-      })
+        if (normalizedSelectedMajor === 'ee' && normalizedMajor === 'ee') {
+          return true
+        } else if (normalizedSelectedMajor === 'ee' && normalizedMajor === 'cee') {
+          return false
+        }
+        return normalizedMajor.includes(normalizedSelectedMajor)
+      }
+      return false
+    })
     : filteredBrothers
 
   // Pagination calculations
@@ -146,8 +146,15 @@ export default function MemberDirectory() {
     setCurrentPage(1)
   }, [searchQuery, selectedMajor])
 
-  const handleNextPage = () => {
+  const handleNextPage = async () => {
+    if (pageLoading || currentPage === totalPages || totalPages === 0) return
+
+    setPageLoading(true)
     setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    setPageLoading(false)
   }
   const handlePrevPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1))
