@@ -197,7 +197,7 @@ export default function RusheeProfile() {
       }
     }
     fetchRusheeImage()
-    console.log("Fidget Fam == Best Fam")
+    console.log("Qam Fam == Best Fam")
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
