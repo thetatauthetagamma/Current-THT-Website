@@ -608,7 +608,7 @@ export default function RusheeProfile() {
       return;
     }
     console.log(existing)
-    console.log(rating)
+    
     if (existing) {
       // Update existing rating
       const { data, error } = await supabase
