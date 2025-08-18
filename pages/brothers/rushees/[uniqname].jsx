@@ -27,6 +27,8 @@ const textOf = (row) => {
 
   if (typeof v === 'string') return v;
 
+  // Fallback: convert any other value to string
+  return String(v ?? '');
 };
 
 
