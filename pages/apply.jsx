@@ -11,7 +11,7 @@ import timezone from 'dayjs/plugin/timezone'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
-export default function Application () {
+export default function Application() {
   const [session, setSession] = useState(null)
   const [isUmichEmail, setIsUmichEmail] = useState(false)
   const [userId, setUserId] = useState(null)
@@ -314,7 +314,7 @@ export default function Application () {
     }
   }
 
-  async function uploadProfilePhoto (file) {
+  async function uploadProfilePhoto(file) {
     if (!session?.user) return
     const fileName = `${userId}.jpeg`
     const { error } = await supabase.storage
@@ -419,14 +419,12 @@ export default function Application () {
       </div>
 
       <div>
-      Hello! Welcome to the Theta Tau rush application! Please be sure to fill
-        out and submit all of the following sections before the due date. There
-        is a section for general info about yourself, a place to upload a
-        profile picture, and some application questions. Your application will
+        Welcome to the Theta Tau rush application! Please be sure to fill
+        out and submit all of the following sections before the due date. Your application will
         only be considered if ALL of the sections are filled in before the due
         date. Please note that if you do not click "Save Application," and you
         close the tab, your progress will not be saved, but you can save/update
-        your application as many times as you wish before the due date.
+        your application as many times as you wish before the due date. Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
       </div>
 
       {/* Due Date */}
@@ -576,18 +574,31 @@ export default function Application () {
         {/* QUESTIONS SECTION */}
         <div className='bg-gray-100 p-4 rounded shadow-sm'>
           <h2 className='font-semibold text-lg mb-3'>Questions</h2>
-          {questions.map(q => (
-            <div key={q.id} className='mb-4'>
-              <p className='font-semibold mb-1'>{q.question}</p>
-              <textarea
-                rows={4}
-                className='border rounded p-2 w-full whitespace-pre-wrap break-words break-all'
-                value={answers[q.id] || ''}
-                disabled={isPastDue}
-                onChange={e => handleAnswerChange(q.id, e.target.value)}
-              />
-            </div>
-          ))}
+          {questions.map(q => {
+            const wordCount = (answers[q.id] || '').trim().split(/\s+/).filter(word => word.length > 0).length
+            return (
+              <div key={q.id} className='mb-4'>
+                <div className='flex items-center justify-between mb-1'>
+                  <p className='font-semibold'>{q.question}</p>
+                  <div className='text-gray-400 text-sm'>
+                    {wordCount} word{wordCount !== 1 ? 's' : ''}
+                    {q.word_count && (
+                      <span className='ml-2'>
+                        (suggested: {q.word_count})
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <textarea
+                  rows={4}
+                  className='border rounded p-2 w-full whitespace-pre-wrap break-words break-all'
+                  value={answers[q.id] || ''}
+                  disabled={isPastDue}
+                  onChange={e => handleAnswerChange(q.id, e.target.value)}
+                />
+              </div>
+            )
+          })}
         </div>
 
         {/* SUBMIT BUTTON + LAST UPDATED */}
