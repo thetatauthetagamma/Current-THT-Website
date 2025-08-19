@@ -50,7 +50,7 @@ export default function ReactionBar({
         data.forEach(bro => {
           map[bro.userid] = {
             firstname: bro.firstname,
-            lastname : bro.lastname
+            lastname: bro.lastname
           }
         })
         setBrothersMap(map)
@@ -60,9 +60,9 @@ export default function ReactionBar({
   }, [])
 
   // Check if the current user has already liked, disliked, or starred
-  const isLiked    = localLikes.includes(brotherID)
+  const isLiked = localLikes.includes(brotherID)
   const isDisliked = localDislikes.includes(brotherID)
-  const isStarred  = localStars.includes(brotherID)
+  const isStarred = localStars.includes(brotherID)
 
   // ─────────────────────────────────────────────────────────
   // 1) Toggling "like"
@@ -75,7 +75,7 @@ export default function ReactionBar({
     } else {
       updatedLikes = [...localLikes, brotherID]
       // If you want to automatically remove from localDislikes:
-      // setDislikes(d => d.filter(id => id !== brotherID))
+      setDislikes(d => d.filter(id => id !== brotherID))
     }
 
     const { data, error } = await supabase
@@ -100,7 +100,7 @@ export default function ReactionBar({
     } else {
       updatedDislikes = [...localDislikes, brotherID]
       // If you want to automatically remove from localLikes:
-      // setLikes(l => l.filter(id => id !== brotherID))
+      setLikes(l => l.filter(id => id !== brotherID))
     }
 
     const { data, error } = await supabase
@@ -122,8 +122,10 @@ export default function ReactionBar({
     let updatedStars
     if (isStarred) {
       updatedStars = localStars.filter(id => id !== brotherID)
+      setDislikes(d => d.filter(id => id !== brotherID))
     } else {
       updatedStars = [...localStars, brotherID]
+      setDislikes(d => d.filter(id => id !== brotherID))
     }
 
     const { data, error } = await supabase

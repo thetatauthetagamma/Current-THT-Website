@@ -7,7 +7,32 @@ import thtlogo from '../../../public/tht-logo.png'
 import ReactionBar from '@/components/rush/ReactionBar'
 import { FaExclamation } from 'react-icons/fa'
 
-export default function RusheeProfile () {
+
+const RusheeStatus = Object.freeze({
+  STRONG_YES: 'Strong Bid',
+  WEAK_YES: 'Weak Bid',
+  NEUTRAL: 'Neutral',
+  WEAK_NO: 'Weak No Bid',
+  STRONG_NO: 'Strong No Bid'
+})
+
+const textOf = (row) => {
+  const v = row?.value;
+
+  // jsonb object like { text: "..." }
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    // Defensive: ensure it's a string
+    return typeof v.text === 'string' ? v.text : JSON.stringify(v.text ?? '');
+  }
+
+  if (typeof v === 'string') return v;
+
+  // Fallback: convert any other value to string
+  return String(v ?? '');
+};
+
+
+export default function RusheeProfile() {
   const router = useRouter()
   const { uniqname } = router.query
   const [brotherID, setBrotherID] = useState('')
@@ -21,6 +46,74 @@ export default function RusheeProfile () {
   const [feedback, setFeedback] = useState([])
   const [newComment, setNewComment] = useState('')
 
+  // Coffee Chats
+  const [coffeeChatFeedback, setCoffeeChatFeedback] = useState('')
+  const [diversityChatFeedback, setDiversityChatFeedback] = useState('')
+
+  const [coffeeChatRating, setCoffeeChatRating] = useState(RusheeStatus.NEUTRAL)
+  const [diversityChatRating, setDiversityChatRating] = useState(RusheeStatus.NEUTRAL)
+
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editTexts, setEditTexts] = useState({})
+
+  // ─────────────────────────────────────────────────────────
+  // Edit comment functionality
+  // ─────────────────────────────────────────────────────────
+  const handleEditComment = (commentId, currentText) => {
+    // Only allow editing if you're the comment author
+    const comment = feedback.find(f => f.id === commentId);
+    if (comment && comment.brother !== brotherID) {
+      alert('You can only edit your own comments!');
+      return;
+    }
+
+    // Set the comment we're editing
+    setEditingCommentId(commentId);
+    // Pre-populate the edit text with the current comment text
+    setEditTexts(prev => ({
+      ...prev,
+      [commentId]: currentText
+    }));
+  };
+
+  // Function to save the edited comment
+  const handleSaveEdit = async (commentId) => {
+    const newText = editTexts[commentId]?.trim();
+
+    if (!newText) return; // Don't save empty comments
+
+    const { data, error } = await supabase
+      .from('Application_Feedback')
+      .update({ value: { text: newText } })
+      .eq('id', commentId)
+      .select(
+        `
+        *,
+        brotherDetails:Brothers(
+          firstname,
+          lastname
+        )
+      `
+      )
+      .single();
+
+    if (error) {
+      console.error('Error updating comment:', error);
+      return;
+    }
+
+    if (data) {
+      // Update the comment in local state
+      setFeedback(prev => prev.map(f => (f.id === commentId ? data : f)));
+      // Exit edit mode
+      setEditingCommentId(null);
+    }
+  };
+
+  // Function to cancel editing
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+  };
   // For per-comment reply text
   const [replyTexts, setReplyTexts] = useState({})
   // Whether each parent comment's replies are expanded
@@ -104,7 +197,7 @@ export default function RusheeProfile () {
       }
     }
     fetchRusheeImage()
-    console.log("Fidget Fam == Best Fam")
+    console.log("Qam Fam == Best Fam")
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
@@ -126,6 +219,7 @@ export default function RusheeProfile () {
         `
         )
         .eq('rushee', uniqname)
+        .eq('value_type', 'comment')
         .order('time', { ascending: true })
       if (!error && data) {
         setFeedback(data)
@@ -135,7 +229,7 @@ export default function RusheeProfile () {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
-  // 6) Fetch Q&A
+  // 6a) Fetch Q&A
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -161,11 +255,96 @@ export default function RusheeProfile () {
     }
     fetchAnswers()
   }, [uniqname])
+  // ─────────────────────────────────────────────────────────
+  // 6b) Fetch feedback
+  // ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!uniqname) {
+      return
+    }
+    const fetchChatFeedback = async () => {
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .select('value, value_type')
+        .eq('rushee', uniqname)
+        .in('value_type', ['diversity_chat_feedback', 'coffee_chat_feedback'])
+        .order('time', { ascending: false });
+      if (data && !error) {
+        const diversity = data.find(f => f.value_type === 'diversity_chat_feedback');
+        const coffee = data.find(f => f.value_type === 'coffee_chat_feedback');
+        if (diversity?.value?.text) {
+          setDiversityChatFeedback(diversity.value.text);
+        }
+        if (coffee?.value?.text) {
+          setCoffeeChatFeedback(coffee.value.text);
+        }
+      }
+    }
+
+    fetchChatFeedback()
+  }, [uniqname])
+
+
+  useEffect(() => {
+    if (!uniqname) return
+    const fetchAnswers = async () => {
+      const { data, error } = await supabase
+        .from('Application_Answers')
+        .select('*')
+        .eq('uniqname', uniqname)
+      if (!error && data) {
+        setAnswers(data)
+      }
+    }
+    fetchAnswers()
+  }, [uniqname])
+
+
+  // ─────────────────────────────────────────────────────────
+  // 6c) Populate Old ratings
+  //  ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!uniqname || !brotherID) return;
+
+    const fetchOldRatings = async () => {
+      const [{ data: divRows, error: divErr }, { data: cofRows, error: cofErr }] = await Promise.all([
+        supabase
+          .from('Application_Feedback')
+          .select('value, time')
+          .eq('rushee', uniqname)
+          .eq('brother', brotherID)
+          .eq('value_type', 'diversity_chat_decision')
+          .order('time', { ascending: false })
+          .limit(1),
+        supabase
+          .from('Application_Feedback')
+          .select('value, time')
+          .eq('rushee', uniqname)
+          .eq('brother', brotherID)
+          .eq('value_type', 'coffee_chat_decision')
+          .order('time', { ascending: false })
+          .limit(1),
+      ]);
+
+      if (!divErr && divRows?.length) {
+        const r = divRows[0]?.value?.rating;
+        if (r && Object.values(RusheeStatus).includes(r)) setDiversityChatRating(r);
+      }
+      if (!cofErr && cofRows?.length) {
+        const r = cofRows[0]?.value?.rating;
+        if (r && Object.values(RusheeStatus).includes(r)) setCoffeeChatRating(r);
+      }
+    };
+
+    fetchOldRatings();
+  }, [uniqname, brotherID]);
+
+
 
   // ─────────────────────────────────────────────────────────
   // 7) Add top-level comment
   // ─────────────────────────────────────────────────────────
-  async function handleAddComment () {
+  async function handleAddComment() {
     if (!brotherID) {
       alert('You must be logged in to comment!')
       return
@@ -178,7 +357,8 @@ export default function RusheeProfile () {
         {
           rushee: uniqname,
           brother: brotherID,
-          comment: newComment,
+          value_type: 'comment',
+          value: { text: newComment },
           time: new Date(),
           parent_id: null,
           emphasis: []
@@ -206,7 +386,7 @@ export default function RusheeProfile () {
   // ─────────────────────────────────────────────────────────
   // 8) Add REPLY
   // ─────────────────────────────────────────────────────────
-  async function handleAddReply (parentId) {
+  async function handleAddReply(parentId) {
     if (!brotherID) {
       alert('You must be logged in!')
       return
@@ -220,7 +400,8 @@ export default function RusheeProfile () {
         {
           rushee: uniqname,
           brother: brotherID,
-          comment: text,
+          value: { text },
+          value_type: 'comment',
           time: new Date(),
           parent_id: parentId,
           emphasis: []
@@ -244,14 +425,14 @@ export default function RusheeProfile () {
       setReplyTexts(prev => ({ ...prev, [parentId]: '' }))
       // Optionally auto-expand the replies
       setExpandedReplies(prev => ({ ...prev, [parentId]: true }))
-      showReplyBox[parentId] = false
+      setShowReplyBox(prev => ({ ...prev, [parentId]: false }))
     }
   }
 
   // ─────────────────────────────────────────────────────────
   // 9) Toggle emphasis
   // ─────────────────────────────────────────────────────────
-  async function handleToggleEmphasis (commentId) {
+  async function handleToggleEmphasis(commentId) {
     const comment = feedback.find(f => f.id === commentId)
     if (!comment) return
 
@@ -268,6 +449,7 @@ export default function RusheeProfile () {
     } else {
       newEmphasis = [...oldEmphasis, brotherID]
     }
+
 
     const { data, error } = await supabase
       .from('Application_Feedback')
@@ -299,14 +481,14 @@ export default function RusheeProfile () {
   // ─────────────────────────────────────────────────────────
   const topLevelComments = feedback.filter(f => !f.parent_id)
 
-  function getRepliesFor (commentId) {
+  function getRepliesFor(commentId) {
     return feedback
       .filter(f => f.parent_id === commentId)
       .sort((a, b) => new Date(a.time) - new Date(b.time))
   }
 
   // Expand/collapse replies
-  function handleToggleExpand (parentId) {
+  function handleToggleExpand(parentId) {
     setExpandedReplies(prev => ({
       ...prev,
       [parentId]: !prev[parentId]
@@ -314,11 +496,184 @@ export default function RusheeProfile () {
   }
 
   // Show/hide reply box
-  function handleToggleReplyBox (parentId) {
+  function handleToggleReplyBox(parentId) {
     setShowReplyBox(prev => ({
       ...prev,
       [parentId]: !prev[parentId]
     }))
+  }
+
+
+  // ─────────────────────────────────────────────────────────
+  // Add Feedback
+  // ─────────────────────────────────────────────────────────
+  async function handleAddFeedback(text, type_name, field) {
+    if (!brotherID) {
+      alert('You must be logged in!');
+      return;
+    }
+    const { data: existing, error: fetchError } = await supabase
+      .from('Application_Feedback')
+      .select('id')
+      .eq('rushee', uniqname)
+      .eq('value_type', type_name)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') { // Ignore "no rows" error
+      console.error('Error fetching existing feedback:', fetchError);
+      return;
+    }
+
+    let result;
+
+    if (existing) {
+      // Update existing feedback
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .update({ value: { text } })
+        .eq('id', existing.id)
+        .select(`
+          *,
+          brotherDetails:Brothers(
+            firstname,
+            lastname
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error updating feedback:', error);
+        return;
+      }
+
+      result = data;
+    } else {
+      // Insert new feedback
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .insert([
+          {
+            rushee: uniqname,
+            brother: brotherID,
+            value: { text },
+            value_type: type_name,
+            time: new Date(),
+            parent_id: null,
+            emphasis: []
+          }
+        ])
+        .select(`
+      *,
+      brotherDetails:Brothers(
+        firstname,
+        lastname
+      )
+    `)
+        .single();
+
+      if (error) {
+        console.error('Error adding feedback:', error);
+        return;
+      }
+
+      // Always update the main feedback list
+      if (data.value_type === 'comment') {
+        setFeedback(prev => [...prev, data]);
+      }
+
+      // Reset the correct text state based on the field flag
+      if (field === 'diversity') {
+        setDiversityChatFeedback(text);
+      } else if (field === 'coffee') {
+        setCoffeeChatFeedback(text);
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Add Rating
+  // ─────────────────────────────────────────────────────────
+  async function handleAddRating(rating, type_name) {
+    if (!brotherID) {
+      alert('You must be logged in!');
+      return;
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('Application_Feedback')
+      .select('*')
+      .eq('rushee', uniqname)
+      .eq('value_type', type_name)
+      .single();
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error('Error fetching existing rating:', fetchError);
+      return;
+    }
+    console.log(existing)
+    
+    if (existing) {
+      // Update existing rating
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .update({ value: { rating } })
+        .eq('id', existing.id)
+        .select(`
+          *,
+          brotherDetails:Brothers(
+            firstname,
+            lastname
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error updating rating:', error);
+        return;
+      }
+
+      // Update local state
+      setFeedback(prev => {
+        const index = prev.findIndex(f => f.id === existing.id);
+        if (index !== -1) {
+          const updated = { ...prev[index], ...data };
+          return [...prev.slice(0, index), updated, ...prev.slice(index + 1)];
+        }
+        return prev;
+      });
+    } else {
+      // Insert new rating
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .insert([
+          {
+            rushee: uniqname,
+            brother: brotherID,
+            value: { rating },
+            value_type: type_name,
+            time: new Date(),
+            parent_id: null,
+            emphasis: []
+          }
+        ])
+        .select(`
+          *,
+          brotherDetails:Brothers(
+            firstname,
+            lastname
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error adding rating:', error);
+        return;
+      }
+
+      // Always update the main feedback list
+      if (['comment', 'diversity_chat_decision', 'coffee_chat_decision'].includes(data.value_type)) {
+        setFeedback(prev => [...prev, data]);
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -444,18 +799,17 @@ export default function RusheeProfile () {
                           </span>
                         </p>
                         <p className='text-sm text-gray-800 mb-1'>
-                          {parent.comment}
+                          {textOf(parent)}
                         </p>
                       </div>
 
                       {/* Emphasis with a custom tooltip (no default browser delay) */}
                       <div
                         // NEW: group + relative for the hover-based custom tooltip
-                        className={`relative group flex items-center space-x-1 ${
-                          canClickEmphasis
-                            ? 'cursor-pointer'
-                            : 'cursor-not-allowed'
-                        }`}
+                        className={`relative group flex items-center space-x-1 ${canClickEmphasis
+                          ? 'cursor-pointer'
+                          : 'cursor-not-allowed'
+                          }`}
                         onClick={() => {
                           if (!canClickEmphasis) return
                           handleToggleEmphasis(parent.id)
@@ -511,7 +865,40 @@ export default function RusheeProfile () {
                             : `View replies (${childReplies.length})`}
                         </button>
                       )}
-                      {/* Always show "Reply" button */}
+                      {/* Edit button - only show for user's own comments */}
+                      {parent.brother === brotherID && (
+                        <button
+                          onClick={() => handleEditComment(parent.id, textOf(parent))}
+                          className='text-gray-500 underline'
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {/* If currently editing this comment, show save/cancel buttons */}
+                      {editingCommentId === parent.id ? (
+                        <div className='flex space-x-2'>
+                          <textarea
+                            value={editTexts[parent.id] || ''}
+                            onChange={(e) => setEditTexts(prev => ({
+                              ...prev,
+                              [parent.id]: e.target.value
+                            }))}
+                            className='border rounded p-1 text-sm w-full'
+                          />
+                          <button
+                            onClick={() => handleSaveEdit(parent.id)}
+                            className='bg-green-600 text-white px-2 py-1 rounded text-xs'
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : null}
                       <button
                         onClick={() => handleToggleReplyBox(parent.id)}
                         className='text-gray-500 underline'
@@ -544,72 +931,98 @@ export default function RusheeProfile () {
                           const canClickChild = child.brother !== brotherID
 
                           return (
-                            <div
-                              key={child.id}
-                              className='flex items-start justify-between'
-                            >
-                              <div>
-                                <p className='font-bold text-sm'>
-                                  {childFirst && childLast
-                                    ? `${childFirst} ${childLast}`
-                                    : child.brother}{' '}
-                                  <span className='text-xs text-gray-400 ml-2'>
-                                    {new Date(child.time).toLocaleString()}
-                                  </span>
-                                </p>
-                                <p className='text-sm text-gray-800 mb-1'>
-                                  {child.comment}
-                                </p>
-                              </div>
+                            <div key={child.id} className='flex flex-col'>
+                              {/* top row (author/time/text + emphasis) */}
+                              <div className='flex items-start justify-between'>
+                                <div>
+                                  <p className='font-bold text-sm'>
+                                    {childFirst && childLast ? `${childFirst} ${childLast}` : child.brother}{' '}
+                                    <span className='text-xs text-gray-400 ml-2'>
+                                      {new Date(child.time).toLocaleString()}
+                                    </span>
+                                  </p>
+                                  <p className='text-sm text-gray-800 mb-1'>{textOf(child)}</p>
+                                </div>
 
-                              {/* Child emphasis with custom tooltip */}
-                              <div
-                                className={`relative group flex items-center space-x-1 ${
-                                  canClickChild
-                                    ? 'cursor-pointer'
-                                    : 'cursor-not-allowed'
-                                }`}
-                                onClick={() => {
-                                  if (!canClickChild) return
-                                  handleToggleEmphasis(child.id)
-                                }}
-                              >
-                                {childEmphasized ? (
-                                  <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
-                                    <FaExclamation className='mr-[-8px]' />
-                                    <FaExclamation />
-                                  </div>
-                                ) : (
-                                  <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
-                                    <FaExclamation className='mr-[-8px]' />
-                                    <FaExclamation />
-                                  </div>
-                                )}
-                                <span className='text-sm font-semibold text-gray-700'>
-                                  {childEmphasisCount}
-                                </span>
-
-                                {/* Child tooltip */}
+                                {/* existing emphasis UI for child (unchanged) */}
                                 <div
-                                  className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
-             whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
+                                  className={`relative group flex items-center space-x-1 ${canClickChild ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                  onClick={() => {
+                                    if (!canClickChild) return
+                                    handleToggleEmphasis(child.id)
+                                  }}
                                 >
-                                  {childEmphasizedByNames.length > 0 ? (
-                                    <div>
-                                      <p className='font-semibold mb-1'>
-                                        Emphasized by:
-                                      </p>
-                                      {childEmphasizedByNames.map((name, i) => (
-                                        <p key={i}>{name}</p>
-                                      ))}
+                                  {childEmphasized ? (
+                                    <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
+                                      <FaExclamation className='mr-[-8px]' />
+                                      <FaExclamation />
                                     </div>
                                   ) : (
-                                    'No emphasis yet'
+                                    <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
+                                      <FaExclamation className='mr-[-8px]' />
+                                      <FaExclamation />
+                                    </div>
                                   )}
+                                  <span className='text-sm font-semibold text-gray-700'>
+                                    {childEmphasisCount}
+                                  </span>
+
+                                  <div className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'>
+                                    {childEmphasizedByNames.length > 0 ? (
+                                      <div>
+                                        <p className='font-semibold mb-1'>Emphasized by:</p>
+                                        {childEmphasizedByNames.map((name, i) => (
+                                          <p key={i}>{name}</p>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      'No emphasis yet'
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+
+                              {/* actions row for replies */}
+                              <div className='ml-0 flex items-center space-x-2 pl-2 text-sm mt-1'>
+                                {child.brother === brotherID && editingCommentId !== child.id && (
+                                  <button
+                                    onClick={() => handleEditComment(child.id, textOf(child))}
+                                    className='text-gray-500 underline'
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* inline edit UI */}
+                              {editingCommentId === child.id && (
+                                <div className='flex w-full items-start space-x-2 mt-1 pl-2'>
+                                  <textarea
+                                    value={editTexts[child.id] || ''}
+                                    onChange={(e) =>
+                                      setEditTexts(prev => ({ ...prev, [child.id]: e.target.value }))
+                                    }
+                                    className='border rounded p-1 text-sm w-full'
+                                  />
+                                  <button
+                                    onClick={() => handleSaveEdit(child.id)}
+                                    className='bg-green-600 text-white px-2 py-1 rounded text-xs'
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleCancelEdit}
+                                    className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )
+
+
+
                         })}
                       </div>
                     )}
@@ -659,7 +1072,103 @@ export default function RusheeProfile () {
             </button>
           </div>
         </div>
+        {/* Diversity + Coffee Chat Feedback */}
+        <div className="p-4 rounded-lg shadow-md bg-white mt-4">
+          <h3 className="text-lg font-semibold mb-4">Diversity Chat Feedback</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Textarea */}
+            <div className="md:col-span-3">
+              <textarea
+                value={diversityChatFeedback}
+                onChange={(e) => setDiversityChatFeedback(e.target.value)}
+                className="w-full p-2 border rounded min-h-[150px] mb-2"
+              />
+            </div>
+
+            {/* Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Select Rating</label>
+              <select
+                value={diversityChatRating}
+                onChange={(e) => {
+                  const selected = e.target.value;
+                  setDiversityChatRating(selected);
+                  handleAddRating(selected, 'diversity_chat_decision');
+                }}
+                className="w-full p-2 border rounded"
+              >
+                {Object.entries(RusheeStatus).map(([key, label]) => (
+                  <option key={key} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              handleAddFeedback(
+                diversityChatFeedback,
+                'diversity_chat_feedback',
+                'diversity'
+              );
+            }}
+            className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+          >
+            Save Diversity Chat Feedback
+          </button>
+        </div>
+
+        {/* Coffee Chat Feedback */}
+        <div className="p-4 rounded-lg shadow-md bg-white mt-4">
+          <h3 className="text-lg font-semibold mb-4">Coffee Chat Feedback</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Textarea */}
+            <div className="md:col-span-3">
+              <textarea
+                value={coffeeChatFeedback}
+                onChange={(e) => setCoffeeChatFeedback(e.target.value)}
+                className="w-full p-2 border rounded min-h-[150px] mb-2"
+              />
+            </div>
+
+            {/* Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Select Rating</label>
+              <select
+                value={coffeeChatRating}
+                onChange={
+                  (e) => {
+                    const selected = e.target.value;
+                    setCoffeeChatRating(selected);
+                    handleAddRating(selected, 'coffee_chat_decision');
+                  }
+                }
+                className="w-full p-2 border rounded"
+              >
+                {Object.entries(RusheeStatus).map(([key, label]) => (
+                  <option key={key} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              handleAddFeedback(
+                coffeeChatFeedback,
+                'coffee_chat_feedback',
+                'coffee'
+              );
+            }}
+            className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+          >
+            Save Coffee Chat Feedback
+          </button>
+        </div>
       </div>
-    </div>
+    </div >
   )
 }
