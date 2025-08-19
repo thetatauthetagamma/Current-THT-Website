@@ -7,11 +7,17 @@ import 'react-vertical-timeline-component/style.min.css';
 const formatDate = (timestamp) => {
     if (timestamp) {
         const date = new Date(timestamp)
-        var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        var options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'America/New_York'
+        };
         return date.toLocaleDateString("en-US", options);
     }
     else {
-        return "Date TBD"
+        return null
     }
 
 }
@@ -19,25 +25,29 @@ const formatDate = (timestamp) => {
 const formatTime = (timestamp) => {
     if (timestamp) {
         const date = new Date(timestamp)
-        var options = { hour: 'numeric', minute: '2-digit', hour12: true };
+        var options = {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'America/New_York'
+        };
         return date.toLocaleTimeString("en-US", options);
     }
     else {
-        return "Time TBD"
+        return null
     }
 }
 
-const formatDateTime = (startTimestamp, endTimestamp) => {
-    const dateStr = formatDate(startTimestamp);
-    const startTime = formatTime(startTimestamp);
-    const endTime = formatTime(endTimestamp);
-
-    if (startTimestamp && endTimestamp) {
-        return `${dateStr} • ${startTime} - ${endTime}`;
-    } else if (startTimestamp) {
+const formatDateTime = (timestamp) => {
+    const dateStr = formatDate(timestamp);
+    const startTime = formatTime(timestamp);
+    if (startTime) {
         return `${dateStr} • ${startTime}`;
-    } else {
+    } else if (dateStr) {
         return dateStr;
+    }
+    else {
+        return null
     }
 }
 
@@ -47,7 +57,9 @@ const TimelineElement = ({ event }) => {
             className="vertical-timeline-element--work"
             contentStyle={{}}
             contentArrowStyle={{}}
-            date={formatDateTime(event.date, event.start_time)}
+            date={
+                formatDateTime(event.date)
+            }
             dateClassName={"xl:text-black"}
             iconStyle={{ background: '#8b0000', color: '#fff' }}
         >
@@ -81,7 +93,6 @@ const Timeline = () => {
                 .order('id', { ascending: true }); // Then sort by id ascending
             if (error) throw error
             if (data) setEvents(data);
-            console.log(data);
         } catch (error) {
             console.error('Error fetching rush events:', error)
         }
