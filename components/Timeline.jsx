@@ -17,7 +17,7 @@ const formatDate = (timestamp) => {
         return date.toLocaleDateString("en-US", options);
     }
     else {
-        return null
+        return ""
     }
 
 }
