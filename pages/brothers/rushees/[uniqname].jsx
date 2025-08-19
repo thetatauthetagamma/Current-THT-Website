@@ -6,6 +6,7 @@ import Image from 'next/image'
 import thtlogo from '../../../public/tht-logo.png'
 import ReactionBar from '@/components/rush/ReactionBar'
 import { FaExclamation } from 'react-icons/fa'
+import { BrothersProvider } from '@/contexts/BrothersContext'
 
 
 const RusheeStatus = Object.freeze({
@@ -687,486 +688,488 @@ export default function RusheeProfile() {
   }
 
   return (
-    <div className='flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]'>
-      <BroNavBar />
+    <BrothersProvider>
+      <div className='flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]'>
+        <BroNavBar />
 
-      <div className='flex-1 p-4'>
-        {/* Basic rushee info */}
-        <div className='flex items-center mb-4'>
-          <div className='w-32 h-32 mb-3 mx-4'>
-            {imageUrl ? (
-              <img
-                className='rounded-full w-full h-full object-cover'
-                src={imageUrl}
-                alt='rushee profile'
+        <div className='flex-1 p-4'>
+          {/* Basic rushee info */}
+          <div className='flex items-center mb-4'>
+            <div className='w-32 h-32 mb-3 mx-4'>
+              {imageUrl ? (
+                <img
+                  className='rounded-full w-full h-full object-cover'
+                  src={imageUrl}
+                  alt='rushee profile'
+                />
+              ) : (
+                <Image
+                  className='rounded-full w-full h-full object-cover'
+                  src={thtlogo}
+                  alt='Default logo'
+                />
+              )}
+            </div>
+            <div className='flex flex-col w-52'>
+              <h2 className='text-xl font-semibold'>
+                {rushee.firstname} {rushee.lastname}
+              </h2>
+              <p>
+                {rushee.major} ({rushee.year})
+              </p>
+              {rushee.pronouns && <p>Pronouns: {rushee.pronouns}</p>}
+
+              {/* ─────────────────────────────────────────────────────────────────────── */}
+              <ReactionBar
+                uniqname={rushee.uniqname}
+                brotherID={brotherID}
+                likes={rushee.likes}
+                dislikes={rushee.dislikes}
+                stars={rushee.stars}
               />
+            </div>
+          </div>
+
+          <hr className='my-4' />
+
+          {/* APPLICATION RESPONSES */}
+          <div className='mb-6'>
+            <h3 className='text-xl font-semibold mb-2'>Application Responses</h3>
+            {questions.length === 0 ? (
+              <p>No questions found.</p>
             ) : (
-              <Image
-                className='rounded-full w-full h-full object-cover'
-                src={thtlogo}
-                alt='Default logo'
-              />
+              <div className='space-y-4'>
+                {questions.map(q => {
+                  const foundAns = answers.find(a => a.question_id === q.id)
+                  const displayAns = foundAns ? foundAns.answer : 'No answer'
+                  return (
+                    <div key={q.id} className='border p-2 rounded'>
+                      <p className='font-semibold mb-1'>
+                        Q{q.id}: {q.question}
+                      </p>
+                      <p className='whitespace-pre-wrap break-words break-all'>
+                        {displayAns}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
-          <div className='flex flex-col w-52'>
-            <h2 className='text-xl font-semibold'>
-              {rushee.firstname} {rushee.lastname}
-            </h2>
-            <p>
-              {rushee.major} ({rushee.year})
-            </p>
-            {rushee.pronouns && <p>Pronouns: {rushee.pronouns}</p>}
 
-            {/* ReactionBar for the rushee profile */}
-            <ReactionBar
-              uniqname={rushee.uniqname}
-              brotherID={brotherID}
-              likes={rushee.likes}
-              dislikes={rushee.dislikes}
-              stars={rushee.stars}
-            />
-          </div>
-        </div>
+          <hr className='my-4' />
 
-        <hr className='my-4' />
+          {/* COMMENTS (top-level + replies) */}
+          <div className='p-4 rounded-lg shadow-md bg-white'>
+            <h3 className='text-lg font-semibold mb-2'>Comments</h3>
 
-        {/* APPLICATION RESPONSES */}
-        <div className='mb-6'>
-          <h3 className='text-xl font-semibold mb-2'>Application Responses</h3>
-          {questions.length === 0 ? (
-            <p>No questions found.</p>
-          ) : (
-            <div className='space-y-4'>
-              {questions.map(q => {
-                const foundAns = answers.find(a => a.question_id === q.id)
-                const displayAns = foundAns ? foundAns.answer : 'No answer'
-                return (
-                  <div key={q.id} className='border p-2 rounded'>
-                    <p className='font-semibold mb-1'>
-                      Q{q.id}: {q.question}
-                    </p>
-                    <p className='whitespace-pre-wrap break-words break-all'>
-                      {displayAns}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+            {topLevelComments.length === 0 ? (
+              <p className='text-gray-500'>No comments yet. Be the first!</p>
+            ) : (
+              <div className='space-y-6'>
+                {topLevelComments.map(parent => {
+                  const childReplies = getRepliesFor(parent.id)
+                  const isEmphasized = parent.emphasis?.includes(brotherID)
+                  const emphasisCount = parent.emphasis?.length || 0
 
-        <hr className='my-4' />
+                  // Grab the first+last name from the joined data
+                  const brotherFirst = parent.brotherDetails?.firstname
+                  const brotherLast = parent.brotherDetails?.lastname
 
-        {/* COMMENTS (top-level + replies) */}
-        <div className='p-4 rounded-lg shadow-md bg-white'>
-          <h3 className='text-lg font-semibold mb-2'>Comments</h3>
+                  // Map emphasis => "Firstname Lastname"
+                  const emphasizedByNames = (parent.emphasis || []).map(uniq => {
+                    return brothersMap[uniq] || uniq
+                  })
 
-          {topLevelComments.length === 0 ? (
-            <p className='text-gray-500'>No comments yet. Be the first!</p>
-          ) : (
-            <div className='space-y-6'>
-              {topLevelComments.map(parent => {
-                const childReplies = getRepliesFor(parent.id)
-                const isEmphasized = parent.emphasis?.includes(brotherID)
-                const emphasisCount = parent.emphasis?.length || 0
+                  // Whether user can click (disallow if own comment)
+                  const canClickEmphasis = parent.brother !== brotherID
 
-                // Grab the first+last name from the joined data
-                const brotherFirst = parent.brotherDetails?.firstname
-                const brotherLast = parent.brotherDetails?.lastname
+                  return (
+                    <div key={parent.id} className='flex flex-col space-y-1'>
+                      {/* Single comment container */}
+                      <div className='flex items-start justify-between'>
+                        <div>
+                          {/* If we have brotherDetails, show that; otherwise, fallback to parent.brother */}
+                          <p className='font-bold text-sm'>
+                            {brotherFirst && brotherLast
+                              ? `${brotherFirst} ${brotherLast}`
+                              : parent.brother}{' '}
+                            <span className='text-xs text-gray-400 ml-2'>
+                              {new Date(parent.time).toLocaleString()}
+                            </span>
+                          </p>
+                          <p className='text-sm text-gray-800 mb-1'>
+                            {textOf(parent)}
+                          </p>
+                        </div>
 
-                // Map emphasis => "Firstname Lastname"
-                const emphasizedByNames = (parent.emphasis || []).map(uniq => {
-                  return brothersMap[uniq] || uniq
-                })
-
-                // Whether user can click (disallow if own comment)
-                const canClickEmphasis = parent.brother !== brotherID
-
-                return (
-                  <div key={parent.id} className='flex flex-col space-y-1'>
-                    {/* Single comment container */}
-                    <div className='flex items-start justify-between'>
-                      <div>
-                        {/* If we have brotherDetails, show that; otherwise, fallback to parent.brother */}
-                        <p className='font-bold text-sm'>
-                          {brotherFirst && brotherLast
-                            ? `${brotherFirst} ${brotherLast}`
-                            : parent.brother}{' '}
-                          <span className='text-xs text-gray-400 ml-2'>
-                            {new Date(parent.time).toLocaleString()}
-                          </span>
-                        </p>
-                        <p className='text-sm text-gray-800 mb-1'>
-                          {textOf(parent)}
-                        </p>
-                      </div>
-
-                      {/* Emphasis with a custom tooltip (no default browser delay) */}
-                      <div
-                        // NEW: group + relative for the hover-based custom tooltip
-                        className={`relative group flex items-center space-x-1 ${canClickEmphasis
-                          ? 'cursor-pointer'
-                          : 'cursor-not-allowed'
-                          }`}
-                        onClick={() => {
-                          if (!canClickEmphasis) return
-                          handleToggleEmphasis(parent.id)
-                        }}
-                      >
-                        {/* The Exclamation icons */}
-                        {isEmphasized ? (
-                          <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
-                            <FaExclamation className='mr-[-8px]' />
-                            <FaExclamation />
-                          </div>
-                        ) : (
-                          <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
-                            <FaExclamation className='mr-[-8px]' />
-                            <FaExclamation />
-                          </div>
-                        )}
-                        <span className='text-sm font-semibold text-gray-700'>
-                          {emphasisCount}
-                        </span>
-
-                        {/* Custom tooltip displayed on hover */}
+                        {/* Emphasis with a custom tooltip (no default browser delay) */}
                         <div
-                          className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
-             whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
+                          // NEW: group + relative for the hover-based custom tooltip
+                          className={`relative group flex items-center space-x-1 ${canClickEmphasis
+                            ? 'cursor-pointer'
+                            : 'cursor-not-allowed'
+                            }`}
+                          onClick={() => {
+                            if (!canClickEmphasis) return
+                            handleToggleEmphasis(parent.id)
+                          }}
                         >
-                          {emphasizedByNames.length > 0 ? (
-                            <div>
-                              <p className='font-semibold mb-1'>
-                                Emphasized by:
-                              </p>
-                              {emphasizedByNames.map((name, i) => (
-                                <p key={i}>{name}</p>
-                              ))}
+                          {/* The Exclamation icons */}
+                          {isEmphasized ? (
+                            <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
+                              <FaExclamation className='mr-[-8px]' />
+                              <FaExclamation />
                             </div>
                           ) : (
-                            'No emphasis yet'
+                            <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
+                              <FaExclamation className='mr-[-8px]' />
+                              <FaExclamation />
+                            </div>
                           )}
+                          <span className='text-sm font-semibold text-gray-700'>
+                            {emphasisCount}
+                          </span>
+
+                          {/* Custom tooltip displayed on hover */}
+                          <div
+                            className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
+             whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
+                          >
+                            {emphasizedByNames.length > 0 ? (
+                              <div>
+                                <p className='font-semibold mb-1'>
+                                  Emphasized by:
+                                </p>
+                                {emphasizedByNames.map((name, i) => (
+                                  <p key={i}>{name}</p>
+                                ))}
+                              </div>
+                            ) : (
+                              'No emphasis yet'
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Buttons: "Reply" / "View replies" */}
-                    <div className='ml-0 flex items-center space-x-2 pl-2 text-sm '>
-                      {/* If there are children, show "View replies" or "Hide Replies" */}
-                      {childReplies.length > 0 && (
+                      {/* Buttons: "Reply" / "View replies" */}
+                      <div className='ml-0 flex items-center space-x-2 pl-2 text-sm '>
+                        {/* If there are children, show "View replies" or "Hide Replies" */}
+                        {childReplies.length > 0 && (
+                          <button
+                            onClick={() => handleToggleExpand(parent.id)}
+                            className='text-gray-500 underline'
+                          >
+                            {expandedReplies[parent.id]
+                              ? `Hide Replies`
+                              : `View replies (${childReplies.length})`}
+                          </button>
+                        )}
+                        {/* Edit button - only show for user's own comments */}
+                        {parent.brother === brotherID && (
+                          <button
+                            onClick={() => handleEditComment(parent.id, textOf(parent))}
+                            className='text-gray-500 underline'
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {/* If currently editing this comment, show save/cancel buttons */}
+                        {editingCommentId === parent.id ? (
+                          <div className='flex space-x-2'>
+                            <textarea
+                              value={editTexts[parent.id] || ''}
+                              onChange={(e) => setEditTexts(prev => ({
+                                ...prev,
+                                [parent.id]: e.target.value
+                              }))}
+                              className='border rounded p-1 text-sm w-full'
+                            />
+                            <button
+                              onClick={() => handleSaveEdit(parent.id)}
+                              className='bg-green-600 text-white px-2 py-1 rounded text-xs'
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : null}
                         <button
-                          onClick={() => handleToggleExpand(parent.id)}
+                          onClick={() => handleToggleReplyBox(parent.id)}
                           className='text-gray-500 underline'
                         >
-                          {expandedReplies[parent.id]
-                            ? `Hide Replies`
-                            : `View replies (${childReplies.length})`}
+                          {showReplyBox[parent.id] ? 'Cancel Reply' : 'Reply'}
                         </button>
-                      )}
-                      {/* Edit button - only show for user's own comments */}
-                      {parent.brother === brotherID && (
-                        <button
-                          onClick={() => handleEditComment(parent.id, textOf(parent))}
-                          className='text-gray-500 underline'
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {/* If currently editing this comment, show save/cancel buttons */}
-                      {editingCommentId === parent.id ? (
-                        <div className='flex space-x-2'>
-                          <textarea
-                            value={editTexts[parent.id] || ''}
-                            onChange={(e) => setEditTexts(prev => ({
-                              ...prev,
-                              [parent.id]: e.target.value
-                            }))}
-                            className='border rounded p-1 text-sm w-full'
-                          />
-                          <button
-                            onClick={() => handleSaveEdit(parent.id)}
-                            className='bg-green-600 text-white px-2 py-1 rounded text-xs'
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : null}
-                      <button
-                        onClick={() => handleToggleReplyBox(parent.id)}
-                        className='text-gray-500 underline'
-                      >
-                        {showReplyBox[parent.id] ? 'Cancel Reply' : 'Reply'}
-                      </button>
-                    </div>
+                      </div>
 
-                    {/* If expanded, show child replies */}
-                    {expandedReplies[parent.id] && (
-                      <div className='pl-4 border-l border-gray-300 space-y-4 mt-1'>
-                        {childReplies.map(child => {
-                          const childEmphasized =
-                            child.emphasis?.includes(brotherID)
-                          const childEmphasisCount = child.emphasis?.length || 0
+                      {/* If expanded, show child replies */}
+                      {expandedReplies[parent.id] && (
+                        <div className='pl-4 border-l border-gray-300 space-y-4 mt-1'>
+                          {childReplies.map(child => {
+                            const childEmphasized =
+                              child.emphasis?.includes(brotherID)
+                            const childEmphasisCount = child.emphasis?.length || 0
 
-                          const childFirst = child.brotherDetails?.firstname
-                          const childLast = child.brotherDetails?.lastname
+                            const childFirst = child.brotherDetails?.firstname
+                            const childLast = child.brotherDetails?.lastname
 
-                          const childEmphasizedByNames = (
-                            child.emphasis || []
-                          ).map(uniq => {
-                            return brothersMap[uniq] || uniq
-                          })
-                          console.log(
-                            'childEmphasizedByNames:',
-                            childEmphasizedByNames
-                          )
+                            const childEmphasizedByNames = (
+                              child.emphasis || []
+                            ).map(uniq => {
+                              return brothersMap[uniq] || uniq
+                            })
+                            console.log(
+                              'childEmphasizedByNames:',
+                              childEmphasizedByNames
+                            )
 
-                          const canClickChild = child.brother !== brotherID
+                            const canClickChild = child.brother !== brotherID
 
-                          return (
-                            <div key={child.id} className='flex flex-col'>
-                              {/* top row (author/time/text + emphasis) */}
-                              <div className='flex items-start justify-between'>
-                                <div>
-                                  <p className='font-bold text-sm'>
-                                    {childFirst && childLast ? `${childFirst} ${childLast}` : child.brother}{' '}
-                                    <span className='text-xs text-gray-400 ml-2'>
-                                      {new Date(child.time).toLocaleString()}
-                                    </span>
-                                  </p>
-                                  <p className='text-sm text-gray-800 mb-1'>{textOf(child)}</p>
-                                </div>
+                            return (
+                              <div key={child.id} className='flex flex-col'>
+                                {/* top row (author/time/text + emphasis) */}
+                                <div className='flex items-start justify-between'>
+                                  <div>
+                                    <p className='font-bold text-sm'>
+                                      {childFirst && childLast ? `${childFirst} ${childLast}` : child.brother}{' '}
+                                      <span className='text-xs text-gray-400 ml-2'>
+                                        {new Date(child.time).toLocaleString()}
+                                      </span>
+                                    </p>
+                                    <p className='text-sm text-gray-800 mb-1'>{textOf(child)}</p>
+                                  </div>
 
-                                {/* existing emphasis UI for child (unchanged) */}
-                                <div
-                                  className={`relative group flex items-center space-x-1 ${canClickChild ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                                  onClick={() => {
-                                    if (!canClickChild) return
-                                    handleToggleEmphasis(child.id)
-                                  }}
-                                >
-                                  {childEmphasized ? (
-                                    <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
-                                      <FaExclamation className='mr-[-8px]' />
-                                      <FaExclamation />
-                                    </div>
-                                  ) : (
-                                    <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
-                                      <FaExclamation className='mr-[-8px]' />
-                                      <FaExclamation />
-                                    </div>
-                                  )}
-                                  <span className='text-sm font-semibold text-gray-700'>
-                                    {childEmphasisCount}
-                                  </span>
-
-                                  <div className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'>
-                                    {childEmphasizedByNames.length > 0 ? (
-                                      <div>
-                                        <p className='font-semibold mb-1'>Emphasized by:</p>
-                                        {childEmphasizedByNames.map((name, i) => (
-                                          <p key={i}>{name}</p>
-                                        ))}
+                                  {/* existing emphasis UI for child (unchanged) */}
+                                  <div
+                                    className={`relative group flex items-center space-x-1 ${canClickChild ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                    onClick={() => {
+                                      if (!canClickChild) return
+                                      handleToggleEmphasis(child.id)
+                                    }}
+                                  >
+                                    {childEmphasized ? (
+                                      <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
+                                        <FaExclamation className='mr-[-8px]' />
+                                        <FaExclamation />
                                       </div>
                                     ) : (
-                                      'No emphasis yet'
+                                      <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
+                                        <FaExclamation className='mr-[-8px]' />
+                                        <FaExclamation />
+                                      </div>
                                     )}
+                                    <span className='text-sm font-semibold text-gray-700'>
+                                      {childEmphasisCount}
+                                    </span>
+
+                                    <div className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'>
+                                      {childEmphasizedByNames.length > 0 ? (
+                                        <div>
+                                          <p className='font-semibold mb-1'>Emphasized by:</p>
+                                          {childEmphasizedByNames.map((name, i) => (
+                                            <p key={i}>{name}</p>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        'No emphasis yet'
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* actions row for replies */}
-                              <div className='ml-0 flex items-center space-x-2 pl-2 text-sm mt-1'>
-                                {child.brother === brotherID && editingCommentId !== child.id && (
-                                  <button
-                                    onClick={() => handleEditComment(child.id, textOf(child))}
-                                    className='text-gray-500 underline'
-                                  >
-                                    Edit
-                                  </button>
+                                {/* actions row for replies */}
+                                <div className='ml-0 flex items-center space-x-2 pl-2 text-sm mt-1'>
+                                  {child.brother === brotherID && editingCommentId !== child.id && (
+                                    <button
+                                      onClick={() => handleEditComment(child.id, textOf(child))}
+                                      className='text-gray-500 underline'
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* inline edit UI */}
+                                {editingCommentId === child.id && (
+                                  <div className='flex w-full items-start space-x-2 mt-1 pl-2'>
+                                    <textarea
+                                      value={editTexts[child.id] || ''}
+                                      onChange={(e) =>
+                                        setEditTexts(prev => ({ ...prev, [child.id]: e.target.value }))
+                                      }
+                                      className='border rounded p-1 text-sm w-full'
+                                    />
+                                    <button
+                                      onClick={() => handleSaveEdit(child.id)}
+                                      className='bg-green-600 text-white px-2 py-1 rounded text-xs'
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={handleCancelEdit}
+                                      className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
                                 )}
                               </div>
-
-                              {/* inline edit UI */}
-                              {editingCommentId === child.id && (
-                                <div className='flex w-full items-start space-x-2 mt-1 pl-2'>
-                                  <textarea
-                                    value={editTexts[child.id] || ''}
-                                    onChange={(e) =>
-                                      setEditTexts(prev => ({ ...prev, [child.id]: e.target.value }))
-                                    }
-                                    className='border rounded p-1 text-sm w-full'
-                                  />
-                                  <button
-                                    onClick={() => handleSaveEdit(child.id)}
-                                    className='bg-green-600 text-white px-2 py-1 rounded text-xs'
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={handleCancelEdit}
-                                    className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )
+                            )
 
 
 
-                        })}
-                      </div>
-                    )}
+                          })}
+                        </div>
+                      )}
 
-                    {/* If showReplyBox is true, show the reply text area */}
-                    {showReplyBox[parent.id] && (
-                      <div className='ml-6 mt-2'>
-                        <textarea
-                          value={replyTexts[parent.id] || ''}
-                          onChange={e =>
-                            setReplyTexts(prev => ({
-                              ...prev,
-                              [parent.id]: e.target.value
-                            }))
-                          }
-                          rows={1}
-                          className='border w-full p-1 rounded text-sm'
-                          placeholder='Write a reply...'
-                        />
-                        <button
-                          onClick={() => handleAddReply(parent.id)}
-                          className='bg-green-600 text-white px-3 py-1 mt-1 rounded text-sm'
-                        >
-                          Submit Reply
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                      {/* If showReplyBox is true, show the reply text area */}
+                      {showReplyBox[parent.id] && (
+                        <div className='ml-6 mt-2'>
+                          <textarea
+                            value={replyTexts[parent.id] || ''}
+                            onChange={e =>
+                              setReplyTexts(prev => ({
+                                ...prev,
+                                [parent.id]: e.target.value
+                              }))
+                            }
+                            rows={1}
+                            className='border w-full p-1 rounded text-sm'
+                            placeholder='Write a reply...'
+                          />
+                          <button
+                            onClick={() => handleAddReply(parent.id)}
+                            className='bg-green-600 text-white px-3 py-1 mt-1 rounded text-sm'
+                          >
+                            Submit Reply
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {/* Input for top-level comment */}
+            <div className='mt-4'>
+              <textarea
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                className='w-full p-2 rounded border'
+                placeholder='Write a top-level comment...'
+                rows={2}
+              />
+              <button
+                onClick={handleAddComment}
+                className='bg-[#8B0000] text-white px-4 py-2 mt-2 rounded hover:bg-red-800'
+              >
+                Submit
+              </button>
             </div>
-          )}
-          {/* Input for top-level comment */}
-          <div className='mt-4'>
-            <textarea
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              className='w-full p-2 rounded border'
-              placeholder='Write a top-level comment...'
-              rows={2}
-            />
+          </div>
+          {/* Diversity + Coffee Chat Feedback */}
+          <div className="p-4 rounded-lg shadow-md bg-white mt-4">
+            <h3 className="text-lg font-semibold mb-4">Diversity Chat Feedback</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Textarea */}
+              <div className="md:col-span-3">
+                <textarea
+                  value={diversityChatFeedback}
+                  onChange={(e) => setDiversityChatFeedback(e.target.value)}
+                  className="w-full p-2 border rounded min-h-[150px] mb-2"
+                />
+              </div>
+
+              {/* Dropdown */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Select Rating</label>
+                <select
+                  value={diversityChatRating}
+                  onChange={(e) => {
+                    const selected = e.target.value;
+                    setDiversityChatRating(selected);
+                    handleAddRating(selected, 'diversity_chat_decision');
+                  }}
+                  className="w-full p-2 border rounded"
+                >
+                  {Object.entries(RusheeStatus).map(([key, label]) => (
+                    <option key={key} value={label}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <button
-              onClick={handleAddComment}
-              className='bg-[#8B0000] text-white px-4 py-2 mt-2 rounded hover:bg-red-800'
+              onClick={() => {
+                handleAddFeedback(
+                  diversityChatFeedback,
+                  'diversity_chat_feedback',
+                  'diversity'
+                );
+              }}
+              className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
             >
-              Submit
+              Save Diversity Chat Feedback
+            </button>
+          </div>
+
+          {/* Coffee Chat Feedback */}
+          <div className="p-4 rounded-lg shadow-md bg-white mt-4">
+            <h3 className="text-lg font-semibold mb-4">Coffee Chat Feedback</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Textarea */}
+              <div className="md:col-span-3">
+                <textarea
+                  value={coffeeChatFeedback}
+                  onChange={(e) => setCoffeeChatFeedback(e.target.value)}
+                  className="w-full p-2 border rounded min-h-[150px] mb-2"
+                />
+              </div>
+
+              {/* Dropdown */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Select Rating</label>
+                <select
+                  value={coffeeChatRating}
+                  onChange={
+                    (e) => {
+                      const selected = e.target.value;
+                      setCoffeeChatRating(selected);
+                      handleAddRating(selected, 'coffee_chat_decision');
+                    }
+                  }
+                  className="w-full p-2 border rounded"
+                >
+                  {Object.entries(RusheeStatus).map(([key, label]) => (
+                    <option key={key} value={label}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                handleAddFeedback(
+                  coffeeChatFeedback,
+                  'coffee_chat_feedback',
+                  'coffee'
+                );
+              }}
+              className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+            >
+              Save Coffee Chat Feedback
             </button>
           </div>
         </div>
-        {/* Diversity + Coffee Chat Feedback */}
-        <div className="p-4 rounded-lg shadow-md bg-white mt-4">
-          <h3 className="text-lg font-semibold mb-4">Diversity Chat Feedback</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Textarea */}
-            <div className="md:col-span-3">
-              <textarea
-                value={diversityChatFeedback}
-                onChange={(e) => setDiversityChatFeedback(e.target.value)}
-                className="w-full p-2 border rounded min-h-[150px] mb-2"
-              />
-            </div>
-
-            {/* Dropdown */}
-            <div>
-              <label className="block text-sm font-medium mb-1">Select Rating</label>
-              <select
-                value={diversityChatRating}
-                onChange={(e) => {
-                  const selected = e.target.value;
-                  setDiversityChatRating(selected);
-                  handleAddRating(selected, 'diversity_chat_decision');
-                }}
-                className="w-full p-2 border rounded"
-              >
-                {Object.entries(RusheeStatus).map(([key, label]) => (
-                  <option key={key} value={label}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              handleAddFeedback(
-                diversityChatFeedback,
-                'diversity_chat_feedback',
-                'diversity'
-              );
-            }}
-            className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
-          >
-            Save Diversity Chat Feedback
-          </button>
-        </div>
-
-        {/* Coffee Chat Feedback */}
-        <div className="p-4 rounded-lg shadow-md bg-white mt-4">
-          <h3 className="text-lg font-semibold mb-4">Coffee Chat Feedback</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Textarea */}
-            <div className="md:col-span-3">
-              <textarea
-                value={coffeeChatFeedback}
-                onChange={(e) => setCoffeeChatFeedback(e.target.value)}
-                className="w-full p-2 border rounded min-h-[150px] mb-2"
-              />
-            </div>
-
-            {/* Dropdown */}
-            <div>
-              <label className="block text-sm font-medium mb-1">Select Rating</label>
-              <select
-                value={coffeeChatRating}
-                onChange={
-                  (e) => {
-                    const selected = e.target.value;
-                    setCoffeeChatRating(selected);
-                    handleAddRating(selected, 'coffee_chat_decision');
-                  }
-                }
-                className="w-full p-2 border rounded"
-              >
-                {Object.entries(RusheeStatus).map(([key, label]) => (
-                  <option key={key} value={label}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              handleAddFeedback(
-                coffeeChatFeedback,
-                'coffee_chat_feedback',
-                'coffee'
-              );
-            }}
-            className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
-          >
-            Save Coffee Chat Feedback
-          </button>
-        </div>
       </div>
-    </div >
+    </BrothersProvider>
   )
 }

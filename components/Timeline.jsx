@@ -4,14 +4,8 @@ import { VerticalTimeline, VerticalTimelineElement } from 'react-vertical-timeli
 import supabase from "supabase"
 import 'react-vertical-timeline-component/style.min.css';
 
-//  export type EventType = {
-//      title: string;
-//      description: string;
-//  };
-
-
 const formatDate = (timestamp) => {
-    if(timestamp){
+    if (timestamp) {
         const date = new Date(timestamp)
         var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         return date.toLocaleDateString("en-US", options);
@@ -19,7 +13,32 @@ const formatDate = (timestamp) => {
     else {
         return "Date TBD"
     }
-    
+
+}
+
+const formatTime = (timestamp) => {
+    if (timestamp) {
+        const date = new Date(timestamp)
+        var options = { hour: 'numeric', minute: '2-digit', hour12: true };
+        return date.toLocaleTimeString("en-US", options);
+    }
+    else {
+        return "Time TBD"
+    }
+}
+
+const formatDateTime = (startTimestamp, endTimestamp) => {
+    const dateStr = formatDate(startTimestamp);
+    const startTime = formatTime(startTimestamp);
+    const endTime = formatTime(endTimestamp);
+
+    if (startTimestamp && endTimestamp) {
+        return `${dateStr} • ${startTime} - ${endTime}`;
+    } else if (startTimestamp) {
+        return `${dateStr} • ${startTime}`;
+    } else {
+        return dateStr;
+    }
 }
 
 const TimelineElement = ({ event }) => {
@@ -28,7 +47,7 @@ const TimelineElement = ({ event }) => {
             className="vertical-timeline-element--work"
             contentStyle={{}}
             contentArrowStyle={{}}
-            date={formatDate(event.date)}
+            date={formatDateTime(event.date, event.start_time)}
             dateClassName={"xl:text-black"}
             iconStyle={{ background: '#8b0000', color: '#fff' }}
         >
