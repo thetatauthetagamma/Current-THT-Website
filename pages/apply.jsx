@@ -427,11 +427,10 @@ export default function Application() {
         your application as many times as you wish before the due date. Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
       </div>
 
-      {/* Due Date */}
       {dueDate && (
         <div className='mb-4 text-gray-700'>
           <span className='font-semibold'>Due Date:</span>{' '}
-          {dayjs(dueDate).format('MMMM D, YYYY')}
+          {dayjs(dueDate).format('MMMM D, YYYY[, 11:59 PM]')}
         </div>
       )}
       {isPastDue && (
