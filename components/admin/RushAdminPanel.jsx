@@ -16,10 +16,12 @@ export default function RushAdminPanel() {
   // Questions
   const [questions, setQuestions] = useState([])
   const [newQuestionText, setNewQuestionText] = useState('')
+  const [newWordCount, setNewWordCount] = useState('')
 
   // Editing question
   const [editingQuestionId, setEditingQuestionId] = useState(null)
   const [editingQuestionText, setEditingQuestionText] = useState('')
+  const [editingWordCount, setEditingWordCount] = useState('')
 
   // ─────────────────────────────────────────────────────────
   //  CSV Upload (Round Cuts)
@@ -105,58 +107,58 @@ export default function RushAdminPanel() {
     // Confirm with user before proceeding
     const confirmMsg = `This will move all current rushees into the Pledges table and reset RushInfo. Please only do this once they have all accepted their bids. This action CANNOT be undone.`;
     if (!window.confirm(confirmMsg)) return;
-  
+
     try {
       // Fetch all active rushees
       const { data: rushees, error: fetchError } = await supabase
         .from('Rushees')
         .select('uniqname, firstname, lastname, major, year, pronouns')
         .eq('active', true);
-  
+
       if (fetchError) {
         console.error('Error fetching active rushees:', fetchError);
         alert('Failed to fetch rushees. Check console.');
         return;
       }
-  
+
       if (!rushees || rushees.length === 0) {
         alert('No active rushees to move.');
         return;
       }
-  
+
       // Insert all rushees into the Pledges table
       const { error: insertError } = await supabase
         .from('Pledges')
         .insert(rushees); // Directly inserts the array
-  
+
       if (insertError) {
         console.error('Error inserting pledges:', insertError);
         alert('Error moving rushees to pledges. Check console.');
         return;
       }
 
-    
+
       // Mark all rushees as inactive
       const { error: updateError } = await supabase
         .from('Rushees')
         .update({ active: false })
         .eq('active', true);
-  
+
       if (updateError) {
         console.error('Error marking rushees as inactive:', updateError);
         alert('Error updating rushee status. Check console.');
         return;
       }
-  
+
       // Delete all rows from RushInfo
       const { error: deleteError } = await supabase.from('RushInfo').delete().neq('id', 0); // Delete all rows
-  
+
       if (deleteError) {
         console.error('Error resetting RushInfo:', deleteError);
         alert('Error resetting RushInfo. Check console.');
         return;
       }
-  
+
       alert('Rush finalized successfully! All active rushees moved to pledges, RushInfo reset.');
     } catch (err) {
       console.error('Unexpected error in handleFinalizePC:', err);
@@ -200,13 +202,13 @@ export default function RushAdminPanel() {
       .insert([
         {
           app_start_date: appStartDate ? appStartDate.toLocaleDateString('en-CA') // produces "YYYY-MM-DD"
-          : null,
+            : null,
           app_due_date: appDueDate ? appDueDate.toLocaleDateString('en-CA') : null,
         },
       ])
       .select('*')
       .single()
-  
+
     if (error) {
       console.error('Error creating RushInfo:', error)
       alert('Failed to create RushInfo')
@@ -217,10 +219,10 @@ export default function RushAdminPanel() {
       setAppDueDate(data.app_due_date ? new Date(`${data.app_due_date}T00:00:00`) : null)
     }
   }
-  
+
   async function handleSaveRushInfo() {
     if (!rushInfo) return
-  
+
     const { data, error } = await supabase
       .from('RushInfo')
       .update({
@@ -230,7 +232,7 @@ export default function RushAdminPanel() {
       .eq('id', rushInfo.id)
       .select('*')
       .single()
-  
+
     if (error) {
       console.error('Error updating RushInfo:', error)
       alert('Failed to update RushInfo')
@@ -261,7 +263,10 @@ export default function RushAdminPanel() {
 
     const { data, error } = await supabase
       .from('Application_Questions')
-      .insert([{ question: newQuestionText }])
+      .insert([{
+        question: newQuestionText,
+        word_count: newWordCount ? parseInt(newWordCount) : null
+      }])
       .single()
 
     if (error) {
@@ -270,6 +275,7 @@ export default function RushAdminPanel() {
     } else {
       alert('Question added!')
       setNewQuestionText('')
+      setNewWordCount('')
       fetchQuestions()
     }
   }
@@ -277,6 +283,7 @@ export default function RushAdminPanel() {
   function handleEditQuestion(q) {
     setEditingQuestionId(q.id)
     setEditingQuestionText(q.question)
+    setEditingWordCount(q.word_count ? q.word_count.toString() : '')
   }
 
   async function handleSaveQuestionEdit(questionId) {
@@ -284,7 +291,10 @@ export default function RushAdminPanel() {
 
     const { error } = await supabase
       .from('Application_Questions')
-      .update({ question: editingQuestionText })
+      .update({
+        question: editingQuestionText,
+        word_count: editingWordCount ? parseInt(editingWordCount) : null
+      })
       .eq('id', questionId)
 
     if (error) {
@@ -294,6 +304,7 @@ export default function RushAdminPanel() {
       alert('Question updated!')
       setEditingQuestionId(null)
       setEditingQuestionText('')
+      setEditingWordCount('')
       fetchQuestions()
     }
   }
@@ -340,7 +351,7 @@ export default function RushAdminPanel() {
                 <DatePicker
                   selected={appStartDate}
                   onChange={(date) => setAppStartDate(date)}
-                  
+
                   showTimeSelect
                   dateFormat="yyyy-MM-dd"
                   placeholderText="Select Start"
@@ -412,17 +423,27 @@ export default function RushAdminPanel() {
         </h3>
 
         {/** Add new question */}
-        <div className="mb-4 flex">
-          <input
-            type="text"
-            placeholder="Enter new question text..."
-            value={newQuestionText}
-            onChange={(e) => setNewQuestionText(e.target.value)}
-            className="flex-1 border rounded-l p-2 outline-none"
-          />
+        <div className="mb-4">
+          <div className="flex flex-col md:flex-row gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Enter new question text..."
+              value={newQuestionText}
+              onChange={(e) => setNewQuestionText(e.target.value)}
+              className="flex-1 border rounded p-2 outline-none"
+            />
+            <input
+              type="number"
+              placeholder="Suggested word count (optional)"
+              value={newWordCount}
+              onChange={(e) => setNewWordCount(e.target.value)}
+              className="w-full md:w-48 border rounded p-2 outline-none"
+              min="1"
+            />
+          </div>
           <button
             onClick={handleAddQuestion}
-            className="bg-green-600 text-white px-4 py-2 rounded-r hover:bg-green-700"
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
           >
             Add Question
           </button>
@@ -442,6 +463,15 @@ export default function RushAdminPanel() {
                     value={editingQuestionText}
                     onChange={(e) => setEditingQuestionText(e.target.value)}
                     className="flex-1 border rounded p-2"
+                    placeholder="Question text"
+                  />
+                  <input
+                    type="number"
+                    value={editingWordCount}
+                    onChange={(e) => setEditingWordCount(e.target.value)}
+                    className="w-full md:w-32 border rounded p-2"
+                    placeholder="Word count"
+                    min="1"
                   />
                   <div className="flex space-x-2">
                     <button
@@ -454,6 +484,7 @@ export default function RushAdminPanel() {
                       onClick={() => {
                         setEditingQuestionId(null)
                         setEditingQuestionText('')
+                        setEditingWordCount('')
                       }}
                       className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500"
                     >
@@ -463,9 +494,16 @@ export default function RushAdminPanel() {
                 </div>
               ) : (
                 <>
-                  <span className="flex-1 mb-2 md:mb-0 mr-2 text-gray-800 font-medium">
-                    {q.question}
-                  </span>
+                  <div className="flex-1 mb-2 md:mb-0 mr-2">
+                    <span className="text-gray-800 font-medium block">
+                      {q.question}
+                    </span>
+                    {q.word_count && (
+                      <span className="text-gray-500 text-sm">
+                        Suggested: {q.word_count} words
+                      </span>
+                    )}
+                  </div>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => handleEditQuestion(q)}
@@ -515,7 +553,7 @@ export default function RushAdminPanel() {
           >
             Eliminate Others
           </button>
-          
+
         </div>
 
         {/* If some names were parsed, show them */}
@@ -533,13 +571,13 @@ export default function RushAdminPanel() {
         )}
       </div>
       <div className="mt-8 p-4 border rounded bg-gray-50">
-      <button
-            onClick={handleFinalizePC}
-            className="bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
-          >
-            Finalize PC!!!!!!!!!! 
-          </button>
-          </div>
+        <button
+          onClick={handleFinalizePC}
+          className="bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
+        >
+          Finalize PC!!!!!!!!!!
+        </button>
+      </div>
     </div>
   )
 }

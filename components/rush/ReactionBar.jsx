@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useBrothers } from '@/contexts/BrothersContext'
 import supabase from '@/supabase'
 
 // React-icons
@@ -30,34 +31,7 @@ export default function ReactionBar({
   const [localDislikes, setDislikes] = useState(dislikes || [])
   const [localStars, setStars] = useState(stars || [])
 
-  // We'll store a dictionary: { [uniqname]: { firstname, lastname } }
-  const [brothersMap, setBrothersMap] = useState({})
-
-  // One-time fetch of all brothers from the "Brothers" table
-  useEffect(() => {
-    const fetchAllBrothers = async () => {
-      const { data, error } = await supabase
-        .from('Brothers')
-        .select('userid, firstname, lastname')
-
-      if (error) {
-        console.error('Error fetching all brothers:', error)
-        return
-      }
-      if (data) {
-        // Build a dictionary: { uniqname: { firstname, lastname } }
-        const map = {}
-        data.forEach(bro => {
-          map[bro.userid] = {
-            firstname: bro.firstname,
-            lastname: bro.lastname
-          }
-        })
-        setBrothersMap(map)
-      }
-    }
-    fetchAllBrothers()
-  }, [])
+  const { brothersMap, isLoading: brothersLoading } = useBrothers()
 
   // Check if the current user has already liked, disliked, or starred
   const isLiked = localLikes.includes(brotherID)
@@ -139,8 +113,10 @@ export default function ReactionBar({
     }
   }
 
-  // This helper function returns a small React element
-  // showing "No X yet" or a multiline list of each brother
+  // ─────────────────────────────────────────────────────────────────────────────
+  // This function takes an array of uniqnames and displays their full names
+  // Uses the shared brothersMap from context for instant lookups
+  // ─────────────────────────────────────────────────────────────────────────────
   function renderNamesOrNone(uniqnameArray, label) {
     if (!uniqnameArray || uniqnameArray.length === 0) {
       return <p>No {label} yet</p>
@@ -149,17 +125,18 @@ export default function ReactionBar({
     return (
       <div>
         <p className="font-bold mb-1">{label} by:</p>
-        {uniqnameArray.map(u => {
-          const brother = brothersMap[u]
+        {uniqnameArray.map(uniqname => {
+          const brother = brothersMap[uniqname]
+
           if (brother) {
             return (
-              <p key={u}>
+              <p key={uniqname}>
                 {brother.firstname} {brother.lastname}
               </p>
             )
           } else {
-            // Fallback if we didn't find that brother in brothersMap
-            return <p key={u}>{u}</p>
+            // fallback is brother not yet loaded
+            return <p key={uniqname}>{uniqname}</p>
           }
         })}
       </div>
