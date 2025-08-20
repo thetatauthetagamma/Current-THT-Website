@@ -68,15 +68,15 @@ const Navbar = () => {
   }, [userEmail]);
 
 
-    const toggleMenuOn = () => {
-      setNavState(navState => '');
-      setNavState1(navState1 => 'hidden');
-    }
+  const toggleMenuOn = () => {
+    setNavState(navState => '');
+    setNavState1(navState1 => 'hidden');
+  }
 
-    const toggleMenuOff = () => {
-      setNavState(navState => 'hidden');
-      setNavState1(navState1 => '');
-    }
+  const toggleMenuOff = () => {
+    setNavState(navState => 'hidden');
+    setNavState1(navState1 => '');
+  }
 
   const handleGoogleSignIn = async () => {
     // Handle the Google sign in
@@ -141,46 +141,51 @@ const Navbar = () => {
                   <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg">Rush </a>
                 </Link>
               </li>
-             
+              <li className="mx-1">
+                <Link legacyBehavior href="/apply">
+                  <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg">Apply </a>
+                </Link>
+              </li>
 
-              { 
-              
-              isPledge ?
-                (
-                  <div className="flex flex-row">
-                        <li className="mx-1">
-                          <Link legacyBehavior href="/pledges/pledgecalendar">
-                            <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Pledges </a>
-                          </Link>
-                        </li>
-                        <li className="mx-1" onClick={handleGoogleSignOut}>
-                          <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign out </a>
-                        </li>
-                      </div>
-                )
-              :
-              userEmail && !isBrother ? (
-                <li className="mx-1">
-                  <li className="mx-1" onClick={handleGoogleSignOut}>
-                    <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign out </a>
-                  </li>
-                </li>
-              ) : isBrother ? (
-                <div className="flex flex-row">
-                  <li className="mx-1">
-                    <Link legacyBehavior href="/brothers">
-                      <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Brothers </a>
-                    </Link>
-                  </li>
-                  <li className="mx-1" onClick={handleGoogleSignOut}>
-                    <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign out </a>
-                  </li>
-                </div>
-              ) : (
-                <li className="mx-1" onClick={handleGoogleSignIn}>
-                  <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign in </a>
-                </li>
-              )}
+
+              {
+
+                isPledge ?
+                  (
+                    <div className="flex flex-row">
+                      <li className="mx-1">
+                        <Link legacyBehavior href="/pledges/pledgecalendar">
+                          <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Pledges </a>
+                        </Link>
+                      </li>
+                      <li className="mx-1" onClick={handleGoogleSignOut}>
+                        <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign out </a>
+                      </li>
+                    </div>
+                  )
+                  :
+                  userEmail && !isBrother ? (
+                    <li className="mx-1">
+                      <li className="mx-1" onClick={handleGoogleSignOut}>
+                        <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign out </a>
+                      </li>
+                    </li>
+                  ) : isBrother ? (
+                    <div className="flex flex-row">
+                      <li className="mx-1">
+                        <Link legacyBehavior href="/brothers">
+                          <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Brothers </a>
+                        </Link>
+                      </li>
+                      <li className="mx-1" onClick={handleGoogleSignOut}>
+                        <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign out </a>
+                      </li>
+                    </div>
+                  ) : (
+                    <li className="mx-1" onClick={handleGoogleSignIn}>
+                      <a className="text-black hover:text-gray-400 transition-colors duration-300 pl-4 py-2 rounded-md font-bold text-lg pr-8"> Sign in </a>
+                    </li>
+                  )}
             </ul>
           </section>
         </div>
@@ -218,39 +223,39 @@ const Navbar = () => {
               </li>
               {
                 isPledge ?
-                (
-                  <div className="flex flex-col">
-                        <li className="mx-1">
-                          <Link legacyBehavior href="/pledges/pledgecalendar">
-                            <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Pledges </a>
-                          </Link>
-                        </li>
-                        <li className="mx-1" onClick={handleGoogleSignOut}>
-                          <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Sign out </a>
-                        </li>
-                      </div>
-                ): userEmail && !isBrother ? (
-                  <li className="mx-1">
-                    <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg">
-                      Hello {userEmail}
-                    </a>
-                  </li>
-                ) : isBrother ? (
-                  <div className="flex flex-col">
+                  (
+                    <div className="flex flex-col">
+                      <li className="mx-1">
+                        <Link legacyBehavior href="/pledges/pledgecalendar">
+                          <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Pledges </a>
+                        </Link>
+                      </li>
+                      <li className="mx-1" onClick={handleGoogleSignOut}>
+                        <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Sign out </a>
+                      </li>
+                    </div>
+                  ) : userEmail && !isBrother ? (
                     <li className="mx-1">
-                      <Link legacyBehavior href="/brothers">
-                        <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Brothers </a>
-                      </Link>
+                      <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg">
+                        Hello {userEmail}
+                      </a>
                     </li>
-                    <li className="mx-1" onClick={handleGoogleSignOut}>
-                      <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Sign out </a>
+                  ) : isBrother ? (
+                    <div className="flex flex-col">
+                      <li className="mx-1">
+                        <Link legacyBehavior href="/brothers">
+                          <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Brothers </a>
+                        </Link>
+                      </li>
+                      <li className="mx-1" onClick={handleGoogleSignOut}>
+                        <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Sign out </a>
+                      </li>
+                    </div>
+                  ) : (
+                    <li className="mx-1" onClick={handleGoogleSignIn}>
+                      <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Sign in </a>
                     </li>
-                  </div>
-                ) : (
-                  <li className="mx-1" onClick={handleGoogleSignIn}>
-                    <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Sign in </a>
-                  </li>
-                )}
+                  )}
             </ul>
           </nav>
         </section>
