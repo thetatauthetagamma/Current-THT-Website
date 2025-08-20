@@ -72,6 +72,7 @@ export default function ReactionBar({
       setLikes(updatedLikes)
     }
   }
+}
 
   // ─────────────────────────────────────────────────────────
   // 2) Toggling "dislike"
@@ -107,6 +108,7 @@ export default function ReactionBar({
       setDislikes(updatedDislikes)
     }
   }
+}
 
   // ─────────────────────────────────────────────────────────
   // 3) Toggling "star"
@@ -233,3 +235,4 @@ export default function ReactionBar({
     </div>
   )
 }
+
