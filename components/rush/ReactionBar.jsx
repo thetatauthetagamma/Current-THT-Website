@@ -44,17 +44,27 @@ export default function ReactionBar({
   async function handleLike(e) {
     e.stopPropagation() // prevent parent onClick
     let updatedLikes
+    let updatedDislikes = localDislikes
+
+    if (isLiked) {
+    let updatedDislikes
+
     if (isLiked) {
       updatedLikes = localLikes.filter(id => id !== brotherID)
+      updatedDislikes = localDislikes
     } else {
       updatedLikes = [...localLikes, brotherID]
       // If you want to automatically remove from localDislikes:
-      setDislikes(d => d.filter(id => id !== brotherID))
+      updatedDislikes = localDislikes.filter(id => id !== brotherID)
+      setDislikes(updatedDislikes)
     }
 
     const { data, error } = await supabase
       .from('Rushees')
-      .update({ likes: updatedLikes })
+      .update({
+        likes: updatedLikes,
+        dislikes: updatedDislikes
+      })
       .eq('uniqname', uniqname)
       .single()
 
@@ -69,17 +79,27 @@ export default function ReactionBar({
   async function handleDislike(e) {
     e.stopPropagation()
     let updatedDislikes
+    let updatedLikes = localLikes
+
+    if (isDisliked) {
+    let updatedLikes
+
     if (isDisliked) {
       updatedDislikes = localDislikes.filter(id => id !== brotherID)
+      updatedLikes = localLikes
     } else {
       updatedDislikes = [...localDislikes, brotherID]
       // If you want to automatically remove from localLikes:
-      setLikes(l => l.filter(id => id !== brotherID))
+      updatedLikes = localLikes.filter(id => id !== brotherID)
+      setLikes(updatedLikes)
     }
 
     const { data, error } = await supabase
       .from('Rushees')
-      .update({ dislikes: updatedDislikes })
+      .update({
+        dislikes: updatedDislikes,
+        likes: updatedLikes
+      })
       .eq('uniqname', uniqname)
       .single()
 
