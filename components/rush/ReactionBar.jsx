@@ -46,12 +46,9 @@ export default function ReactionBar({
     let updatedLikes
     let updatedDislikes = localDislikes
 
-    if (isLiked) {
-    let updatedDislikes
 
     if (isLiked) {
       updatedLikes = localLikes.filter(id => id !== brotherID)
-      updatedDislikes = localDislikes
     } else {
       updatedLikes = [...localLikes, brotherID]
       // If you want to automatically remove from localDislikes:
@@ -72,7 +69,7 @@ export default function ReactionBar({
       setLikes(updatedLikes)
     }
   }
-}
+
 
   // ─────────────────────────────────────────────────────────
   // 2) Toggling "dislike"
@@ -83,11 +80,7 @@ export default function ReactionBar({
     let updatedLikes = localLikes
 
     if (isDisliked) {
-    let updatedLikes
-
-    if (isDisliked) {
       updatedDislikes = localDislikes.filter(id => id !== brotherID)
-      updatedLikes = localLikes
     } else {
       updatedDislikes = [...localDislikes, brotherID]
       // If you want to automatically remove from localLikes:
@@ -108,7 +101,7 @@ export default function ReactionBar({
       setDislikes(updatedDislikes)
     }
   }
-}
+
 
   // ─────────────────────────────────────────────────────────
   // 3) Toggling "star"
