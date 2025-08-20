@@ -221,6 +221,11 @@ const Navbar = () => {
                   <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg">Rush </a>
                 </Link>
               </li>
+              <li className="mx-1">
+                <Link legacyBehavior href="/apply">
+                  <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg">Apply </a>
+                </Link>
+              </li>
               {
                 isPledge ?
                   (
