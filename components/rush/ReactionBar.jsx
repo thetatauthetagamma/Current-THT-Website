@@ -47,7 +47,11 @@ export default function ReactionBar({
     let updatedDislikes = localDislikes
 
     if (isLiked) {
+    let updatedDislikes
+
+    if (isLiked) {
       updatedLikes = localLikes.filter(id => id !== brotherID)
+      updatedDislikes = localDislikes
     } else {
       updatedLikes = [...localLikes, brotherID]
       // If you want to automatically remove from localDislikes:
