@@ -463,7 +463,7 @@ export default function Application() {
               {!isPastDue && (
                 <div className='mt-2'>
                   <label className='bg-blue-500 text-white px-3 py-2 rounded cursor-pointer'>
-                    Select Photo (JPEG ONLY)
+                    Select Profile Photo (JPEG ONLY)
                     <input
                       type='file'
                       accept='image/jpeg'
