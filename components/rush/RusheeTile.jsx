@@ -49,7 +49,7 @@ export default function RusheeTile({
         .single()
 
       if (!error && data) {
-        setIsAdmin(data.adminrole==='dev' || data.adminrole==='rush')
+        setIsAdmin(data.adminrole === 'dev' || data.adminrole === 'rush')
       } else {
         console.error('Error fetching admin role:', error)
       }
@@ -138,6 +138,7 @@ export default function RusheeTile({
         likes={likes}
         dislikes={dislikes}
         stars={stars}
+        isAdmin={isAdmin}
       />
     </div>
   )

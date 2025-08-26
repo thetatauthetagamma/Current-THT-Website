@@ -24,7 +24,8 @@ export default function ReactionBar({
   brotherID,    // The currently logged-in user's uniqname
   likes = [],   // Array of uniqnames who liked the rushee
   dislikes = [],// Array of uniqnames who disliked the rushee
-  stars = []    // Array of uniqnames who starred the rushee
+  stars = [],   // Array of uniqnames who starred the rushee
+  isAdmin = false // Whether the current user is admin
 }) {
   // Local state so the UI updates immediately on toggle
   const [localLikes, setLikes] = useState(likes || [])
@@ -131,10 +132,16 @@ export default function ReactionBar({
   // ─────────────────────────────────────────────────────────────────────────────
   // This function takes an array of uniqnames and displays their full names
   // Uses the shared brothersMap from context for instant lookups
+  // Only shows names if user is admin, otherwise shows count only
   // ─────────────────────────────────────────────────────────────────────────────
   function renderNamesOrNone(uniqnameArray, label) {
     if (!uniqnameArray || uniqnameArray.length === 0) {
       return <p>No {label} yet</p>
+    }
+
+    // If not admin, only show count
+    if (!isAdmin) {
+      return <p>{uniqnameArray.length} {label}</p>
     }
 
     return (

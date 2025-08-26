@@ -11,6 +11,12 @@ import timezone from 'dayjs/plugin/timezone'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
+// Helper function to count words in text
+const countWords = (text) => {
+  if (!text || typeof text !== 'string') return 0;
+  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+};
+
 export default function Application() {
   const [session, setSession] = useState(null)
   const [isUmichEmail, setIsUmichEmail] = useState(false)
@@ -124,7 +130,7 @@ export default function Application() {
     const fetchQuestions = async () => {
       const { data, error } = await supabase
         .from('Application_Questions')
-        .select('*')
+        .select('*, word_limit')
         .order('id', { ascending: true })
       if (!error && data) setQuestions(data)
     }
@@ -238,6 +244,21 @@ export default function Application() {
     if (isPastDue) {
       alert('Application deadline has passed.')
       return
+    }
+
+    // Check if any answers exceed word limits
+    const overLimitQuestions = questions.filter(q => {
+      const wordLimit = q.word_limit;
+      if (!wordLimit) return false;
+      const currentAnswer = answers[q.id] || '';
+      const wordCount = countWords(currentAnswer);
+      return wordCount > wordLimit;
+    });
+
+    if (overLimitQuestions.length > 0) {
+      const questionNumbers = overLimitQuestions.map(q => `Q${q.id}`).join(', ');
+      alert(`Cannot submit: The following questions exceed their word limits: ${questionNumbers}. Please review and reduce your responses.`);
+      return;
     }
 
     try {
@@ -574,7 +595,11 @@ export default function Application() {
         <div className='bg-gray-100 p-4 rounded shadow-sm'>
           <h2 className='font-semibold text-lg mb-3'>Questions</h2>
           {questions.map(q => {
-            const wordCount = (answers[q.id] || '').trim().split(/\s+/).filter(word => word.length > 0).length
+            const currentAnswer = answers[q.id] || '';
+            const wordCount = countWords(currentAnswer);
+            const wordLimit = q.word_limit;
+            const isOverLimit = wordLimit && wordCount > wordLimit;
+
             return (
               <div key={q.id} className='mb-4'>
                 <div className='flex items-center justify-between mb-1'>
@@ -591,10 +616,15 @@ export default function Application() {
                 <textarea
                   rows={4}
                   className='border rounded p-2 w-full whitespace-pre-wrap break-words break-all'
-                  value={answers[q.id] || ''}
+                  value={currentAnswer}
                   disabled={isPastDue}
                   onChange={e => handleAnswerChange(q.id, e.target.value)}
                 />
+                {isOverLimit && (
+                  <p className='text-red-600 text-xs mt-1'>
+                    Your response is {wordCount - wordLimit} word{(wordCount - wordLimit) !== 1 ? 's' : ''} over the limit.
+                  </p>
+                )}
               </div>
             )
           })}
@@ -603,12 +633,34 @@ export default function Application() {
         {/* SUBMIT BUTTON + LAST UPDATED */}
         <div className='flex items-center gap-4'>
           {!isPastDue && (
-            <button
-              type='submit'
-              className='bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
-            >
-              Save Application
-            </button>
+            <div className='flex flex-col'>
+              <button
+                type='submit'
+                className={`px-4 py-2 rounded text-white ${questions.some(q => {
+                  const wordLimit = q.word_limit;
+                  if (!wordLimit) return false;
+                  const currentAnswer = answers[q.id] || '';
+                  const wordCount = countWords(currentAnswer);
+                  return wordCount > wordLimit;
+                })
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+              >
+                Save Application
+              </button>
+              {questions.some(q => {
+                const wordLimit = q.word_limit;
+                if (!wordLimit) return false;
+                const currentAnswer = answers[q.id] || '';
+                const wordCount = countWords(currentAnswer);
+                return wordCount > wordLimit;
+              }) && (
+                  <p className='text-red-600 text-xs mt-1'>
+                    Some responses exceed word limits
+                  </p>
+                )}
+            </div>
           )}
           {lastUpdated && (
             <span className='text-gray-600 text-sm'>
