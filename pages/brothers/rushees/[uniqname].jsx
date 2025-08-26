@@ -38,6 +38,7 @@ export default function RusheeProfile() {
   const { uniqname } = router.query
   const [brotherID, setBrotherID] = useState('')
   const [rushee, setRushee] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   // Q&A
   const [questions, setQuestions] = useState([])
@@ -139,6 +140,27 @@ export default function RusheeProfile() {
     }
     getSession()
   }, [])
+
+  // ─────────────────────────────────────────────────────────
+  // 1.5) Check if user is admin
+  // ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchAdminRole = async () => {
+      if (!brotherID) return
+      const { data, error } = await supabase
+        .from('Brothers')
+        .select('adminrole')
+        .eq('userid', brotherID)
+        .single()
+
+      if (!error && data) {
+        setIsAdmin(data.adminrole === 'dev' || data.adminrole === 'rush')
+      } else {
+        console.error('Error fetching admin role:', error)
+      }
+    }
+    fetchAdminRole()
+  }, [brotherID])
 
   // ─────────────────────────────────────────────────────────
   // 2) Fetch all Brothers once -> build { uniqname: "First Last" } map
@@ -611,7 +633,7 @@ export default function RusheeProfile() {
       return;
     }
     console.log(existing)
-    
+
     if (existing) {
       // Update existing rating
       const { data, error } = await supabase
@@ -728,6 +750,7 @@ export default function RusheeProfile() {
                 likes={rushee.likes}
                 dislikes={rushee.dislikes}
                 stars={rushee.stars}
+                isAdmin={isAdmin}
               />
             </div>
           </div>

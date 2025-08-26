@@ -17,11 +17,13 @@ export default function RushAdminPanel() {
   const [questions, setQuestions] = useState([])
   const [newQuestionText, setNewQuestionText] = useState('')
   const [newWordCount, setNewWordCount] = useState('')
+  const [newWordLimit, setNewWordLimit] = useState('')
 
   // Editing question
   const [editingQuestionId, setEditingQuestionId] = useState(null)
   const [editingQuestionText, setEditingQuestionText] = useState('')
   const [editingWordCount, setEditingWordCount] = useState('')
+  const [editingWordLimit, setEditingWordLimit] = useState('')
 
   // ─────────────────────────────────────────────────────────
   //  CSV Upload (Round Cuts)
@@ -265,7 +267,8 @@ export default function RushAdminPanel() {
       .from('Application_Questions')
       .insert([{
         question: newQuestionText,
-        word_count: newWordCount ? parseInt(newWordCount) : null
+        word_count: newWordCount ? parseInt(newWordCount) : null,
+        word_limit: newWordLimit ? parseInt(newWordLimit) : null
       }])
       .single()
 
@@ -276,6 +279,7 @@ export default function RushAdminPanel() {
       alert('Question added!')
       setNewQuestionText('')
       setNewWordCount('')
+      setNewWordLimit('')
       fetchQuestions()
     }
   }
@@ -284,6 +288,7 @@ export default function RushAdminPanel() {
     setEditingQuestionId(q.id)
     setEditingQuestionText(q.question)
     setEditingWordCount(q.word_count ? q.word_count.toString() : '')
+    setEditingWordLimit(q.word_limit ? q.word_limit.toString() : '')
   }
 
   async function handleSaveQuestionEdit(questionId) {
@@ -293,7 +298,8 @@ export default function RushAdminPanel() {
       .from('Application_Questions')
       .update({
         question: editingQuestionText,
-        word_count: editingWordCount ? parseInt(editingWordCount) : null
+        word_count: editingWordCount ? parseInt(editingWordCount) : null,
+        word_limit: editingWordLimit ? parseInt(editingWordLimit) : null
       })
       .eq('id', questionId)
 
@@ -305,6 +311,7 @@ export default function RushAdminPanel() {
       setEditingQuestionId(null)
       setEditingQuestionText('')
       setEditingWordCount('')
+      setEditingWordLimit('')
       fetchQuestions()
     }
   }
@@ -424,22 +431,32 @@ export default function RushAdminPanel() {
 
         {/** Add new question */}
         <div className="mb-4">
-          <div className="flex flex-col md:flex-row gap-2 mb-2">
+          <div className="flex flex-col gap-2 mb-2">
             <input
               type="text"
               placeholder="Enter new question text..."
               value={newQuestionText}
               onChange={(e) => setNewQuestionText(e.target.value)}
-              className="flex-1 border rounded p-2 outline-none"
+              className="border rounded p-2 outline-none"
             />
-            <input
-              type="number"
-              placeholder="Suggested word count (optional)"
-              value={newWordCount}
-              onChange={(e) => setNewWordCount(e.target.value)}
-              className="w-full md:w-48 border rounded p-2 outline-none"
-              min="1"
-            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Suggested word count (optional)"
+                value={newWordCount}
+                onChange={(e) => setNewWordCount(e.target.value)}
+                className="flex-1 border rounded p-2 outline-none"
+                min="1"
+              />
+              <input
+                type="number"
+                placeholder="Word limit (required)"
+                value={newWordLimit}
+                onChange={(e) => setNewWordLimit(e.target.value)}
+                className="flex-1 border rounded p-2 outline-none"
+                min="1"
+              />
+            </div>
           </div>
           <button
             onClick={handleAddQuestion}
@@ -457,22 +474,32 @@ export default function RushAdminPanel() {
               className="flex flex-col md:flex-row items-start md:items-center justify-between border rounded p-2 bg-white"
             >
               {editingQuestionId === q.id ? (
-                <div className="flex flex-col md:flex-row md:items-center w-full gap-2">
+                <div className="flex flex-col w-full gap-2">
                   <input
                     type="text"
                     value={editingQuestionText}
                     onChange={(e) => setEditingQuestionText(e.target.value)}
-                    className="flex-1 border rounded p-2"
+                    className="border rounded p-2"
                     placeholder="Question text"
                   />
-                  <input
-                    type="number"
-                    value={editingWordCount}
-                    onChange={(e) => setEditingWordCount(e.target.value)}
-                    className="w-full md:w-32 border rounded p-2"
-                    placeholder="Word count"
-                    min="1"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={editingWordCount}
+                      onChange={(e) => setEditingWordCount(e.target.value)}
+                      className="flex-1 border rounded p-2"
+                      placeholder="Suggested count"
+                      min="1"
+                    />
+                    <input
+                      type="number"
+                      value={editingWordLimit}
+                      onChange={(e) => setEditingWordLimit(e.target.value)}
+                      className="flex-1 border rounded p-2"
+                      placeholder="Word limit"
+                      min="1"
+                    />
+                  </div>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => handleSaveQuestionEdit(q.id)}
@@ -485,6 +512,7 @@ export default function RushAdminPanel() {
                         setEditingQuestionId(null)
                         setEditingQuestionText('')
                         setEditingWordCount('')
+                        setEditingWordLimit('')
                       }}
                       className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500"
                     >
@@ -498,11 +526,14 @@ export default function RushAdminPanel() {
                     <span className="text-gray-800 font-medium block">
                       {q.question}
                     </span>
-                    {q.word_count && (
-                      <span className="text-gray-500 text-sm">
-                        Suggested: {q.word_count} words
-                      </span>
-                    )}
+                    <div className="text-gray-500 text-sm space-x-4">
+                      {q.word_count && (
+                        <span>Suggested: {q.word_count} words</span>
+                      )}
+                      {q.word_limit && (
+                        <span className="font-semibold">Limit: {q.word_limit} words</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex space-x-2">
                     <button
