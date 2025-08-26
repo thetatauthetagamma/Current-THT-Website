@@ -53,9 +53,11 @@ export default function RushBook() {
         .single()
 
       if (!error && data) {
-        setIsAdmin(data.adminrole === 'dev' || data.adminrole === 'rush')
+        const isAdminUser = data.adminrole === 'dev' || data.adminrole === 'rush'
+        setIsAdmin(isAdminUser)
+        
         // Set default sort for non-admin users
-        if (!(data.adminrole === 'dev' || data.adminrole === 'rush')) {
+        if (!isAdminUser) {
           setSortField('uniqname')
           setSortOrder('asc')
         }
