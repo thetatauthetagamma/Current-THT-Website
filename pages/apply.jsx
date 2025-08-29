@@ -27,7 +27,8 @@ export default function Application() {
   const [dueDate, setDueDate] = useState(null)
   const [isPastDue, setIsPastDue] = useState(false)
   const [startDate, setStartDate] = useState(null)
-  const [isBeforeStart, setIsBeforeStart] = useState(true)
+  const [isBeforeStart, setIsBeforeStart] = useState(false) // Changed from true to false
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true) // Add loading state
 
   // Personal info
   const [firstname, setFirstname] = useState('')
@@ -124,6 +125,7 @@ export default function Application() {
         setIsPastDue(annArborToday.isAfter(due))
         setIsBeforeStart(annArborToday.isBefore(start))
       }
+      setIsLoadingSettings(false) // Mark loading as complete
     }
     fetchSettings()
 
@@ -384,6 +386,16 @@ export default function Application() {
         >
           Sign Out
         </button>
+      </div>
+    )
+  }
+
+  // Show loading while fetching application settings
+  if (isLoadingSettings) {
+    return (
+      <div className='container mx-auto p-4 max-w-lg'>
+        <h1 className='text-2xl font-bold mb-4'>Application</h1>
+        <p>Loading application details...</p>
       </div>
     )
   }

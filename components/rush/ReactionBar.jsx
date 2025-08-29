@@ -20,17 +20,19 @@ import {
  * from "Brothers" to display them in a multiline tooltip.
  */
 export default function ReactionBar({
-  uniqname,     // The rushee's unique identifier
-  brotherID,    // The currently logged-in user's uniqname
-  likes = [],   // Array of uniqnames who liked the rushee
-  dislikes = [],// Array of uniqnames who disliked the rushee
-  stars = [],   // Array of uniqnames who starred the rushee
-  isAdmin = false // Whether the current user is admin
+  uniqname,
+  brotherID,
+  likes = [],
+  dislikes = [],
+  stars = [],
+  isAdmin = false
 }) {
   // Local state so the UI updates immediately on toggle
   const [localLikes, setLikes] = useState(likes || [])
   const [localDislikes, setDislikes] = useState(dislikes || [])
   const [localStars, setStars] = useState(stars || [])
+  const [userStarCount, setUserStarCount] = useState(0) // Track user's total stars used
+  const [starLimit] = useState(3) // Maximum stars a user can give (configurable)
 
   const { brothersMap, isLoading: brothersLoading } = useBrothers()
 
@@ -38,6 +40,31 @@ export default function ReactionBar({
   const isLiked = localLikes.includes(brotherID)
   const isDisliked = localDislikes.includes(brotherID)
   const isStarred = localStars.includes(brotherID)
+
+  // Fetch user's total star count across all rushees
+  useEffect(() => {
+    const fetchUserStarCount = async () => {
+      if (!brotherID) return
+
+      const { data, error } = await supabase
+        .from('Rushees')
+        .select('stars')
+        .eq('active', true)
+
+      if (!error && data) {
+        // Count how many times this user appears in any stars array
+        const totalStars = data.reduce((count, rushee) => {
+          if (rushee.stars && rushee.stars.includes(brotherID)) {
+            return count + 1
+          }
+          return count
+        }, 0)
+        setUserStarCount(totalStars)
+      }
+    }
+
+    fetchUserStarCount()
+  }, [brotherID])
 
   // ─────────────────────────────────────────────────────────
   // 1) Toggling "like"
@@ -105,17 +132,27 @@ export default function ReactionBar({
 
 
   // ─────────────────────────────────────────────────────────
-  // 3) Toggling "star"
+  // 3) Toggling "star" - with limit check
   // ─────────────────────────────────────────────────────────
   async function handleStar(e) {
     e.stopPropagation()
+
+    console.log(userStarCount)
     let updatedStars
     if (isStarred) {
+      // User is removing a star - always allowed
       updatedStars = localStars.filter(id => id !== brotherID)
       setDislikes(d => d.filter(id => id !== brotherID))
+      setUserStarCount(prev => prev - 1) // Decrease user's star count
     } else {
+      // User is adding a star - check limit
+      if (userStarCount >= starLimit) {
+        alert(`You can only star up to ${starLimit} rushees. Remove a star from another rushee first.`)
+        return
+      }
       updatedStars = [...localStars, brotherID]
       setDislikes(d => d.filter(id => id !== brotherID))
+      setUserStarCount(prev => prev + 1) // Increase user's star count
     }
 
     const { data, error } = await supabase
@@ -126,6 +163,13 @@ export default function ReactionBar({
 
     if (!error) {
       setStars(updatedStars)
+    } else {
+      // Revert the star count change if database update failed
+      if (isStarred) {
+        setUserStarCount(prev => prev + 1)
+      } else {
+        setUserStarCount(prev => prev - 1)
+      }
     }
   }
 
@@ -226,7 +270,7 @@ export default function ReactionBar({
         {isStarred ? (
           <FaStar className="text-[#8B0000] text-2xl" />
         ) : (
-          <FaRegStar className="text-[#8B0000] text-2xl" />
+          <FaRegStar className={`text-2xl ${userStarCount >= starLimit ? 'text-gray-400' : 'text-[#8B0000]'}`} />
         )}
         <span className="text-lg font-semibold text-gray-700">
           {localStars.length}
