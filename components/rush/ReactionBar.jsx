@@ -31,7 +31,6 @@ export default function ReactionBar({
   const [localLikes, setLikes] = useState(likes || [])
   const [localDislikes, setDislikes] = useState(dislikes || [])
   const [localStars, setStars] = useState(stars || [])
-  const [userStarCount, setUserStarCount] = useState(0)
   const { brothersMap, isLoading: brothersLoading } = useBrothers()
 
   const isLiked = localLikes.includes(brotherID)
