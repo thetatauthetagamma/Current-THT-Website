@@ -27,8 +27,8 @@ export default function Application() {
   const [dueDate, setDueDate] = useState(null)
   const [isPastDue, setIsPastDue] = useState(false)
   const [startDate, setStartDate] = useState(null)
-  const [isBeforeStart, setIsBeforeStart] = useState(false) // Changed from true to false
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true) // Add loading state
+  const [isBeforeStart, setIsBeforeStart] = useState(false)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
 
   // Personal info
   const [firstname, setFirstname] = useState('')
