@@ -110,7 +110,6 @@ export default function ReactionBar({
   async function handleStar(e) {
     e.stopPropagation()
 
-    console.log(userStarCount)
     let updatedStars
     if (isStarred) {
       updatedStars = localStars.filter(id => id !== brotherID)
