@@ -9,15 +9,12 @@ const BrothersContext = createContext()
  * This component should wrap any page that contains ReactionBar components.
  */
 export function BrothersProvider({ children }) {
-    // State to hold the brothers data
     const [brothersMap, setBrothersMap] = useState({})
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState(null)
 
     useEffect(() => {
-        // Fetch all brothers data once
         const fetchAllBrothers = async () => {
-            console.log('🔄 BrothersContext: Fetching all brothers data (single API call)')
 
             try {
                 const { data, error } = await supabase
