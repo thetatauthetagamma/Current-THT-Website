@@ -814,11 +814,9 @@ export default function RusheeProfile() {
                       {/* Single comment container */}
                       <div className='flex items-start justify-between'>
                         <div>
-                          {/* If we have brotherDetails, show that; otherwise, fallback to parent.brother */}
+                          {/* Show only timestamp, no name */}
                           <p className='font-bold text-sm'>
-                            {brotherFirst && brotherLast
-                              ? `${brotherFirst} ${brotherLast}`
-                              : parent.brother}{' '}
+                            Anonymous{' '}
                             <span className='text-xs text-gray-400 ml-2'>
                               {new Date(parent.time).toLocaleString()}
                             </span>
@@ -864,11 +862,8 @@ export default function RusheeProfile() {
                             {emphasizedByNames.length > 0 ? (
                               <div>
                                 <p className='font-semibold mb-1'>
-                                  Emphasized by:
+                                  Emphasized by {emphasizedByNames.length} users
                                 </p>
-                                {emphasizedByNames.map((name, i) => (
-                                  <p key={i}>{name}</p>
-                                ))}
                               </div>
                             ) : (
                               'No emphasis yet'
@@ -961,7 +956,7 @@ export default function RusheeProfile() {
                                 <div className='flex items-start justify-between'>
                                   <div>
                                     <p className='font-bold text-sm'>
-                                      {childFirst && childLast ? `${childFirst} ${childLast}` : child.brother}{' '}
+                                      Anonymous{' '}
                                       <span className='text-xs text-gray-400 ml-2'>
                                         {new Date(child.time).toLocaleString()}
                                       </span>
@@ -995,10 +990,7 @@ export default function RusheeProfile() {
                                     <div className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'>
                                       {childEmphasizedByNames.length > 0 ? (
                                         <div>
-                                          <p className='font-semibold mb-1'>Emphasized by:</p>
-                                          {childEmphasizedByNames.map((name, i) => (
-                                            <p key={i}>{name}</p>
-                                          ))}
+                                          <p className='font-semibold mb-1'>Emphasized by {childEmphasizedByNames.length} users</p>
                                         </div>
                                       ) : (
                                         'No emphasis yet'
