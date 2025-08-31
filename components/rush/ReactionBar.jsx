@@ -20,24 +20,23 @@ import {
  * from "Brothers" to display them in a multiline tooltip.
  */
 export default function ReactionBar({
-  uniqname,     // The rushee's unique identifier
-  brotherID,    // The currently logged-in user's uniqname
-  likes = [],   // Array of uniqnames who liked the rushee
-  dislikes = [],// Array of uniqnames who disliked the rushee
-  stars = [],   // Array of uniqnames who starred the rushee
-  isAdmin = false // Whether the current user is admin
+  uniqname,
+  brotherID,
+  likes = [],
+  dislikes = [],
+  stars = [],
+  isAdmin = false
 }) {
   // Local state so the UI updates immediately on toggle
   const [localLikes, setLikes] = useState(likes || [])
   const [localDislikes, setDislikes] = useState(dislikes || [])
   const [localStars, setStars] = useState(stars || [])
-
   const { brothersMap, isLoading: brothersLoading } = useBrothers()
 
-  // Check if the current user has already liked, disliked, or starred
   const isLiked = localLikes.includes(brotherID)
   const isDisliked = localDislikes.includes(brotherID)
   const isStarred = localStars.includes(brotherID)
+
 
   // ─────────────────────────────────────────────────────────
   // 1) Toggling "like"
@@ -105,10 +104,11 @@ export default function ReactionBar({
 
 
   // ─────────────────────────────────────────────────────────
-  // 3) Toggling "star"
+  // 3) Toggling "star" - with limit check
   // ─────────────────────────────────────────────────────────
   async function handleStar(e) {
     e.stopPropagation()
+
     let updatedStars
     if (isStarred) {
       updatedStars = localStars.filter(id => id !== brotherID)
