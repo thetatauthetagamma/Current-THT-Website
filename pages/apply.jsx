@@ -217,6 +217,18 @@ export default function Application() {
         setLastUpdated(upsertData.updated_at)
       }
 
+      // If DB save is successful, we can clear session storage
+      try {
+        sessionStorage.removeItem('apply-firstname');
+        sessionStorage.removeItem('apply-lastname');
+        sessionStorage.removeItem('apply-major');
+        sessionStorage.removeItem('apply-year');
+        sessionStorage.removeItem('apply-pronouns');
+        // Don't remove answers yet until we save them below
+      } catch (storageError) {
+        console.error('Failed to clear personal info from session storage:', storageError);
+      }
+
       // Check word limits before saving answers
       const overLimitQuestions = questions.filter(q => {
         const wordLimit = q.word_limit;
@@ -247,6 +259,13 @@ export default function Application() {
         }
       }
 
+      // If answers saved successfully, remove from session storage
+      try {
+        sessionStorage.removeItem('apply-answers');
+      } catch (storageError) {
+        console.error('Failed to clear answers from session storage:', storageError);
+      }
+
       // Success - clear unsaved changes flag
       setHasUnsavedChanges(false)
     } catch (err) {
@@ -267,7 +286,7 @@ export default function Application() {
       clearInterval(autoSaveInterval)
       setAutoSaveInterval(null)
     }
-  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length])
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length, autoSave])
 
   // Warn before leaving page if there are unsaved changes
   useEffect(() => {
@@ -285,18 +304,30 @@ export default function Application() {
 
   // Add a useEffect hook to load saved form data from sessionStorage
   useEffect(() => {
-    const savedFirstname = sessionStorage.getItem('apply-firstname');
-    if (savedFirstname) setFirstname(savedFirstname);
-    const savedLastname = sessionStorage.getItem('apply-lastname');
-    if (savedLastname) setLastname(savedLastname);
-    const savedMajor = sessionStorage.getItem('apply-major');
-    if (savedMajor) setMajor(savedMajor);
-    const savedYear = sessionStorage.getItem('apply-year');
-    if (savedYear) setYear(savedYear);
-    const savedPronouns = sessionStorage.getItem('apply-pronouns');
-    if (savedPronouns) setPronouns(savedPronouns);
-    const savedAnswers = sessionStorage.getItem('apply-answers');
-    if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
+    try {
+      const savedFirstname = sessionStorage.getItem('apply-firstname');
+      if (savedFirstname) setFirstname(savedFirstname);
+      const savedLastname = sessionStorage.getItem('apply-lastname');
+      if (savedLastname) setLastname(savedLastname);
+      const savedMajor = sessionStorage.getItem('apply-major');
+      if (savedMajor) setMajor(savedMajor);
+      const savedYear = sessionStorage.getItem('apply-year');
+      if (savedYear) setYear(savedYear);
+      const savedPronouns = sessionStorage.getItem('apply-pronouns');
+      if (savedPronouns) setPronouns(savedPronouns);
+
+      const savedAnswers = sessionStorage.getItem('apply-answers');
+      if (savedAnswers) {
+        try {
+          const parsedAnswers = JSON.parse(savedAnswers);
+          setAnswers(parsedAnswers);
+        } catch (parseError) {
+          console.error('Failed to parse saved answers:', parseError);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading data from session storage:', error);
+    }
   }, []);
 
   // ─────────────────────────────────────────────────────────
@@ -324,7 +355,11 @@ export default function Application() {
     else if (name === 'pronouns') setPronouns(value)
 
     // Persist the change to sessionStorage
-    sessionStorage.setItem(`apply-${name}`, value);
+    try {
+      sessionStorage.setItem(`apply-${name}`, value);
+    } catch (error) {
+      console.error(`Failed to save ${name} to session storage:`, error);
+    }
 
     // Mark as having unsaved changes
     setHasUnsavedChanges(true)
@@ -335,7 +370,11 @@ export default function Application() {
     setAnswers(updatedAnswers);
 
     // Persist answers update to sessionStorage
-    sessionStorage.setItem('apply-answers', JSON.stringify(updatedAnswers));
+    try {
+      sessionStorage.setItem('apply-answers', JSON.stringify(updatedAnswers));
+    } catch (error) {
+      console.error('Failed to save answers to session storage:', error);
+    }
 
     // Mark as having unsaved changes
     setHasUnsavedChanges(true);
@@ -467,6 +506,18 @@ export default function Application() {
 
       setPhotoChanged(false) // Reset
       setHasUnsavedChanges(false) // Clear unsaved changes flag
+
+      // Clear session storage after successful save
+      try {
+        sessionStorage.removeItem('apply-firstname');
+        sessionStorage.removeItem('apply-lastname');
+        sessionStorage.removeItem('apply-major');
+        sessionStorage.removeItem('apply-year');
+        sessionStorage.removeItem('apply-pronouns');
+        sessionStorage.removeItem('apply-answers');
+      } catch (storageError) {
+        console.error('Failed to clear session storage:', storageError);
+      }
     } catch (err) {
       console.error('Unexpected error while saving:', err)
       alert('Unexpected error while saving. Check console for details.')
