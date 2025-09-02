@@ -283,6 +283,15 @@ export default function Application() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges, isPastDue])
 
+  // on unmount, save everything
+  useEffect(() => {
+    return () => {
+      if (hasUnsavedChanges) {
+        autoSave()
+      }
+    }
+  }, [hasUnsavedChanges, autoSave])
+
   // ─────────────────────────────────────────────────────────
   // 5. Auth / Submissions
   // ─────────────────────────────────────────────────────────
