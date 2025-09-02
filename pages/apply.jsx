@@ -442,7 +442,6 @@ export default function Application() {
       }
 
       // If everything succeeded:
-      alert('Application saved!')
       setPhotoChanged(false) // Reset
       setHasUnsavedChanges(false) // Clear unsaved changes flag
     } catch (err) {
