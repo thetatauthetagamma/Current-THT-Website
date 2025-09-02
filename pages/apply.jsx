@@ -185,8 +185,8 @@ export default function Application() {
   // ─────────────────────────────────────────────────────────
 
   // Auto-save function (excludes photo uploads)
-  const autoSave = async () => {
-    if (!hasUnsavedChanges || isPastDue || !session || !isUmichEmail) return
+  const autoSave = useCallback(async () => {
+    if (!hasUnsavedChanges || isPastDue || !session || !isUmichEmail || !userId || questions.length === 0) return
 
     setIsAutoSaving(true)
     try {
@@ -240,11 +240,11 @@ export default function Application() {
     } finally {
       setIsAutoSaving(false)
     }
-  }
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions, firstname, lastname, major, year, pronouns, answers])
 
   // Set up auto-save interval when there are unsaved changes
   useEffect(() => {
-    if (hasUnsavedChanges && !isPastDue && session && isUmichEmail) {
+    if (hasUnsavedChanges && !isPastDue && session && isUmichEmail && userId && questions.length > 0) {
       const interval = setInterval(autoSave, 45000) // Auto-save every 45 seconds
       setAutoSaveInterval(interval)
       return () => clearInterval(interval)
@@ -252,7 +252,7 @@ export default function Application() {
       clearInterval(autoSaveInterval)
       setAutoSaveInterval(null)
     }
-  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, firstname, lastname, major, year, pronouns, answers])
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length, autoSave])
 
   // Warn before leaving page if there are unsaved changes
   useEffect(() => {
@@ -267,15 +267,6 @@ export default function Application() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges, isPastDue])
-
-  // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveInterval) {
-        clearInterval(autoSaveInterval)
-      }
-    }
-  }, [autoSaveInterval])
 
   // ─────────────────────────────────────────────────────────
   // 5. Auth / Submissions
@@ -465,10 +456,10 @@ export default function Application() {
   // ─────────────────────────────────────────────────────────
   // 8. Manual save now function (for immediate save button)
   // ─────────────────────────────────────────────────────────
-  const handleSaveNow = async () => {
+  const handleSaveNow = useCallback(async () => {
     if (!hasUnsavedChanges || isPastDue) return
     await autoSave()
-  }
+  }, [hasUnsavedChanges, isPastDue, autoSave])
 
   // ─────────────────────────────────────────────────────────
   // 9. Rendering
