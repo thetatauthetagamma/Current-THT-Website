@@ -210,33 +210,48 @@ export default function Application() {
 
       if (upsertError) {
         console.error('Auto-save error (personal info):', upsertError)
-        return
+        throw new Error('Personal info save failed')
       }
 
       if (upsertData?.updated_at) {
         setLastUpdated(upsertData.updated_at)
       }
 
-      // Save answers
-      const updates = questions.map(q => ({
-        question_id: q.id,
-        uniqname: userId,
-        answer: answers[q.id] || ''
-      }))
+      // Check word limits before saving answers
+      const overLimitQuestions = questions.filter(q => {
+        const wordLimit = q.word_limit;
+        if (!wordLimit) return false;
+        const currentAnswer = answers[q.id] || '';
+        const wordCount = countWords(currentAnswer);
+        return wordCount > wordLimit;
+      });
 
-      const { error: ansError } = await supabase
-        .from('Application_Answers')
-        .upsert(updates, { onConflict: 'question_id, uniqname' })
+      if (overLimitQuestions.length > 0) {
+        console.warn('Some answers exceed word limits, skipping auto-save for answers.');
+        // Don't save answers if over limit
+      } else {
+        // Save answers
+        const updates = questions.map(q => ({
+          question_id: q.id,
+          uniqname: userId,
+          answer: answers[q.id] || ''
+        }))
 
-      if (ansError) {
-        console.error('Auto-save error (answers):', ansError)
-        return
+        const { error: ansError } = await supabase
+          .from('Application_Answers')
+          .upsert(updates, { onConflict: 'question_id, uniqname' })
+
+        if (ansError) {
+          console.error('Auto-save error (answers):', ansError)
+          throw new Error('Answers save failed')
+        }
       }
 
       // Success - clear unsaved changes flag
       setHasUnsavedChanges(false)
     } catch (err) {
       console.error('Auto-save unexpected error:', err)
+      alert('Auto-save failed. Please try saving manually.')
     } finally {
       setIsAutoSaving(false)
     }
@@ -252,7 +267,7 @@ export default function Application() {
       clearInterval(autoSaveInterval)
       setAutoSaveInterval(null)
     }
-  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length, autoSave])
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length])
 
   // Warn before leaving page if there are unsaved changes
   useEffect(() => {
