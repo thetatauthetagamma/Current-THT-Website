@@ -115,17 +115,17 @@ NOTE: Any changes merged to the main branch will be automatically built, cloned 
 11. **Pledges**: This is the equivalent of the brothers table, but for pledges. New pledges need to be added each semester. At the end of the semester, they need to be initiated. There is a button on the admin page to assign role numbers and initiate pledges. This will automatically remove all of their pledging data and move their profiles to the brothers table. 
 12. **Resources**: This has the resources that are displayed to brothers on it.
 13. **Rush Events** : This is where we store the semesters rush events so that they display on the rush page. Updating this is super important in case rushees are getting info from our website. Below is an example of what this can look like when rush is not currently taking place. 
-14. **RushInfo**: Manages application start and due dates, as well as active status for the current rush. The way that this is setup right now, there should only ever be one row in it which is kind of stupid but whatver.
+14. **RushInfo**: Manages application start and due dates, as well as active status for the current rush. The way that this is set up right now, there should only ever be one row in it which is kind of stupid but whatever.
 15. **Rushees**: Stores data of individuals currently rushing, including reactions and applicant info (name, major, etc).
  
   ### admin Roles in Supabase
-If you need to access any front end admin features, set your adminRole in the Brothers table to `dev`. This should give you access to anything you may need to do. Its basically so that you can test out the features that are developed for EBoard and if they get too lazy to do them, it is up to you to complete these responsibilities, which are outlined next.
+If you need to access any front end admin features, set your adminRole in the Brothers table to `dev`. This should give you access to anything you may need to do. It's basically so that you can test out the features that are developed for EBoard and if they get too lazy to do them, it is up to you to complete these responsibilities, which are outlined next.
 
 Also, the following variables are used for different adminRoles throughout the code: 
 `['regent', 'vice', 'scribe', 'treasurer', 'corsec', 'parents', 'academic'] or ['dev']`
 
 ## Action Required Each Semester
-### Beginning of Each Semeseter
+### Beginning of Each Semester
 - Updating pledge stuff on front end
 - There is a resources page under the brothers. Any admin can update the links, but it is up to you to ensure that they get updated. May need to bother different people to update them. It should at least have the following links up to date:
 	- EBoard Feedback Form
