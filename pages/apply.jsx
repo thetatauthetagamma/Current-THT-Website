@@ -283,6 +283,22 @@ export default function Application() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges, isPastDue])
 
+  // Add a useEffect hook to load saved form data from sessionStorage
+  useEffect(() => {
+    const savedFirstname = sessionStorage.getItem('apply-firstname');
+    if (savedFirstname) setFirstname(savedFirstname);
+    const savedLastname = sessionStorage.getItem('apply-lastname');
+    if (savedLastname) setLastname(savedLastname);
+    const savedMajor = sessionStorage.getItem('apply-major');
+    if (savedMajor) setMajor(savedMajor);
+    const savedYear = sessionStorage.getItem('apply-year');
+    if (savedYear) setYear(savedYear);
+    const savedPronouns = sessionStorage.getItem('apply-pronouns');
+    if (savedPronouns) setPronouns(savedPronouns);
+    const savedAnswers = sessionStorage.getItem('apply-answers');
+    if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
+  }, []);
+
   // ─────────────────────────────────────────────────────────
   // 5. Auth / Submissions
   // ─────────────────────────────────────────────────────────
@@ -307,14 +323,22 @@ export default function Application() {
     else if (name === 'year') setYear(value)
     else if (name === 'pronouns') setPronouns(value)
 
+    // Persist the change to sessionStorage
+    sessionStorage.setItem(`apply-${name}`, value);
+
     // Mark as having unsaved changes
     setHasUnsavedChanges(true)
   }
 
   const handleAnswerChange = (qID, newVal) => {
-    setAnswers(prev => ({ ...prev, [qID]: newVal }))
+    const updatedAnswers = { ...answers, [qID]: newVal };
+    setAnswers(updatedAnswers);
+
+    // Persist answers update to sessionStorage
+    sessionStorage.setItem('apply-answers', JSON.stringify(updatedAnswers));
+
     // Mark as having unsaved changes
-    setHasUnsavedChanges(true)
+    setHasUnsavedChanges(true);
   }
 
   // ─────────────────────────────────────────────────────────
@@ -441,8 +465,6 @@ export default function Application() {
         return
       }
 
-      // If everything succeeded:
-      alert('Application saved!')
       setPhotoChanged(false) // Reset
       setHasUnsavedChanges(false) // Clear unsaved changes flag
     } catch (err) {
