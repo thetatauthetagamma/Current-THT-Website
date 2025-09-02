@@ -14,6 +14,12 @@ import {
  *  - Lets you "like," "dislike," or "star" a Rushee.
  *  - Shows a custom tooltip (no browser delay) with FIRST+LAST name of
  *    each brother who performed that reaction.
+ *  - Star button is only clickable after a specified unlock date.
+ *
+ * Props:
+ *  - starUnlockDate: ISO string or Date object for when star button becomes available
+ *    - If null/undefined, star button is always enabled
+ *    - If set, star button is disabled until that date
  *
  * The "likes", "dislikes", and "stars" arrays in the Rushees table
  * still store each brother's uniqname, but we look up their full names
@@ -25,7 +31,8 @@ export default function ReactionBar({
   likes = [],
   dislikes = [],
   stars = [],
-  isAdmin = false
+  isAdmin = false,
+  starUnlockDate = "2025-09-15" // ISO string or Date object for when star button becomes available
 }) {
   // Local state so the UI updates immediately on toggle
   const [localLikes, setLikes] = useState(likes || [])
@@ -36,6 +43,16 @@ export default function ReactionBar({
   const isLiked = localLikes.includes(brotherID)
   const isDisliked = localDislikes.includes(brotherID)
   const isStarred = localStars.includes(brotherID)
+
+  // Check if star button should be enabled based on date
+  const isStarEnabled = () => {
+    if (!starUnlockDate) return true // If no date specified, always enabled
+    
+    const unlockDate = new Date(starUnlockDate)
+    const currentDate = new Date()
+    
+    return currentDate >= unlockDate
+  }
 
 
   // ─────────────────────────────────────────────────────────
@@ -104,10 +121,15 @@ export default function ReactionBar({
 
 
   // ─────────────────────────────────────────────────────────
-  // 3) Toggling "star" - with limit check
+  // 3) Toggling "star" - with date restriction check
   // ─────────────────────────────────────────────────────────
   async function handleStar(e) {
     e.stopPropagation()
+    
+    // Check if star button is enabled based on date
+    if (!isStarEnabled()) {
+      return // Exit early if star button is not yet enabled
+    }
 
     let updatedStars
     if (isStarred) {
@@ -213,15 +235,20 @@ export default function ReactionBar({
 
       {/* STAR */}
       <div
-        className="relative group flex items-center space-x-1 cursor-pointer overflow-visible"
-        onClick={handleStar}
+        className={`relative group flex items-center space-x-1 overflow-visible ${
+          isStarEnabled() ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+        }`}
+        onClick={isStarEnabled() ? handleStar : undefined}
       >
         <div
           className="absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded z-50
                      top-0 left-1/2 -translate-x-1/2 -translate-y-full mb-1 whitespace-nowrap"
           style={{ whiteSpace: 'pre' }}
         >
-          {renderNamesOrNone(localStars, 'Starred')}
+          {isStarEnabled() 
+            ? renderNamesOrNone(localStars, 'Starred')
+            : <p>Unlocks {new Date(starUnlockDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</p>
+          }
         </div>
         {isStarred ? (
           <FaStar className="text-[#8B0000] text-2xl" />
