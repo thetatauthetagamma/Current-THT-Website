@@ -578,14 +578,20 @@ export default function Application() {
               </div>
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Grad Year</label>
-                <input
-                  type='text'
+                <select
                   name='year'
                   value={year}
                   onChange={handlePersonalInfoChange}
                   disabled={isPastDue}
                   className='border p-2 rounded max-w-sm'
-                />
+                >
+                  <option value=''>Select Graduation Year</option>
+                  <option value='2025'>2025</option>
+                  <option value='2026'>2026</option>
+                  <option value='2027'>2027</option>
+                  <option value='2028'>2028</option>
+                  <option value='2029'>2029</option>
+                </select>
               </div>
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Pronouns</label>
