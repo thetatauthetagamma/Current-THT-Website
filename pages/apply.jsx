@@ -267,7 +267,7 @@ export default function Application() {
       clearInterval(autoSaveInterval)
       setAutoSaveInterval(null)
     }
-  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length])
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length, autoSave])
 
   // Warn before leaving page if there are unsaved changes
   useEffect(() => {
