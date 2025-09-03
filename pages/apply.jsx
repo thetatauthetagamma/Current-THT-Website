@@ -426,8 +426,8 @@ export default function Application() {
         .single()
 
       if (upsertError) {
-        console.error('Error upserting personal info:', upsertError)
-        alert('Could not save. See console.')
+        // console.error('Error upserting personal info:', upsertError)
+        alert('Could not save. Please contact tht-rush@umich.edu if this issue persists.')
         return
       } else if (upsertData?.updated_at) {
         setLastUpdated(upsertData.updated_at)
@@ -445,8 +445,8 @@ export default function Application() {
         .upsert(updates, { onConflict: 'question_id, uniqname' })
 
       if (ansError) {
-        console.error('Error saving answers:', ansError)
-        alert('Could not save. See console.')
+        // console.error('Error saving answers:', ansError)
+        alert('Could not save')
         return
       }
 
@@ -454,8 +454,8 @@ export default function Application() {
       setPhotoChanged(false) // Reset
       setHasUnsavedChanges(false) // Clear unsaved changes flag
     } catch (err) {
-      console.error('Unexpected error while saving:', err)
-      alert('Unexpected error while saving. Check console for details.')
+      // console.error('Unexpected error while saving:', err)
+      alert('Unexpected error while saving. Please contact tht-rush@umich.edu if this issue persists.')
     }
   }
 
@@ -471,7 +471,7 @@ export default function Application() {
       })
 
     if (error) {
-      console.error('Error uploading photo:', error.message)
+      // console.error('Error uploading photo:', error.message)
       throw error
     }
   }

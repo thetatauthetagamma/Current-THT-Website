@@ -1,4 +1,4 @@
-// utils/getCroppedImg.js
+// utils/cropImageHelper.js
 export default async function getCroppedImg(imageSrc, pixelCrop) {
     const image = await createImage(imageSrc)
     const canvas = document.createElement('canvas')
