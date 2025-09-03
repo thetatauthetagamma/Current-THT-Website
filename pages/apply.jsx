@@ -456,7 +456,8 @@ export default function Application() {
         only be considered if ALL of the sections are filled in before the due
         date. Please note that if you do not click "Save Application," and you
         close the tab, your progress will not be saved, but you can save/update
-        your application as many times as you wish before the due date. Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
+        your application as many times as you wish before the due date. We recommend writing long answer responses in another application, and pasting them here. Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
+
       </div>
 
       {dueDate && (
