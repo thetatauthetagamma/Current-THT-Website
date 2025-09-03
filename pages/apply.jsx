@@ -41,6 +41,11 @@ export default function Application() {
   // Keep track of lastUpdated from the DB
   const [lastUpdated, setLastUpdated] = useState(null)
 
+  // Auto-save functionality
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isAutoSaving, setIsAutoSaving] = useState(false)
+  const [autoSaveInterval, setAutoSaveInterval] = useState(null)
+
   // Photo / Crop
   const [profileImageFile, setProfileImageFile] = useState(null)
   const [croppingImageUrl, setCroppingImageUrl] = useState(null)
@@ -176,7 +181,119 @@ export default function Application() {
   }, [session, isUmichEmail, userId])
 
   // ─────────────────────────────────────────────────────────
-  // 4. Auth / Submissions
+  // 4. Auto-save functionality
+  // ─────────────────────────────────────────────────────────
+
+  // Auto-save function (excludes photo uploads)
+  const autoSave = useCallback(async () => {
+    if (!hasUnsavedChanges || isPastDue || !session || !isUmichEmail || !userId || questions.length === 0) return
+
+    setIsAutoSaving(true)
+    try {
+      // Save personal info
+      const { data: upsertData, error: upsertError } = await supabase
+        .from('Rushees')
+        .upsert(
+          {
+            uniqname: userId,
+            firstname,
+            lastname,
+            major,
+            year,
+            pronouns,
+            updated_at: new Date()
+          },
+          { onConflict: 'uniqname' }
+        )
+        .select('*')
+        .single()
+
+      if (upsertError) {
+        console.error('Auto-save error (personal info):', upsertError)
+        throw new Error('Personal info save failed')
+      }
+
+      if (upsertData?.updated_at) {
+        setLastUpdated(upsertData.updated_at)
+      }
+
+      // Check word limits before saving answers
+      const overLimitQuestions = questions.filter(q => {
+        const wordLimit = q.word_limit;
+        if (!wordLimit) return false;
+        const currentAnswer = answers[q.id] || '';
+        const wordCount = countWords(currentAnswer);
+        return wordCount > wordLimit;
+      });
+
+      if (overLimitQuestions.length > 0) {
+        console.warn('Some answers exceed word limits, skipping auto-save for answers.');
+        // Don't save answers if over limit
+      } else {
+        // Save answers
+        const updates = questions.map(q => ({
+          question_id: q.id,
+          uniqname: userId,
+          answer: answers[q.id] || ''
+        }))
+
+        const { error: ansError } = await supabase
+          .from('Application_Answers')
+          .upsert(updates, { onConflict: 'question_id, uniqname' })
+
+        if (ansError) {
+          console.error('Auto-save error (answers):', ansError)
+          throw new Error('Answers save failed')
+        }
+      }
+
+      // Success - clear unsaved changes flag
+      setHasUnsavedChanges(false)
+    } catch (err) {
+      console.error('Auto-save unexpected error:', err)
+      alert('Auto-save failed. Please try saving manually.')
+    } finally {
+      setIsAutoSaving(false)
+    }
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions, firstname, lastname, major, year, pronouns, answers])
+
+  // Set up auto-save interval when there are unsaved changes
+  useEffect(() => {
+    if (hasUnsavedChanges && !isPastDue && session && isUmichEmail && userId && questions.length > 0) {
+      const interval = setInterval(autoSave, 45000) // Auto-save every 45 seconds
+      setAutoSaveInterval(interval)
+      return () => clearInterval(interval)
+    } else if (autoSaveInterval) {
+      clearInterval(autoSaveInterval)
+      setAutoSaveInterval(null)
+    }
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length])
+
+  // Warn before leaving page if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges && !isPastDue) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges, isPastDue])
+
+  // on unmount, save everything
+  useEffect(() => {
+    return () => {
+      if (hasUnsavedChanges) {
+        autoSave()
+      }
+    }
+  }, [hasUnsavedChanges, autoSave])
+
+  // ─────────────────────────────────────────────────────────
+  // 5. Auth / Submissions
   // ─────────────────────────────────────────────────────────
   const handleGoogleSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -198,14 +315,19 @@ export default function Application() {
     else if (name === 'major') setMajor(value)
     else if (name === 'year') setYear(value)
     else if (name === 'pronouns') setPronouns(value)
+
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true)
   }
 
   const handleAnswerChange = (qID, newVal) => {
     setAnswers(prev => ({ ...prev, [qID]: newVal }))
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true)
   }
 
   // ─────────────────────────────────────────────────────────
-  // 5. Photo / Crop Handlers
+  // 6. Photo / Crop Handlers
   // ─────────────────────────────────────────────────────────
 
   // If the user picks a new file from disk:
@@ -239,7 +361,7 @@ export default function Application() {
   }
 
   // ─────────────────────────────────────────────────────────
-  // 6. Submit the entire form (including possibly recropped photo)
+  // 7. Submit the entire form (including possibly recropped photo)
   // ─────────────────────────────────────────────────────────
   const handleSubmit = async e => {
     e.preventDefault()
@@ -330,6 +452,7 @@ export default function Application() {
 
       // If everything succeeded:
       setPhotoChanged(false) // Reset
+      setHasUnsavedChanges(false) // Clear unsaved changes flag
     } catch (err) {
       console.error('Unexpected error while saving:', err)
       alert('Unexpected error while saving. Check console for details.')
@@ -354,7 +477,15 @@ export default function Application() {
   }
 
   // ─────────────────────────────────────────────────────────
-  // 7. Rendering
+  // 8. Manual save now function (for immediate save button)
+  // ─────────────────────────────────────────────────────────
+  const handleSaveNow = useCallback(async () => {
+    if (!hasUnsavedChanges || isPastDue) return
+    await autoSave()
+  }, [hasUnsavedChanges, isPastDue, autoSave])
+
+  // ─────────────────────────────────────────────────────────
+  // 9. Rendering
   // ─────────────────────────────────────────────────────────
 
   // If not signed in
@@ -442,21 +573,50 @@ export default function Application() {
       {/* Header */}
       <div className='flex justify-between items-center mb-6'>
         <h1 className='text-3xl font-bold'>Application</h1>
-        <button
-          onClick={handleSignOut}
-          className='bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600'
-        >
-          Sign Out
-        </button>
+        <div className='flex items-center gap-4'>
+          {/* Auto-save status indicator */}
+          {hasUnsavedChanges && !isPastDue && (
+            <div className='flex items-center gap-2'>
+              {isAutoSaving ? (
+                <div className='flex items-center gap-2'>
+                  <div className='w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin'></div>
+                  <span className='text-sm text-gray-600'>Saving...</span>
+                </div>
+              ) : (
+                <div className='flex items-center gap-2'>
+                  <div className='w-2 h-2 bg-orange-500 rounded-full'></div>
+                  <span className='text-sm text-gray-600'>Unsaved changes</span>
+                  <button
+                    onClick={handleSaveNow}
+                    className='text-sm bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600'
+                  >
+                    Save now
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {!hasUnsavedChanges && lastUpdated && !isAutoSaving && (
+            <div className='flex items-center gap-2'>
+              <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+              <span className='text-sm text-gray-600'>All changes saved</span>
+            </div>
+          )}
+          <button
+            onClick={handleSignOut}
+            className='bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600'
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
 
       <div>
         Welcome to the Theta Tau rush application! Please be sure to fill
         out and submit all of the following sections before the due date. Your application will
         only be considered if ALL of the sections are filled in before the due
-        date. Please note that if you do not click "Save Application," and you
-        close the tab, your progress will not be saved, but you can save/update
-        your application as many times as you wish before the due date. Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
+        date. Please note that your progress is automatically saved every 45 seconds,
+        but you can also save manually at any time. Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
       </div>
 
       {dueDate && (
@@ -578,14 +738,20 @@ export default function Application() {
               </div>
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Grad Year</label>
-                <input
-                  type='text'
+                <select
                   name='year'
                   value={year}
                   onChange={handlePersonalInfoChange}
                   disabled={isPastDue}
                   className='border p-2 rounded max-w-sm'
-                />
+                >
+                  <option value=''>Select Graduation Year</option>
+                  <option value='2025'>2025</option>
+                  <option value='2026'>2026</option>
+                  <option value='2027'>2027</option>
+                  <option value='2028'>2028</option>
+                  <option value='2029'>2029</option>
+                </select>
               </div>
               <div className='flex flex-col'>
                 <label className='font-semibold mb-1'>Pronouns</label>
