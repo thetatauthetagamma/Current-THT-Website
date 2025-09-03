@@ -259,15 +259,26 @@ export default function Application() {
 
   // Set up auto-save interval when there are unsaved changes
   useEffect(() => {
-    if (hasUnsavedChanges && !isPastDue && session && isUmichEmail && userId && questions.length > 0) {
-      const interval = setInterval(autoSave, 45000) // Auto-save every 45 seconds
-      setAutoSaveInterval(interval)
-      return () => clearInterval(interval)
-    } else if (autoSaveInterval) {
-      clearInterval(autoSaveInterval)
-      setAutoSaveInterval(null)
+    // Don't set up auto-save if past due or no unsaved changes
+    if (!hasUnsavedChanges || isPastDue || !session || !isUmichEmail || !userId || questions.length === 0) {
+      if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+        setAutoSaveInterval(null);
+      }
+      return;
     }
-  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length, autoSave])
+
+    // Create interval with a function that calls the latest autoSave
+    const interval = setInterval(() => {
+      autoSave();
+    }, 45000); // Auto-save every 45 seconds
+
+    setAutoSaveInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [hasUnsavedChanges, isPastDue, session, isUmichEmail, userId, questions.length])
 
   // Warn before leaving page if there are unsaved changes
   useEffect(() => {
@@ -287,10 +298,10 @@ export default function Application() {
   useEffect(() => {
     return () => {
       if (hasUnsavedChanges) {
-        autoSave()
+        autoSave();
       }
     }
-  }, [hasUnsavedChanges, autoSave])
+  }, [])
 
   // ─────────────────────────────────────────────────────────
   // 5. Auth / Submissions
@@ -308,6 +319,17 @@ export default function Application() {
     if (error) console.error('SignOut Error:', error)
   }
 
+  // Create a debounced version of setHasUnsavedChanges
+  const [debouncedSetUnsaved] = useState(() => {
+    let timeout = null;
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        setHasUnsavedChanges(true);
+      }, 200);
+    };
+  });
+
   const handlePersonalInfoChange = e => {
     const { name, value } = e.target
     if (name === 'firstname') setFirstname(value)
@@ -316,14 +338,14 @@ export default function Application() {
     else if (name === 'year') setYear(value)
     else if (name === 'pronouns') setPronouns(value)
 
-    // Mark as having unsaved changes
-    setHasUnsavedChanges(true)
+    // Use debounced function to mark unsaved changes
+    debouncedSetUnsaved();
   }
 
   const handleAnswerChange = (qID, newVal) => {
     setAnswers(prev => ({ ...prev, [qID]: newVal }))
-    // Mark as having unsaved changes
-    setHasUnsavedChanges(true)
+    // Use debounced function to mark unsaved changes
+    debouncedSetUnsaved();
   }
 
   // ─────────────────────────────────────────────────────────
@@ -479,10 +501,11 @@ export default function Application() {
   // ─────────────────────────────────────────────────────────
   // 8. Manual save now function (for immediate save button)
   // ─────────────────────────────────────────────────────────
-  const handleSaveNow = useCallback(async () => {
-    if (!hasUnsavedChanges || isPastDue) return
-    await autoSave()
-  }, [hasUnsavedChanges, isPastDue, autoSave])
+  const handleSaveNow = useCallback(() => {
+    // Direct function call that doesn't depend on stale closures
+    if (!hasUnsavedChanges || isPastDue) return;
+    autoSave();
+  }, []); // No dependencies to avoid frequent re-renders
 
   // ─────────────────────────────────────────────────────────
   // 9. Rendering
