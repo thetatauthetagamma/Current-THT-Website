@@ -596,11 +596,7 @@ export default function Application() {
         out and submit all of the following sections before the due date. Your application will
         only be considered if ALL of the sections are filled in before the due
         date. Be sure to click the "Save Application" button to save your progress.
-
-        <p className="mt-2">
-          We recommend writing long answer responses in another application, and pasting them here.
-          Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
-        </p>
+        Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
       </div>
 
       {dueDate && (
