@@ -11,6 +11,49 @@ import timezone from 'dayjs/plugin/timezone'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
+// Helper functions for localStorage implementation
+
+// Helper to save form data to local storage
+const saveToLocalStorage = (userId, data) => {
+  if (typeof window !== 'undefined' && userId) {
+    localStorage.setItem(`tht_application_${userId}`, JSON.stringify({
+      ...data,
+      timestamp: new Date().toISOString()
+    }));
+  }
+};
+
+// Helper to retrieve form data from local storage
+const getFromLocalStorage = (userId) => {
+  if (typeof window !== 'undefined' && userId) {
+    const data = localStorage.getItem(`tht_application_${userId}`);
+    return data ? JSON.parse(data) : null;
+  }
+  return null;
+};
+
+// Component to handle beforeunload events and periodic sync
+function FormSyncHandler({ hasUnsavedChanges, userId }) {
+  useEffect(() => {
+    // Handle beforeunload event
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        const message = "You have unsaved changes. To save your application, click Save Application before leaving.";
+        e.returnValue = message;
+        return message;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+  return null;
+};
+
 // Helper function to count words in text
 const countWords = (text) => {
   if (!text || typeof text !== 'string') return 0;
@@ -138,7 +181,30 @@ export default function Application() {
     }
 
     const fetchUserData = async () => {
-      // Personal info from "Rushees"
+      // First check for locally stored form data
+      const localData = getFromLocalStorage(userId);
+      let hasLocalData = false;
+
+      if (localData) {
+        hasLocalData = true;
+
+        // Restore personal info from local storage
+        const { personalInfo, answers: localAnswers } = localData;
+        if (personalInfo) {
+          setFirstname(personalInfo.firstname || '');
+          setLastname(personalInfo.lastname || '');
+          setMajor(personalInfo.major || '');
+          setYear(personalInfo.year || '');
+          setPronouns(personalInfo.pronouns || '');
+        }
+
+        // Restore answers from local storage
+        if (localAnswers) {
+          setAnswers(localAnswers);
+        }
+      }
+
+      // Then get saved data from database
       const { data: userData } = await supabase
         .from('Rushees')
         .select('*')
@@ -146,28 +212,34 @@ export default function Application() {
         .single()
 
       if (userData) {
-        setFirstname(userData.firstname || '')
-        setLastname(userData.lastname || '')
-        setMajor(userData.major || '')
-        setYear(userData.year || '')
-        setPronouns(userData.pronouns || '')
+        // Only set from database if we don't have local data
+        if (!hasLocalData) {
+          setFirstname(userData.firstname || '')
+          setLastname(userData.lastname || '')
+          setMajor(userData.major || '')
+          setYear(userData.year || '')
+          setPronouns(userData.pronouns || '')
+        }
+
         if (userData.updated_at) {
           setLastUpdated(userData.updated_at)
         }
       }
 
       // Answers from "Application_Answers"
-      const { data: answersData } = await supabase
-        .from('Application_Answers')
-        .select('*')
-        .eq('uniqname', userId)
+      if (!hasLocalData) {
+        const { data: answersData } = await supabase
+          .from('Application_Answers')
+          .select('*')
+          .eq('uniqname', userId)
 
-      if (answersData) {
-        const mapped = {}
-        answersData.forEach(a => {
-          mapped[a.question_id] = a.answer
-        })
-        setAnswers(mapped)
+        if (answersData) {
+          const mapped = {}
+          answersData.forEach(a => {
+            mapped[a.question_id] = a.answer
+          })
+          setAnswers(mapped)
+        }
       }
     }
 
@@ -198,10 +270,41 @@ export default function Application() {
     else if (name === 'major') setMajor(value)
     else if (name === 'year') setYear(value)
     else if (name === 'pronouns') setPronouns(value)
+
+    // Cache form data changes to local storage
+    saveToLocalStorage(userId, {
+      personalInfo: {
+        firstname: name === 'firstname' ? value : firstname,
+        lastname: name === 'lastname' ? value : lastname,
+        major: name === 'major' ? value : major,
+        year: name === 'year' ? value : year,
+        pronouns: name === 'pronouns' ? value : pronouns,
+      },
+      answers,
+    });
+
+    // Mark that we have local drafts
+    setHasLocalDrafts(true);
   }
 
   const handleAnswerChange = (qID, newVal) => {
-    setAnswers(prev => ({ ...prev, [qID]: newVal }))
+    const updatedAnswers = { ...answers, [qID]: newVal };
+    setAnswers(updatedAnswers);
+
+    // Cache answer changes to local storage
+    saveToLocalStorage(userId, {
+      personalInfo: {
+        firstname,
+        lastname,
+        major,
+        year,
+        pronouns,
+      },
+      answers: updatedAnswers,
+    });
+
+    // Mark that we have local drafts
+    setHasLocalDrafts(true);
   }
 
   // ─────────────────────────────────────────────────────────
@@ -330,11 +433,48 @@ export default function Application() {
 
       // If everything succeeded:
       setPhotoChanged(false) // Reset
+
+      // Clear local storage since data is now saved to database
+      localStorage.removeItem(`tht_application_${userId}`);
+
+      // Update state to reflect no unsaved changes
+      setHasLocalDrafts(false);
     } catch (err) {
       console.error('Unexpected error while saving:', err)
       alert('Unexpected error while saving. Check console for details.')
     }
   }
+
+  // Track if there are unsaved changes as a state variable
+  const [hasLocalDrafts, setHasLocalDrafts] = useState(false);
+
+  // Update the hasLocalDrafts state when component mounts or userId changes
+  useEffect(() => {
+    if (userId) {
+      const localData = getFromLocalStorage(userId);
+      setHasLocalDrafts(!!localData);
+    }
+  }, [userId]);
+
+  // Function to detect if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    return hasLocalDrafts;
+  }
+
+  // Update the hasLocalDrafts state whenever localStorage changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && userId) {
+      // Create a storage event listener to detect changes from other tabs
+      const handleStorageChange = (e) => {
+        if (e.key === `tht_application_${userId}`) {
+          setHasLocalDrafts(!!e.newValue);
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      return () => window.removeEventListener('storage', handleStorageChange);
+    }
+  }, [userId]);
 
   async function uploadProfilePhoto(file) {
     if (!session?.user) return
@@ -439,6 +579,7 @@ export default function Application() {
   // If user is properly signed in & domain is umich
   return (
     <div className='container mx-auto p-4 max-w-4xl'>
+      <FormSyncHandler hasUnsavedChanges={hasUnsavedChanges()} userId={userId} />
       {/* Header */}
       <div className='flex justify-between items-center mb-6'>
         <h1 className='text-3xl font-bold'>Application</h1>
@@ -454,10 +595,12 @@ export default function Application() {
         Welcome to the Theta Tau rush application! Please be sure to fill
         out and submit all of the following sections before the due date. Your application will
         only be considered if ALL of the sections are filled in before the due
-        date. Please note that if you do not click "Save Application," and you
-        close the tab, your progress will not be saved, but you can save/update
-        your application as many times as you wish before the due date. We recommend writing long answer responses in another application, and pasting them here. Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
+        date. Be sure to click the "Save Application" button to save your progress.
 
+        <p className="mt-2">
+          We recommend writing long answer responses in another application, and pasting them here.
+          Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
+        </p>
       </div>
 
       {dueDate && (
@@ -652,21 +795,26 @@ export default function Application() {
         <div className='flex items-center gap-4'>
           {!isPastDue && (
             <div className='flex flex-col'>
-              <button
-                type='submit'
-                className={`px-4 py-2 rounded text-white ${questions.some(q => {
-                  const wordLimit = q.word_limit;
-                  if (!wordLimit) return false;
-                  const currentAnswer = answers[q.id] || '';
-                  const wordCount = countWords(currentAnswer);
-                  return wordCount > wordLimit;
-                })
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-              >
-                Save Application
-              </button>
+              <div className='flex gap-2'>
+                <button
+                  type='submit'
+                  className={`px-4 py-2 rounded text-white ${questions.some(q => {
+                    const wordLimit = q.word_limit;
+                    if (!wordLimit) return false;
+                    const currentAnswer = answers[q.id] || '';
+                    const wordCount = countWords(currentAnswer);
+                    return wordCount > wordLimit;
+                  })
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : hasUnsavedChanges()
+                      ? 'bg-yellow-600 hover:bg-yellow-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                >
+                  Save Application
+                </button>
+              </div>
+
               {questions.some(q => {
                 const wordLimit = q.word_limit;
                 if (!wordLimit) return false;
@@ -680,12 +828,14 @@ export default function Application() {
                 )}
             </div>
           )}
-          {lastUpdated && (
-            <span className='text-gray-600 text-sm'>
-              Last updated:{' '}
-              {dayjs(lastUpdated).format('MMM D, YYYY h:mm A')}
-            </span>
-          )}
+          <div className='flex flex-col'>
+            {lastUpdated && (
+              <span className='text-gray-600 text-sm'>
+                Last updated:{' '}
+                {dayjs(lastUpdated).format('MMM D, YYYY h:mm A')}
+              </span>
+            )}
+          </div>
         </div>
       </form>
     </div>
