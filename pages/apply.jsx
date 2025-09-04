@@ -729,7 +729,6 @@ export default function Application() {
                   disabled={isPastDue}
                   className='border p-2 rounded max-w-sm'
                 >
-                  <option value=''>Select Graduation Year</option>
                   <option value='2025'>2025</option>
                   <option value='2026'>2026</option>
                   <option value='2027'>2027</option>
