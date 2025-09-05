@@ -159,9 +159,9 @@ export default function Application() {
         .select('*')
         .single()
       if (!error && data) {
-        const originalDueDate = dayjs(data.app_due_date).startOf('day')
+        const originalDueDate = dayjs(data.app_due_date).tz('America/New_York').startOf('day')
         const graceDueDate = dayjs(data.app_due_date).tz('America/New_York').add(1, 'day').hour(1).minute(0).second(0)
-        const start = dayjs(data.app_start_date).startOf('day')
+        const start = dayjs(data.app_start_date).tz('America/New_York').startOf('day')
         const annArborToday = dayjs().tz('America/New_York')
 
         setDueDate(originalDueDate)
