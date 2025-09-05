@@ -209,7 +209,7 @@ export default function Application() {
         .from('Rushees')
         .select('*')
         .eq('uniqname', userId)
-        .single()
+        .maybeSingle()
 
       if (userData) {
         // Only set from database if we don't have local data
@@ -404,7 +404,7 @@ export default function Application() {
           { onConflict: 'uniqname' }
         )
         .select('*')
-        .single()
+        .maybeSingle()
 
       if (upsertError) {
         console.error('Error upserting personal info:', upsertError)
