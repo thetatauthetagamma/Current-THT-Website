@@ -90,10 +90,7 @@ const RusheeAttendance = ({ uniqname }) => {
                     });
                 });
 
-                // Sort events by event_number to ensure proper order
-                round1Events.sort((a, b) => a.eventNumber - b.eventNumber);
-                round2Events.sort((a, b) => a.eventNumber - b.eventNumber);
-
+                // Events are already in order from EVENTS arrays; no need to sort
                 setAttendanceData({
                     round1: round1Events,
                     round2: round2Events
