@@ -118,7 +118,10 @@ export default function RusheeTile({
       onClick={handleCardClick}
     >
       {/* Comment count icon in top left corner */}
-      <div className="absolute top-2 left-2 bg-blue-500 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs">
+      <div
+        className="absolute top-2 left-2 bg-blue-500 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs"
+        aria-label={`${commentCount} comments`}
+      >
         <FaComment className="w-3 h-3" />
         <span>{commentCount}</span>
       </div>
