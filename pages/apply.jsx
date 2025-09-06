@@ -409,7 +409,7 @@ export default function Application() {
 
       if (upsertError) {
         console.error('Error upserting personal info:', upsertError)
-        alert('Could not save. See console.')
+        alert('Could not save. Please email tht-rush@umich.edu if error persists.')
         return
       } else if (upsertData?.updated_at) {
         setLastUpdated(upsertData.updated_at)
@@ -596,7 +596,7 @@ export default function Application() {
         Welcome to the Theta Tau rush application! Please be sure to fill
         out and submit all of the following sections before the due date. Your application will
         only be considered if ALL of the sections are filled in before the due
-        date. Be sure to click the "Save Application" button to save your progress.
+        date. Be sure to click the "Save Application" button to save your progress. There is no submit button, just make sure to save your application before the deadline.
         Contact us at <a href="mailto:tht-rush@umich.edu" className="text-blue-600 hover:underline">tht-rush@umich.edu</a> with any questions or concerns.
       </div>
 
