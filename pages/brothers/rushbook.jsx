@@ -5,6 +5,7 @@ import supabase from "../../supabase";
 import { CSVLink } from "react-csv"; // Import CSV download library
 import { BrothersProvider } from "@/contexts/BrothersContext";
 import { CommentCountProvider } from "@/contexts/CommentCountContext";
+import { restoreScrollPosition } from "@/utils/scrollHelper";
 
 // Helper to compute "net score"
 function getNetScore(rushee) {
@@ -28,44 +29,15 @@ export default function RushBook() {
 
   // Restore scroll position when component mounts
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedPosition = sessionStorage.getItem('rushbook-scroll-position')
-      if (savedPosition) {
-        // Wait for content to load, then restore scroll position
-        const restoreScroll = () => {
-          const position = parseInt(savedPosition, 10)
-          window.scrollTo({
-            top: position,
-            behavior: 'auto'
-          })
-          // Clean up after restoring
-          sessionStorage.removeItem('rushbook-scroll-position')
-        }
-
-        // Try multiple times to ensure content is loaded
-        setTimeout(restoreScroll, 100)
-        setTimeout(restoreScroll, 300)
-        setTimeout(restoreScroll, 500)
-      }
-    }
-  }, []) // Run only on mount
+    restoreScrollPosition('rushbook-scroll-position');
+  }, []);
 
   // Also restore scroll after rushees are loaded
   useEffect(() => {
     if (sortedRushees.length > 0) {
-      const savedPosition = sessionStorage.getItem('rushbook-scroll-position')
-      if (savedPosition) {
-        setTimeout(() => {
-          const position = parseInt(savedPosition, 10)
-          window.scrollTo({
-            top: position,
-            behavior: 'auto'
-          })
-          sessionStorage.removeItem('rushbook-scroll-position')
-        }, 100)
-      }
+      restoreScrollPosition('rushbook-scroll-position', [100]);
     }
-  }, [sortedRushees.length])
+  }, [sortedRushees.length]);
 
   // 1. Fetch current user
   useEffect(() => {
