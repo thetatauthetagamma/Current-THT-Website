@@ -19,7 +19,6 @@ export const restoreScrollPosition = (storageKey, delays = [100, 300, 500]) => {
         return;
     }
 
-    console.log('Restoring scroll position:', position);
 
     const scrollToPosition = () => {
         window.scrollTo({
