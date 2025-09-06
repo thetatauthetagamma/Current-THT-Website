@@ -16,7 +16,7 @@ import Image from 'next/image'
 import thtlogo from '../../../public/tht-logo.png'
 import ReactionBar from '@/components/rush/ReactionBar'
 import RusheeAttendance from '@/components/rush/RusheeAttendance'
-import { FaExclamation } from 'react-icons/fa'
+import { FaExclamation, FaArrowLeft } from 'react-icons/fa'
 import { BrothersProvider } from '@/contexts/BrothersContext'
 
 
@@ -70,6 +70,11 @@ export default function RusheeProfile() {
   const [editTexts, setEditTexts] = useState({})
 
   // ─────────────────────────────────────────────────────────
+  // Back button functionality
+  // ─────────────────────────────────────────────────────────
+  const handleBackToRushbook = () => {
+    router.push('/brothers/rushbook')
+  }
   // Edit comment functionality
   // ─────────────────────────────────────────────────────────
   const handleEditComment = (commentId, currentText) => {
@@ -728,6 +733,15 @@ export default function RusheeProfile() {
         <BroNavBar />
 
         <div className='flex-1 p-4'>
+          {/* Back button */}
+          <button
+            onClick={handleBackToRushbook}
+            className='flex items-center gap-2 mb-4 px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors'
+          >
+            <FaArrowLeft className='w-4 h-4' />
+            Back to Rush Book
+          </button>
+
           {/* Basic rushee info */}
           <div className='flex items-center mb-4'>
             <div className='w-32 h-32 mb-3 mx-4'>
