@@ -47,5 +47,4 @@ export const saveScrollPosition = (storageKey) => {
 
     const position = window.scrollY || window.pageYOffset;
     sessionStorage.setItem(storageKey, position.toString());
-    console.log('Saved scroll position:', position);
 };
