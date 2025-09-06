@@ -21,13 +21,10 @@ export const CommentCountProvider = ({ children }) => {
       
       if (!error && data) {
         // Count comments for each rushee
-        const counts = {};
-        data.forEach(item => {
-          if (!counts[item.rushee]) {
-            counts[item.rushee] = 0;
-          }
-          counts[item.rushee]++;
-        });
+        const counts = data.reduce((acc, item) => {
+          acc[item.rushee] = (acc[item.rushee] || 0) + 1;
+          return acc;
+        }, {});
         
         setCommentCounts(counts);
       } else {
