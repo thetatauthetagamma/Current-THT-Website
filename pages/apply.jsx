@@ -772,7 +772,7 @@ export default function Application() {
                 </div>
                 <textarea
                   rows={4}
-                  className='border rounded p-2 w-full whitespace-pre-wrap break-words break-all'
+                  className='border rounded p-2 w-full whitespace-pre-wrap break-words'
                   value={currentAnswer}
                   disabled={isPastDue}
                   onChange={e => handleAnswerChange(q.id, e.target.value)}
