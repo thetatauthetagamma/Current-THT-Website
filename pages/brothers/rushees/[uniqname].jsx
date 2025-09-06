@@ -1,3 +1,13 @@
+/**
+ * RusheeProfile Component
+ * 
+ * This component displays a detailed profile page for a rushee, including:
+ * - Basic rushee information and profile photo
+ * - Application responses to questions
+ * - Comment system with replies and emphasis features
+ * - Diversity and Coffee Chat feedback forms with ratings
+ * - Anonymous commenting system for brothers
+ */
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import supabase from '@/supabase'
@@ -5,6 +15,7 @@ import BroNavBar from '@/components/BroNavBar'
 import Image from 'next/image'
 import thtlogo from '../../../public/tht-logo.png'
 import ReactionBar from '@/components/rush/ReactionBar'
+import RusheeAttendance from '@/components/rush/RusheeAttendance'
 import { FaExclamation } from 'react-icons/fa'
 import { BrothersProvider } from '@/contexts/BrothersContext'
 
@@ -752,6 +763,13 @@ export default function RusheeProfile() {
                 stars={rushee.stars}
                 isAdmin={isAdmin}
               />
+            </div>
+            {/* Attendance display */}
+            <div className='ml-4 flex-1'>
+              <div className='mb-2 text-sm font-semibold'>Event Attendance:</div>
+              <div className='bg-gray-50 p-3 rounded-md border border-gray-200'>
+                <RusheeAttendance uniqname={rushee.uniqname} />
+              </div>
             </div>
           </div>
 
