@@ -7,6 +7,7 @@ import thtlogo from '../../public/tht-logo.png'
 // Import the new ReactionBar
 import ReactionBar from './ReactionBar'
 import { FaRegTrashCan, FaComment } from "react-icons/fa6";
+import { useCommentCounts } from '@/contexts/CommentCountContext';
 
 export default function RusheeTile({
   uniqname,
@@ -23,6 +24,7 @@ export default function RusheeTile({
   const [isAdmin, setIsAdmin] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false) // Loading state for delete
   const [commentCount, setCommentCount] = useState(0) // State to track comment count
+  const { commentCounts, loading: commentsLoading } = useCommentCounts()
 
   // Fetch the image from Supabase storage
   useEffect(() => {
@@ -58,26 +60,12 @@ export default function RusheeTile({
     fetchAdminRole()
   }, [brotherID])
 
-  // Fetch comment count for this rushee
+  // Use comment count from context
   useEffect(() => {
-    const fetchCommentCount = async () => {
-      if (!uniqname) return
-
-      const { count, error } = await supabase
-        .from('Application_Feedback')
-        .select('id', { count: 'exact', head: true })
-        .eq('rushee', uniqname)
-        .eq('value_type', 'comment')
-
-      if (!error && count !== null) {
-        setCommentCount(count)
-      } else {
-        console.error('Error fetching comment count:', error)
-      }
+    if (!commentsLoading && uniqname && commentCounts) {
+      setCommentCount(commentCounts[uniqname] || 0)
     }
-
-    fetchCommentCount()
-  }, [uniqname])
+  }, [uniqname, commentCounts, commentsLoading])
 
   function handleCardClick() {
     router.push(`/brothers/rushees/${uniqname}`)
