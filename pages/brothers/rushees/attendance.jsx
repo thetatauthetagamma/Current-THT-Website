@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import BroNavBar from '@/components/BroNavBar';
-import { insertSampleAttendance, updateAttendance } from '@/utils/rusheeAttendanceSetup';
 import supabase from '@/supabase';
 
 const AttendanceManager = () => {
