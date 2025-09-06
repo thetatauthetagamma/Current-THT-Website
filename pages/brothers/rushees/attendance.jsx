@@ -12,10 +12,6 @@ const AttendanceManager = () => {
     const [message, setMessage] = useState({ text: '', type: '' });
 
     // Round 1 and Round 2 events
-    const events = {
-        1: ["Info Session - CCCB", "Info Session - League", "Resume Workshop", "Diversity Workshop", "Social Event"],
-        2: ["Committee Highlights", "Natural Disaster Event", "Speed Dating"]
-    };
 
     useEffect(() => {
         // Check if the user is an admin
