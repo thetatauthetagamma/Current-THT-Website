@@ -6,7 +6,8 @@ import thtlogo from '../../public/tht-logo.png'
 
 // Import the new ReactionBar
 import ReactionBar from './ReactionBar'
-import { FaRegTrashCan } from "react-icons/fa6";
+import { FaRegTrashCan, FaComment } from "react-icons/fa6";
+import { useCommentCounts } from '@/contexts/CommentCountContext';
 
 export default function RusheeTile({
   uniqname,
@@ -22,6 +23,8 @@ export default function RusheeTile({
   const [imageUrl, setImageUrl] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false) // Loading state for delete
+  const [commentCount, setCommentCount] = useState(0) // State to track comment count
+  const { commentCounts, loading: commentsLoading } = useCommentCounts()
 
   // Fetch the image from Supabase storage
   useEffect(() => {
@@ -56,6 +59,13 @@ export default function RusheeTile({
     }
     fetchAdminRole()
   }, [brotherID])
+
+  // Use comment count from context
+  useEffect(() => {
+    if (!commentsLoading && uniqname && commentCounts) {
+      setCommentCount(commentCounts[uniqname] || 0)
+    }
+  }, [uniqname, commentCounts, commentsLoading])
 
   function handleCardClick() {
     router.push(`/brothers/rushees/${uniqname}`)
@@ -92,9 +102,17 @@ export default function RusheeTile({
     <div
       className="max-w-xs w-full bg-white rounded-lg shadow-md 
                  overflow-hidden transition-transform transform 
-                 hover:scale-105 cursor-pointer "
+                 hover:scale-105 cursor-pointer relative"
       onClick={handleCardClick}
     >
+      {/* Comment count icon in top left corner */}
+      <div
+        className="absolute top-2 left-2 bg-blue-500 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs"
+        aria-label={`${commentCount} comments`}
+      >
+        <FaComment className="w-3 h-3" />
+        <span>{commentCount}</span>
+      </div>
       {/* TOP SECTION (IMAGE + NAME) */}
       <div className="p-4 flex flex-col items-center">
         <div className="w-32 h-32 mb-3">
