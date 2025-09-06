@@ -30,12 +30,10 @@ export default function RushBook() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedPosition = sessionStorage.getItem('rushbook-scroll-position')
-      console.log('Attempting to restore scroll position:', savedPosition) // Debug log
       if (savedPosition) {
         // Wait for content to load, then restore scroll position
         const restoreScroll = () => {
           const position = parseInt(savedPosition, 10)
-          console.log('Scrolling to position:', position) // Debug log
           window.scrollTo({
             top: position,
             behavior: 'auto'
