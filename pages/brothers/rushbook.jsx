@@ -57,7 +57,6 @@ export default function RushBook() {
       if (savedPosition) {
         setTimeout(() => {
           const position = parseInt(savedPosition, 10)
-          console.log('Restoring scroll after rushees loaded:', position)
           window.scrollTo({
             top: position,
             behavior: 'auto'
