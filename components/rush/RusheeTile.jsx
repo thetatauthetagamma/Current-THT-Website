@@ -72,7 +72,6 @@ export default function RusheeTile({
     if (typeof window !== 'undefined') {
       const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0
       sessionStorage.setItem('rushbook-scroll-position', scrollPosition.toString())
-      console.log('Saved scroll position:', scrollPosition) // Debug log
     }
     router.push(`/brothers/rushees/${uniqname}`)
   }
