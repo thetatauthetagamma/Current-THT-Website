@@ -804,7 +804,7 @@ export default function RusheeProfile() {
                       <p className='font-semibold mb-1'>
                         Q{q.id}: {q.question}
                       </p>
-                      <p className='whitespace-pre-wrap break-words break-all'>
+                      <p className='whitespace-pre-wrap break-words'>
                         {displayAns}
                       </p>
                     </div>
