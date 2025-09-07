@@ -743,45 +743,49 @@ export default function RusheeProfile() {
           </button>
 
           {/* Basic rushee info */}
-          <div className='flex items-center mb-4'>
-            <div className='w-32 h-32 mb-3 mx-4'>
-              {imageUrl ? (
-                <img
-                  className='rounded-full w-full h-full object-cover'
-                  src={imageUrl}
-                  alt='rushee profile'
-                />
-              ) : (
-                <Image
-                  className='rounded-full w-full h-full object-cover'
-                  src={thtlogo}
-                  alt='Default logo'
-                />
-              )}
-            </div>
-            <div className='flex flex-col w-52'>
-              <h2 className='text-xl font-semibold'>
-                {rushee.firstname} {rushee.lastname}
-              </h2>
-              <p>
-                {rushee.major} ({rushee.year})
-              </p>
-              {rushee.pronouns && <p>Pronouns: {rushee.pronouns}</p>}
+          <div className='flex flex-col lg:flex-row lg:items-center mb-4 gap-4'>
+            <div className='flex flex-col sm:flex-row items-center sm:items-start gap-4'>
+              <div className='w-32 h-32 flex-shrink-0'>
+                {imageUrl ? (
+                  <img
+                    className='rounded-full w-full h-full object-cover'
+                    src={imageUrl}
+                    alt='rushee profile'
+                  />
+                ) : (
+                  <Image
+                    className='rounded-full w-full h-full object-cover'
+                    src={thtlogo}
+                    alt='Default logo'
+                  />
+                )}
+              </div>
+              <div className='flex flex-col text-center sm:text-left'>
+                <h2 className='text-xl font-semibold'>
+                  {rushee.firstname} {rushee.lastname}
+                </h2>
+                <p>
+                  {rushee.major} ({rushee.year})
+                </p>
+                {rushee.pronouns && <p>Pronouns: {rushee.pronouns}</p>}
 
-              {/* ─────────────────────────────────────────────────────────────────────── */}
-              <ReactionBar
-                uniqname={rushee.uniqname}
-                brotherID={brotherID}
-                likes={rushee.likes}
-                dislikes={rushee.dislikes}
-                stars={rushee.stars}
-                isAdmin={isAdmin}
-              />
+                {/* ─────────────────────────────────────────────────────────────────────── */}
+                <div className='mt-2'>
+                  <ReactionBar
+                    uniqname={rushee.uniqname}
+                    brotherID={brotherID}
+                    likes={rushee.likes}
+                    dislikes={rushee.dislikes}
+                    stars={rushee.stars}
+                    isAdmin={isAdmin}
+                  />
+                </div>
+              </div>
             </div>
             {/* Attendance display */}
-            <div className='ml-4 flex-1'>
+            <div className='w-full lg:flex-1'>
               <div className='mb-2 text-sm font-semibold'>Event Attendance:</div>
-              <div className='bg-gray-50 p-3 rounded-md border border-gray-200'>
+              <div className='bg-gray-50 p-3 rounded-md border border-gray-200 overflow-x-auto'>
                 <RusheeAttendance uniqname={rushee.uniqname} />
               </div>
             </div>
