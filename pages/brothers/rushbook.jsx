@@ -23,8 +23,8 @@ export default function RushBook() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Sorting & filtering states
-  const [sortField, setSortField] = useState('uniqname');  // default sort by 'uniqname' for non-admin
-  const [sortOrder, setSortOrder] = useState('asc');       // 'asc' or 'desc'
+  const [sortField, setSortField] = useState('netscore');
+  const [sortOrder, setSortOrder] = useState('desc');       // 'asc' or 'desc'
   const [searchTerm, setSearchTerm] = useState('');        // filter by name
 
   // Restore scroll position when component mounts
@@ -69,12 +69,6 @@ export default function RushBook() {
       if (!error && data) {
         const isAdminUser = data.adminrole === 'dev' || data.adminrole === 'rush'
         setIsAdmin(isAdminUser)
-
-        // Set default sort for non-admin users
-        if (!isAdminUser) {
-          setSortField('uniqname')
-          setSortOrder('asc')
-        }
       } else {
         console.error('Error fetching admin role:', error)
       }
@@ -218,10 +212,10 @@ export default function RushBook() {
                   value={sortField}
                   onChange={(e) => setSortField(e.target.value)}
                 >
-                  {isAdmin && <option value="likes">Likes</option>}
-                  {isAdmin && <option value="dislikes">Dislikes</option>}
-                  {isAdmin && <option value="stars">Stars</option>}
-                  {isAdmin && <option value="netscore">Net Score</option>}
+                  <option value="likes">Likes</option>
+                  <option value="dislikes">Dislikes</option>
+                  <option value="stars">Stars</option>
+                  <option value="netscore">Net Score</option>
                   <option value="uniqname">Uniqname</option>
                   <option value="firstname">First Name</option>
                 </select>
