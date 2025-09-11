@@ -22,7 +22,7 @@ const RusheeAttendance = ({ uniqname }) => {
         ],
         round2: [
             'Committee Highlights',
-            'Natural Disaster Event',
+            'Natural Disaster Survival',
             'Speed Dating'
         ]
     };
