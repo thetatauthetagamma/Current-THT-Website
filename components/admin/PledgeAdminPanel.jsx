@@ -162,7 +162,7 @@ export default function PledgeAdminPanel() {
     return (
       <div className="bg-white rounded-md shadow-md p-4 w-full">
         <h2 className="text-2xl font-bold mb-2 text-[#8B0000]">
-          Pledge Info
+          PNM Info
         </h2>
         <p>You are not authorized to view this panel.</p>
       </div>
@@ -172,15 +172,15 @@ export default function PledgeAdminPanel() {
   return (
     <div className="bg-white rounded-md shadow-md p-4 w-full">
       <h2 className="text-2xl font-bold mb-6 text-[#8B0000]">
-        Pledge Info Admin
+        PNM Info Admin
       </h2>
 
       {/* If no row in Pledge_Info, allow user to insert one */}
       {!pledgeInfo ? (
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-          <h3 className="text-lg font-semibold mb-4">No Pledge_Info Found</h3>
+          <h3 className="text-lg font-semibold mb-4">No PNM_Info Found</h3>
           <p className="mb-4 text-gray-600">
-            Create a new Pledge_Info entry by selecting a due date and specifying the total hours/interviews.
+            Create a new PNM_Info entry by selecting a due date and specifying the total hours/interviews.
           </p>
 
           <div className="mt-4 space-y-4">
@@ -229,14 +229,14 @@ export default function PledgeAdminPanel() {
               onClick={handleCreatePledgeInfo}
               className="mt-4 bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
             >
-              Create Pledge Info
+              Create PNM Info
             </button>
           </div>
         </div>
       ) : (
         // If we do have a row in Pledge_Info, show the edit form
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-          <h3 className="text-lg font-semibold mb-4">Edit Pledge Requirement Info</h3>
+          <h3 className="text-lg font-semibold mb-4">Edit PNM Requirement Info</h3>
           <div className="mt-2 space-y-4">
             <div>
               <label className="block font-medium mb-1">Requirement Due Date:</label>
@@ -283,7 +283,7 @@ export default function PledgeAdminPanel() {
             onClick={handleSavePledgeInfo}
             className="mt-4 bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
           >
-            Save Pledge Info
+            Save PNM Info
           </button>
           <PledgeRequirementsManager/>
         </div>
