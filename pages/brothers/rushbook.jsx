@@ -5,6 +5,7 @@ import supabase from "../../supabase";
 import { CSVLink } from "react-csv"; // Import CSV download library
 import { BrothersProvider } from "@/contexts/BrothersContext";
 import { CommentCountProvider } from "@/contexts/CommentCountContext";
+import { StarCountProvider, useStarCount } from "@/contexts/StarCountContext";
 import { restoreScrollPosition } from "@/utils/scrollHelper";
 
 // Helper to compute "net score"
@@ -14,6 +15,32 @@ function getNetScore(rushee) {
   const starsCount = rushee.stars?.length || 0;
   // example weighting: like = +1, dislike = -1, star = +2
   return likesCount + 2 * starsCount - dislikesCount;
+}
+
+// Component to display star count info
+function StarCountDisplay() {
+  const { starCount, maxStars, isLoading } = useStarCount();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border">
+        <span className="text-yellow-500">⭐</span>
+        <span className="text-sm font-medium">Loading...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border">
+      <span className="text-yellow-500">⭐</span>
+      <span className="text-sm font-medium">
+        Stars Used: {starCount}/{maxStars}
+      </span>
+      {starCount >= maxStars && (
+        <span className="text-xs text-red-600 font-semibold">LIMIT REACHED</span>
+      )}
+    </div>
+  );
 }
 
 export default function RushBook() {
@@ -175,21 +202,28 @@ export default function RushBook() {
   return (
     <BrothersProvider>
       <CommentCountProvider>
-        <div className="flex flex-col md:flex-row flex-grow border-b-2 border-[#a3000020] min-h-screen">
-          <BroNavBar />
-          <div className="flex-1 p-4 bg-gray-100">
+        <StarCountProvider brotherID={userID}>
+          <div className="flex flex-col md:flex-row flex-grow border-b-2 border-[#a3000020] min-h-screen">
+            <BroNavBar />
+            <div className="flex-1 p-4 bg-gray-100">
 
             {/* Page Title */}
-            <h1 className="text-2xl font-bold mb-4">Rush Book</h1>
-            {isAdmin && (
-              <CSVLink
-                data={generateCSVData()}
-                filename={`rushee_data_${new Date().toISOString().slice(0, 10)}.csv`}
-                className="bg-red-800 text-white px-3 py-2 rounded hover:bg-red-900"
-              >
-                Download CSV
-              </CSVLink>
-            )}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+              <h1 className="text-2xl font-bold">Rush Book</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2 sm:mt-0">
+                {/* Star Count Display */}
+                <StarCountDisplay />
+                {isAdmin && (
+                  <CSVLink
+                    data={generateCSVData()}
+                    filename={`rushee_data_${new Date().toISOString().slice(0, 10)}.csv`}
+                    className="bg-red-800 text-white px-3 py-2 rounded hover:bg-red-900"
+                  >
+                    Download CSV
+                  </CSVLink>
+                )}
+              </div>
+            </div>
             {/* SORT & SEARCH BAR */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 ">
               {/* Search Input */}
@@ -252,6 +286,7 @@ export default function RushBook() {
             </div>
           </div>
         </div>
+        </StarCountProvider>
       </CommentCountProvider>
     </BrothersProvider>
   );
