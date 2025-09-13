@@ -136,7 +136,7 @@ export default function BroNavBar({isPledge}) {
               </Link>
               <Link legacyBehavior href="/brothers/pledgetracking">
                 <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                  <a>Pledge Tracking</a>
+                  <a>PNM Tracking</a>
                 </li>
               </Link>
               <Link legacyBehavior href="/brothers/broresources">

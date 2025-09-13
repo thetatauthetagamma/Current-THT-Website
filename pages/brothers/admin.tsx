@@ -396,7 +396,7 @@ export default function Admin() {
                   {rollEditingMode ? (
                     <div className="bg-[#fff0f0] p-4 rounded-md">
                       <h3 className="text-lg font-bold mb-2">
-                        Assign pledges roll numbers
+                        Assign potential new members roll numbers
                       </h3>
                       {pledges.map((pledge) => (
                         <div
@@ -436,7 +436,7 @@ export default function Admin() {
                       onClick={handleInitiatePledges}
                       className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
                     >
-                      Initiate Pledges
+                      Initiate Potential New Members
                     </button>
                   )}
                 </div>)}
@@ -527,7 +527,7 @@ export default function Admin() {
                 </div>)}
               {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
                 <div>
-                  {pledgeEditingMode ? <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} /> : (<button onClick={() => setPledgeEditingMode(!pledgeEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Pledge Committee</button>)}
+                  {pledgeEditingMode ? <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} /> : (<button onClick={() => setPledgeEditingMode(!pledgeEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Potential New Member Committee</button>)}
                 </div>)}
             </div>
 
