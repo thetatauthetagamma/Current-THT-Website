@@ -18,6 +18,7 @@ import ReactionBar from '@/components/rush/ReactionBar'
 import RusheeAttendance from '@/components/rush/RusheeAttendance'
 import { FaExclamation, FaArrowLeft } from 'react-icons/fa'
 import { BrothersProvider } from '@/contexts/BrothersContext'
+import { StarCountProvider } from '@/contexts/StarCountContext'
 
 
 const RusheeStatus = Object.freeze({
@@ -729,8 +730,9 @@ export default function RusheeProfile() {
 
   return (
     <BrothersProvider>
-      <div className='flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]'>
-        <BroNavBar />
+      <StarCountProvider brotherID={brotherID}>
+        <div className='flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020]'>
+          <BroNavBar />
 
         <div className='flex-1 p-4'>
           {/* Back button */}
@@ -1222,7 +1224,8 @@ export default function RusheeProfile() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      </StarCountProvider>
     </BrothersProvider>
   )
 }

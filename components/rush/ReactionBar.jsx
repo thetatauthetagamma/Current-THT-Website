@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useBrothers } from '@/contexts/BrothersContext'
+import { useStarCount } from '@/contexts/StarCountContext'
 import supabase from '@/supabase'
 
 // React-icons
@@ -39,18 +40,23 @@ export default function ReactionBar({
   const [localDislikes, setDislikes] = useState(dislikes || [])
   const [localStars, setStars] = useState(stars || [])
   const { brothersMap, isLoading: brothersLoading } = useBrothers()
+  const { canStarMore, updateStarCount, isRusheeStarred, getRusheeStars } = useStarCount()
 
   const isLiked = localLikes.includes(brotherID)
   const isDisliked = localDislikes.includes(brotherID)
-  const isStarred = localStars.includes(brotherID)
+  // Use context to determine if starred, with fallback to local state
+  const isStarred = isRusheeStarred ? isRusheeStarred(uniqname) : localStars.includes(brotherID)
+
+  // Use context stars with fallback to props
+  const currentStars = getRusheeStars ? getRusheeStars(uniqname) : stars
 
   // Check if star button should be enabled based on date
   const isStarEnabled = () => {
     if (!starUnlockDate) return true // If no date specified, always enabled
-    
+
     const unlockDate = new Date(starUnlockDate)
     const currentDate = new Date()
-    
+
     return currentDate >= unlockDate
   }
 
@@ -121,22 +127,36 @@ export default function ReactionBar({
 
 
   // ─────────────────────────────────────────────────────────
-  // 3) Toggling "star" - with date restriction check
+  // 3) Toggling "star" - with date restriction and limit check
   // ─────────────────────────────────────────────────────────
   async function handleStar(e) {
     e.stopPropagation()
-    
+
     // Check if star button is enabled based on date
     if (!isStarEnabled()) {
       return // Exit early if star button is not yet enabled
     }
 
+    const willBeStar = !isStarred
+
+    // Check star limit using context
+    if (willBeStar && !canStarMore()) {
+      // Show a brief notification that limit is reached
+      return
+    }
+
+    // Update context first (optimistic update)
+    const canUpdate = updateStarCount(uniqname, willBeStar)
+    if (!canUpdate) {
+      return // Context prevented the update
+    }
+
     let updatedStars
     if (isStarred) {
-      updatedStars = localStars.filter(id => id !== brotherID)
+      updatedStars = currentStars.filter(id => id !== brotherID)
       setDislikes(d => d.filter(id => id !== brotherID))
     } else {
-      updatedStars = [...localStars, brotherID]
+      updatedStars = [...currentStars, brotherID]
       setDislikes(d => d.filter(id => id !== brotherID))
     }
 
@@ -148,6 +168,10 @@ export default function ReactionBar({
 
     if (!error) {
       setStars(updatedStars)
+    } else {
+      // If database update failed, revert the context update
+      updateStarCount(uniqname, !willBeStar)
+      console.error('Failed to update star in database:', error)
     }
   }
 
@@ -235,19 +259,20 @@ export default function ReactionBar({
 
       {/* STAR */}
       <div
-        className={`relative group flex items-center space-x-1 overflow-visible ${
-          isStarEnabled() ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-        }`}
-        onClick={isStarEnabled() ? handleStar : undefined}
+        className={`relative group flex items-center space-x-1 overflow-visible ${isStarEnabled() && (isStarred || canStarMore()) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+          }`}
+        onClick={isStarEnabled() && (isStarred || canStarMore()) ? handleStar : undefined}
       >
         <div
           className="absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded z-50
                      top-0 left-1/2 -translate-x-1/2 -translate-y-full mb-1 whitespace-nowrap"
           style={{ whiteSpace: 'pre' }}
         >
-          {isStarEnabled() 
-            ? renderNamesOrNone(localStars, 'Starred')
-            : <p>Unlocks {new Date(starUnlockDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</p>
+          {!isStarEnabled()
+            ? <p>Unlocks {new Date(starUnlockDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</p>
+            : !isStarred && !canStarMore()
+              ? <p>Star limit reached (3/3)</p>
+              : renderNamesOrNone(currentStars, 'Starred')
           }
         </div>
         {isStarred ? (
@@ -256,7 +281,7 @@ export default function ReactionBar({
           <FaRegStar className="text-[#8B0000] text-2xl" />
         )}
         <span className="text-lg font-semibold text-gray-700">
-          {localStars.length}
+          {currentStars.length}
         </span>
       </div>
     </div>

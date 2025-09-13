@@ -5,6 +5,7 @@ import supabase from "../../supabase";
 import { CSVLink } from "react-csv"; // Import CSV download library
 import { BrothersProvider } from "@/contexts/BrothersContext";
 import { CommentCountProvider } from "@/contexts/CommentCountContext";
+import { StarCountProvider, useStarCount } from "@/contexts/StarCountContext";
 import { restoreScrollPosition } from "@/utils/scrollHelper";
 
 // Helper to compute "net score"
@@ -15,6 +16,7 @@ function getNetScore(rushee) {
   // example weighting: like = +1, dislike = -1, star = +2
   return likesCount + 2 * starsCount - dislikesCount;
 }
+
 
 export default function RushBook() {
   const [rushees, setRushees] = useState([]);
@@ -175,83 +177,90 @@ export default function RushBook() {
   return (
     <BrothersProvider>
       <CommentCountProvider>
-        <div className="flex flex-col md:flex-row flex-grow border-b-2 border-[#a3000020] min-h-screen">
-          <BroNavBar />
-          <div className="flex-1 p-4 bg-gray-100">
+        <StarCountProvider brotherID={userID}>
+          <div className="flex flex-col md:flex-row flex-grow border-b-2 border-[#a3000020] min-h-screen">
+            <BroNavBar />
+            <div className="flex-1 p-4 bg-gray-100">
 
-            {/* Page Title */}
-            <h1 className="text-2xl font-bold mb-4">Rush Book</h1>
-            {isAdmin && (
-              <CSVLink
-                data={generateCSVData()}
-                filename={`rushee_data_${new Date().toISOString().slice(0, 10)}.csv`}
-                className="bg-red-800 text-white px-3 py-2 rounded hover:bg-red-900"
-              >
-                Download CSV
-              </CSVLink>
-            )}
-            {/* SORT & SEARCH BAR */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 ">
-              {/* Search Input */}
-              <div>
-                <label className="font-semibold mr-2">Search (First Name/Uniqname):</label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="border rounded px-2 py-1"
-                  placeholder="e.g. katemcg"
-                />
+              {/* Page Title */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <h1 className="text-2xl font-bold">Rush Book</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2 sm:mt-0">
+                  {/* Star Count Display */}
+                  {isAdmin && (
+                    <CSVLink
+                      data={generateCSVData()}
+                      filename={`rushee_data_${new Date().toISOString().slice(0, 10)}.csv`}
+                      className="bg-red-800 text-white px-3 py-2 rounded hover:bg-red-900"
+                    >
+                      Download CSV
+                    </CSVLink>
+                  )}
+                </div>
               </div>
+              {/* SORT & SEARCH BAR */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 ">
+                {/* Search Input */}
+                <div>
+                  <label className="font-semibold mr-2">Search (First Name/Uniqname):</label>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border rounded px-2 py-1"
+                    placeholder="e.g. katemcg"
+                  />
+                </div>
 
-              {/* Sort Field */}
-              <div>
-                <label className="font-semibold mr-2">Sort By:</label>
-                <select
-                  className="border p-1 rounded"
-                  value={sortField}
-                  onChange={(e) => setSortField(e.target.value)}
-                >
-                  <option value="likes">Likes</option>
-                  <option value="dislikes">Dislikes</option>
-                  <option value="stars">Stars</option>
-                  <option value="netscore">Net Score</option>
-                  <option value="uniqname">Uniqname</option>
-                  <option value="firstname">First Name</option>
-                </select>
-              </div>
+                {/* Sort Field */}
+                <div>
+                  <label className="font-semibold mr-2">Sort By:</label>
+                  <select
+                    className="border p-1 rounded"
+                    value={sortField}
+                    onChange={(e) => setSortField(e.target.value)}
+                  >
+                    <option value="likes">Likes</option>
+                    <option value="dislikes">Dislikes</option>
+                    <option value="stars">Stars</option>
+                    <option value="netscore">Net Score</option>
+                    <option value="uniqname">Uniqname</option>
+                    <option value="firstname">First Name</option>
+                  </select>
+                </div>
 
-              {/* Sort Order */}
-              <div>
-                <label className="font-semibold mr-2">Order:</label>
-                <select
-                  className="border p-1 rounded"
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value)}
-                >
-                  <option value="desc">Desc</option>
-                  <option value="asc">Asc</option>
-                </select>
+                {/* Sort Order */}
+                <div>
+                  <label className="font-semibold mr-2">Order:</label>
+                  <select
+                    className="border p-1 rounded"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                  >
+                    <option value="desc">Desc</option>
+                    <option value="asc">Asc</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            {/* ─────────────────────────────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {sortedRushees.map((rushee) => (
-                <RusheeTile
-                  key={rushee.uniqname}
-                  uniqname={rushee.uniqname}
-                  firstname={rushee.firstname}
-                  lastname={rushee.lastname}
-                  pronouns={rushee.pronouns}
-                  likes={rushee.likes}
-                  dislikes={rushee.dislikes}
-                  stars={rushee.stars}
-                  brotherID={userID}
-                />
-              ))}
+              {/* ─────────────────────────────────────────────────────────────────────── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {sortedRushees.map((rushee) => (
+                  <RusheeTile
+                    key={rushee.uniqname}
+                    uniqname={rushee.uniqname}
+                    firstname={rushee.firstname}
+                    lastname={rushee.lastname}
+                    pronouns={rushee.pronouns}
+                    likes={rushee.likes}
+                    dislikes={rushee.dislikes}
+                    stars={rushee.stars}
+                    brotherID={userID}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </StarCountProvider>
       </CommentCountProvider>
     </BrothersProvider>
   );
