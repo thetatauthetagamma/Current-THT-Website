@@ -19,7 +19,7 @@ export default function PledgeInitiation({ pledges, handleSubmit }: Props) {
   };
 
   const handleConfirmSubmit = () => {
-    if (window.confirm('Are you sure you want to initiate these pledges?')) {
+    if (window.confirm('Are you sure you want to initiate these PNMs?')) {
       handleSubmit(roleAssignments);
     }
   };

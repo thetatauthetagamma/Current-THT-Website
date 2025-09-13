@@ -107,7 +107,7 @@ export default function pledgetracking() {
             rel="noopener noreferrer"
             className="inline-block px-4 py-2 bg-blue-500 text-white font-medium rounded hover:bg-blue-600 transition"
           >
-            👶 Fill Out the Pledge Feedback Form
+            👶 Fill Out the Potential New Member Feedback Form
           </a>
         </div>
           {/* Search Bar */}
