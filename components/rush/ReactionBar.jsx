@@ -46,17 +46,17 @@ export default function ReactionBar({
   const isDisliked = localDislikes.includes(brotherID)
   // Use context to determine if starred, with fallback to local state
   const isStarred = isRusheeStarred ? isRusheeStarred(uniqname) : localStars.includes(brotherID)
-  
+
   // Use context stars with fallback to props
   const currentStars = getRusheeStars ? getRusheeStars(uniqname) : stars
 
   // Check if star button should be enabled based on date
   const isStarEnabled = () => {
     if (!starUnlockDate) return true // If no date specified, always enabled
-    
+
     const unlockDate = new Date(starUnlockDate)
     const currentDate = new Date()
-    
+
     return currentDate >= unlockDate
   }
 
@@ -131,18 +131,17 @@ export default function ReactionBar({
   // ─────────────────────────────────────────────────────────
   async function handleStar(e) {
     e.stopPropagation()
-    
+
     // Check if star button is enabled based on date
     if (!isStarEnabled()) {
       return // Exit early if star button is not yet enabled
     }
 
     const willBeStar = !isStarred
-    
+
     // Check star limit using context
     if (willBeStar && !canStarMore()) {
       // Show a brief notification that limit is reached
-      console.log('Star limit reached (3/3)')
       return
     }
 
@@ -260,9 +259,8 @@ export default function ReactionBar({
 
       {/* STAR */}
       <div
-        className={`relative group flex items-center space-x-1 overflow-visible ${
-          isStarEnabled() && (isStarred || canStarMore()) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-        }`}
+        className={`relative group flex items-center space-x-1 overflow-visible ${isStarEnabled() && (isStarred || canStarMore()) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+          }`}
         onClick={isStarEnabled() && (isStarred || canStarMore()) ? handleStar : undefined}
       >
         <div
@@ -270,11 +268,11 @@ export default function ReactionBar({
                      top-0 left-1/2 -translate-x-1/2 -translate-y-full mb-1 whitespace-nowrap"
           style={{ whiteSpace: 'pre' }}
         >
-          {!isStarEnabled() 
+          {!isStarEnabled()
             ? <p>Unlocks {new Date(starUnlockDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</p>
             : !isStarred && !canStarMore()
-            ? <p>Star limit reached (3/3)</p>
-            : renderNamesOrNone(currentStars, 'Starred')
+              ? <p>Star limit reached (3/3)</p>
+              : renderNamesOrNone(currentStars, 'Starred')
           }
         </div>
         {isStarred ? (
