@@ -34,7 +34,7 @@ export default function PledgeRequirementsManager() {
         .select('*')
         .order('id', { ascending: true })
       if (error) {
-        console.error('Error fetching PNM_Requirements:', error)
+        console.error('Error fetching Pledge_Requirements:', error)
       } else if (data) {
         setRequirements(data as PledgeRequirement[])
       }

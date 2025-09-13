@@ -89,9 +89,9 @@ export default function committees() {
         <div className='flex flex-grow pb-4 md:w-1/2 md:pr-2'>
           <div className="flex flex-col md:flex-col bg-gray-100 justify-center flex-grow px-4 md:px-16 md:pt-8 md:pb-8 pt-4 pb-4 ">
             <div className="flex flex-col w-full items-center">
-              <h1 className="pt-4 pb-4 text-2xl md:text-4xl font-bold md:text-left text-center text-[#8b0000]" >New Member Education</h1>
+              <h1 className="pt-4 pb-4 text-2xl md:text-4xl font-bold md:text-left text-center text-[#8b0000]" >Pledge</h1>
               <div className="flex flex-col md:flex-row  md:text-lg text-md pt-4 pb-4">
-                The New Member Education Committee plays a vital role in our fraternity's growth and unity. Their primary focus is on educating new members and preparing them for their transition to full brothers by the end of the pledge semester. They organize various events to foster camaraderie among potential new members, helping them become acquainted with each other and fully integrated into our brotherhood. Through mentorship, guidance, and immersive activities, the committee ensures that potential new members are well-prepared to embrace their roles as active members and contribute to the fraternity's values and traditions.
+                The Pledge Committee plays a vital role in our fraternity's growth and unity. Their primary focus is on educating new members and preparing them for their transition to full brothers by the end of the pledge semester. They organize various events to foster camaraderie among pledges, helping them become acquainted with each other and fully integrated into our brotherhood. Through mentorship, guidance, and immersive activities, the committee ensures that pledges are well-prepared to embrace their roles as active members and contribute to the fraternity's values and traditions.
 
 
 
@@ -236,7 +236,7 @@ export default function committees() {
             <div className="flex flex-col w-full items-center">
               <h1 className="pt-4 pb-4 text-2xl md:text-4xl font-bold md:text-left text-center text-[#8b0000]" >Wellness</h1>
               <div className="flex flex-col md:flex-row  md:text-lg text-md pt-4 pb-4">
-                The Wellness Committee is dedicated to nurturing the holistic well-being of our fraternity brothers and potential new members. We understand the importance of a sound mind and body in the demanding field of engineering. We provide a wealth of information and resources to support mental and physical health, offering tools such as chapter meditation sessions and calming videos to help manage the stresses of academic life. Throughout the semester, we also plan and host events like group yoga to promote physical fitness and mental relaxation. Our mission is to create a supportive and balanced environment where our members can thrive, not only as engineers but as individuals.
+                The Wellness Committee is dedicated to nurturing the holistic well-being of our fraternity brothers and pledges. We understand the importance of a sound mind and body in the demanding field of engineering. We provide a wealth of information and resources to support mental and physical health, offering tools such as chapter meditation sessions and calming videos to help manage the stresses of academic life. Throughout the semester, we also plan and host events like group yoga to promote physical fitness and mental relaxation. Our mission is to create a supportive and balanced environment where our members can thrive, not only as engineers but as individuals.
               </div>
             </div>
             <div className="w-full  flex flex-grow justify-center items-center pt-4 pb-4">

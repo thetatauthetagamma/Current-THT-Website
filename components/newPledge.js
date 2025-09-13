@@ -344,7 +344,7 @@ const NewPledgeTile = ({ fetchPledges }) => {
                     className='font-bold text-md bg-[#8b000070] p-2 rounded-md text-center'
                     onClick={handleCreatePledge}
                   >
-                    Create Potential New Member
+                    Create Pledge
                   </button>
                 </div>
               </div>

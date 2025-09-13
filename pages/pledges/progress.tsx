@@ -55,7 +55,7 @@ export default function progress() {
           setLoading(false);
           setError(null);
         } else {
-          throw new Error('PNM details not found.');
+          throw new Error('Pledge details not found.');
         }
       } catch (error) {
         

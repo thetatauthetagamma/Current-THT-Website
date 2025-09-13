@@ -259,7 +259,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
         <div className='inline-flex border-2 border-[#8b0000] rounded px-2 ml-2 mr-2'>
           {countdown}
         </div>
-        days until potential new member requirements are due.
+        days until pledge requirements are due.
       </div>
 
       {/* INTERVIEWS */}

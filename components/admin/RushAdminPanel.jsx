@@ -107,7 +107,7 @@ export default function RushAdminPanel() {
 
   async function handleFinalizePC() {
     // Confirm with user before proceeding
-    const confirmMsg = `This will move all current rushees into the PNMs table and reset RushInfo. Please only do this once they have all accepted their bids. This action CANNOT be undone.`;
+    const confirmMsg = `This will move all current rushees into the Pledges table and reset RushInfo. Please only do this once they have all accepted their bids. This action CANNOT be undone.`;
     if (!window.confirm(confirmMsg)) return;
 
     try {
@@ -134,8 +134,8 @@ export default function RushAdminPanel() {
         .insert(rushees); // Directly inserts the array
 
       if (insertError) {
-        console.error('Error inserting PNMs:', insertError);
-        alert('Error moving rushees to PNMs. Check console.');
+        console.error('Error inserting pledges:', insertError);
+        alert('Error moving rushees to pledges. Check console.');
         return;
       }
 
@@ -161,7 +161,7 @@ export default function RushAdminPanel() {
         return;
       }
 
-      alert('Rush finalized successfully! All active rushees moved to PNMs, RushInfo reset.');
+      alert('Rush finalized successfully! All active rushees moved to pledges, RushInfo reset.');
     } catch (err) {
       console.error('Unexpected error in handleFinalizePC:', err);
       alert('Something went wrong. Check console.');

@@ -121,11 +121,11 @@ export default function PledgeCommitteeManager({
   
     return (
       <div className="bg-white rounded-md shadow-md p-4">
-        <h2 className="text-xl font-semibold text-[#8B0000] mb-2">PNM Committee Management</h2>
+        <h2 className="text-xl font-semibold text-[#8B0000] mb-2">Pledge Committee Management</h2>
   
         {/* Current Members */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold">Current PNM Committee</h3>
+          <h3 className="text-lg font-semibold">Current Pledge Committee</h3>
           {pledgeCommittee.length > 0 ? (
             <ul>
               {pledgeCommittee.map((member) => (
@@ -143,13 +143,13 @@ export default function PledgeCommitteeManager({
               ))}
             </ul>
           ) : (
-            <p>No members in the PNM Committee.</p>
+            <p>No members in the Pledge Committee.</p>
           )}
         </div>
   
         {/* Add New Member */}
         <div>
-          <h3 className="text-lg font-semibold mb-2">Add Brother to PNM</h3>
+          <h3 className="text-lg font-semibold mb-2">Add Brother to Pledge</h3>
           <Select
             options={searchResults.map((brother) => ({
               value: brother.userid,
@@ -167,7 +167,7 @@ export default function PledgeCommitteeManager({
             onClick={addPledgeMember}
             className="bg-green-600 text-white px-3 py-2 mt-2 rounded hover:bg-green-700"
           >
-            Add to PNM Committee
+            Add to Pledge Committee
           </button>
         </div>
   
@@ -176,7 +176,7 @@ export default function PledgeCommitteeManager({
           onClick={() => setPledgeEditingMode(false)}
           className="bg-gray-400 text-white px-3 py-2 mt-4 rounded hover:bg-gray-500"
         >
-          Done Updating PNM Committee
+          Done Updating Pledge Committee
         </button>
       </div>
     );

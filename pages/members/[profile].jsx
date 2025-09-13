@@ -259,7 +259,7 @@ export default function Profile () {
           .eq('email', email)
 
         if (!error) {
-          console.log('PNM profile updated successfully')
+          console.log('Pledge profile updated successfully')
         }
 
         // Upload the new profile photo if selected
@@ -296,7 +296,7 @@ export default function Profile () {
           pronouns: false
         })
       } catch (error) {
-        console.error('Error updating PNM profile:', error.message)
+        console.error('Error updating pledge profile:', error.message)
       }
     }
   }
