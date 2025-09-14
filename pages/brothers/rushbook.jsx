@@ -25,7 +25,7 @@ export default function RushBook() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Sorting & filtering states
-  const [sortField, setSortField] = useState('netscore');
+  const [sortField, setSortField] = useState('uniqname');
   const [sortOrder, setSortOrder] = useState('desc');       // 'asc' or 'desc'
   const [searchTerm, setSearchTerm] = useState('');        // filter by name
 
