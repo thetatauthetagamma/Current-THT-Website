@@ -33,7 +33,7 @@ export default function ReactionBar({
   dislikes = [],
   stars = [],
   isAdmin = false,
-  starUnlockDate = "2025-09-15" // ISO string or Date object for when star button becomes available
+  starUnlockDate = "2025-09-14" // ISO string or Date object for when star button becomes available
 }) {
   // Local state so the UI updates immediately on toggle
   const [localLikes, setLikes] = useState(likes || [])
