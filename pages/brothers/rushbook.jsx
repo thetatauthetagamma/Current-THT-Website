@@ -26,7 +26,7 @@ export default function RushBook() {
 
   // Sorting & filtering states
   const [sortField, setSortField] = useState('uniqname');
-  const [sortOrder, setSortOrder] = useState('desc');       // 'asc' or 'desc'
+  const [sortOrder, setSortOrder] = useState('asc');       // 'asc' or 'desc'
   const [searchTerm, setSearchTerm] = useState('');        // filter by name
 
   // Restore scroll position when component mounts
