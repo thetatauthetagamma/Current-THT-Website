@@ -770,6 +770,7 @@ export default function RusheeProfile() {
                     {rushee.major} ({rushee.year})
                   </p>
                   {rushee.pronouns && <p>Pronouns: {rushee.pronouns}</p>}
+                  {rushee.uniqname && <p>Email: {rushee.uniqname}@umich.edu</p>}
 
                   {/* ─────────────────────────────────────────────────────────────────────── */}
                   <div className='mt-2'>
