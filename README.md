@@ -18,21 +18,22 @@ Welcome to the new THT Website, reconstructed with Next.js, Supabase, and Tailwi
 
 The THT Web Committee:
 
-1. Kate McGraw
-3. George Gilfond
-4. Owen Willoughby
-5. Sikananya Kuntanarumitkul
-6. Tomi Bruno
-7. Pear Seraypheap
-10. Esben Sorensen
-11. Shaun Gupte
+1. Owen Willoughby
+2. Sikananya Kuntanarumitkul
+3. Tomi Bruno
+4. Pear Seraypheap
+5. Esben Sorensen
+6. Shaun Gupte
+7. Isaac Diemer
+8. Kaitlyn Ye
    
 
 Previous Developers:
 1. Hariharan Chidambaram
 2. Ethan Schenk
 3. Luke Weaver
-4. Isaac Diemer
+5. George Gilfond
+6. Kate McGraw
 
 ## Progress Report
 
