@@ -29,6 +29,18 @@ const RusheeStatus = Object.freeze({
   STRONG_NO: 'Strong No Bid'
 })
 
+// UI-only labels: safely change how these render without changing stored values
+const RusheeStatusDisplay = Object.freeze({
+  [RusheeStatus.STRONG_YES]: 'Strong Bid',
+  [RusheeStatus.WEAK_YES]: 'Bid',
+  [RusheeStatus.NEUTRAL]: 'Neutral',
+  [RusheeStatus.WEAK_NO]: 'No Bid',
+  [RusheeStatus.STRONG_NO]: 'Strong No Bid'
+})
+
+// Helper to render a status with the UI label while preserving the underlying value
+const renderRusheeStatus = (value) => RusheeStatusDisplay[value] ?? value
+
 const textOf = (row) => {
   const v = row?.value;
 
@@ -1165,9 +1177,9 @@ export default function RusheeProfile() {
                     }}
                     className="w-full p-2 border rounded"
                   >
-                    {Object.entries(RusheeStatus).map(([key, label]) => (
-                      <option key={key} value={label}>
-                        {label}
+                    {Object.values(RusheeStatus).map((val) => (
+                      <option key={val} value={val}>
+                        {renderRusheeStatus(val)}
                       </option>
                     ))}
                   </select>
@@ -1205,18 +1217,16 @@ export default function RusheeProfile() {
                   <label className="block text-sm font-medium mb-1">Select Rating</label>
                   <select
                     value={coffeeChatRating}
-                    onChange={
-                      (e) => {
-                        const selected = e.target.value;
-                        setCoffeeChatRating(selected);
-                        handleAddRating(selected, 'coffee_chat_decision');
-                      }
-                    }
+                    onChange={(e) => {
+                      const selected = e.target.value;
+                      setCoffeeChatRating(selected);
+                      handleAddRating(selected, 'coffee_chat_decision');
+                    }}
                     className="w-full p-2 border rounded"
                   >
-                    {Object.entries(RusheeStatus).map(([key, label]) => (
-                      <option key={key} value={label}>
-                        {label}
+                    {Object.values(RusheeStatus).map((val) => (
+                      <option key={val} value={val}>
+                        {renderRusheeStatus(val)}
                       </option>
                     ))}
                   </select>
