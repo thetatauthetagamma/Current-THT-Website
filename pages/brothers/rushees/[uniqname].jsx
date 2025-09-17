@@ -341,18 +341,17 @@ export default function RusheeProfile() {
 
 
   // ─────────────────────────────────────────────────────────
-  // 6c) Populate Old ratings
+  // 6c) Populate ratings (GLOBAL latest per rushee)
   //  ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!uniqname || !brotherID) return;
+    if (!uniqname) return;
 
-    const fetchOldRatings = async () => {
-      const [{ data: divRows, error: divErr }, { data: cofRows, error: cofErr }] = await Promise.all([
+    const fetchGlobalRatings = async () => {
+      const [divRes, cofRes] = await Promise.all([
         supabase
           .from('Application_Feedback')
           .select('value, time')
           .eq('rushee', uniqname)
-          .eq('brother', brotherID)
           .eq('value_type', 'diversity_chat_decision')
           .order('time', { ascending: false })
           .limit(1),
@@ -360,24 +359,26 @@ export default function RusheeProfile() {
           .from('Application_Feedback')
           .select('value, time')
           .eq('rushee', uniqname)
-          .eq('brother', brotherID)
           .eq('value_type', 'coffee_chat_decision')
           .order('time', { ascending: false })
           .limit(1),
       ]);
 
-      if (!divErr && divRows?.length) {
-        const r = divRows[0]?.value?.rating;
-        if (r && Object.values(RusheeStatus).includes(r)) setDiversityChatRating(r);
+      const { data: divRows } = divRes || {};
+      const { data: cofRows } = cofRes || {};
+      const divRating = divRows?.[0]?.value?.rating;
+      const cofRating = cofRows?.[0]?.value?.rating;
+
+      if (divRating && Object.values(RusheeStatus).includes(divRating)) {
+        setDiversityChatRating(divRating);
       }
-      if (!cofErr && cofRows?.length) {
-        const r = cofRows[0]?.value?.rating;
-        if (r && Object.values(RusheeStatus).includes(r)) setCoffeeChatRating(r);
+      if (cofRating && Object.values(RusheeStatus).includes(cofRating)) {
+        setCoffeeChatRating(cofRating);
       }
     };
 
-    fetchOldRatings();
-  }, [uniqname, brotherID]);
+    fetchGlobalRatings();
+  }, [uniqname])
 
 
 
@@ -631,7 +632,7 @@ export default function RusheeProfile() {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Add Rating
+  // Add Rating (GLOBAL per rushee)
   // ─────────────────────────────────────────────────────────
   async function handleAddRating(rating, type_name) {
     if (!brotherID) {
@@ -639,23 +640,27 @@ export default function RusheeProfile() {
       return;
     }
 
-    const { data: existing, error: fetchError } = await supabase
+    // Look up latest existing global record for this rushee+type
+    const { data: existingRows, error: fetchError } = await supabase
       .from('Application_Feedback')
       .select('*')
       .eq('rushee', uniqname)
       .eq('value_type', type_name)
-      .single();
-    if (fetchError && fetchError.code !== "PGRST116") {
+      .order('time', { ascending: false })
+      .limit(1);
+
+    if (fetchError) {
       console.error('Error fetching existing rating:', fetchError);
       return;
     }
-    console.log(existing)
+
+    const existing = existingRows?.[0];
 
     if (existing) {
-      // Update existing rating
+      // Update existing latest global rating
       const { data, error } = await supabase
         .from('Application_Feedback')
-        .update({ value: { rating } })
+        .update({ value: { rating }, time: new Date() })
         .eq('id', existing.id)
         .select(`
           *,
@@ -671,7 +676,11 @@ export default function RusheeProfile() {
         return;
       }
 
-      // Update local state
+      // Update UI selection immediately
+      if (type_name === 'diversity_chat_decision') setDiversityChatRating(rating);
+      if (type_name === 'coffee_chat_decision') setCoffeeChatRating(rating);
+
+      // Maintain feedback list if applicable
       setFeedback(prev => {
         const index = prev.findIndex(f => f.id === existing.id);
         if (index !== -1) {
@@ -681,7 +690,7 @@ export default function RusheeProfile() {
         return prev;
       });
     } else {
-      // Insert new rating
+      // Insert new global rating
       const { data, error } = await supabase
         .from('Application_Feedback')
         .insert([
@@ -709,7 +718,10 @@ export default function RusheeProfile() {
         return;
       }
 
-      // Always update the main feedback list
+      if (type_name === 'diversity_chat_decision') setDiversityChatRating(rating);
+      if (type_name === 'coffee_chat_decision') setCoffeeChatRating(rating);
+
+      // Ensure feedback reflects the new row if we track it
       if (['comment', 'diversity_chat_decision', 'coffee_chat_decision'].includes(data.value_type)) {
         setFeedback(prev => [...prev, data]);
       }
@@ -1004,8 +1016,7 @@ export default function RusheeProfile() {
                                     </div>
 
                                     {/* existing emphasis UI for child (unchanged) */}
-                                    <div
-                                      className={`relative group flex items-center space-x-1 ${canClickChild ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                    <div className={`relative group flex items-center space-x-1 ${canClickChild ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                                       onClick={() => {
                                         if (!canClickChild) return
                                         handleToggleEmphasis(child.id)
