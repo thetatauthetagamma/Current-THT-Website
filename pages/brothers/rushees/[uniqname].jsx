@@ -378,7 +378,7 @@ export default function RusheeProfile() {
     };
 
     fetchGlobalRatings();
-  }, [uniqname])
+  }, [uniqname]);
 
 
 
