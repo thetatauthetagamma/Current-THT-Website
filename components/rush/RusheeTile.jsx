@@ -7,6 +7,7 @@ import thtlogo from '../../public/tht-logo.png'
 // Import the new ReactionBar
 import ReactionBar from './ReactionBar'
 import { FaRegTrashCan, FaComment } from "react-icons/fa6";
+import { FaCoffee, FaUsers } from "react-icons/fa";
 import { useCommentCounts } from '@/contexts/CommentCountContext';
 
 export default function RusheeTile({
@@ -24,6 +25,8 @@ export default function RusheeTile({
   const [isAdmin, setIsAdmin] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false) // Loading state for delete
   const [commentCount, setCommentCount] = useState(0) // State to track comment count
+  const [hasDiversityFeedback, setHasDiversityFeedback] = useState(false) // Track diversity chat feedback
+  const [hasCoffeeFeedback, setHasCoffeeFeedback] = useState(false) // Track coffee chat feedback
   const { commentCounts, loading: commentsLoading } = useCommentCounts()
 
   // Fetch the image from Supabase storage
@@ -66,6 +69,30 @@ export default function RusheeTile({
       setCommentCount(commentCounts[uniqname] || 0)
     }
   }, [uniqname, commentCounts, commentsLoading])
+
+  // Fetch feedback presence for diversity and coffee chat
+  useEffect(() => {
+    const fetchFeedbackPresence = async () => {
+      if (!uniqname) return
+
+      const { data, error } = await supabase
+        .from('Application_Feedback')
+        .select('value_type, value')
+        .eq('rushee', uniqname)
+        .in('value_type', ['diversity_chat_feedback', 'coffee_chat_feedback'])
+
+      if (!error && data) {
+        const diversityFeedback = data.find(f => f.value_type === 'diversity_chat_feedback')
+        const coffeeFeedback = data.find(f => f.value_type === 'coffee_chat_feedback')
+        
+        // Check if feedback exists and has meaningful content
+        setHasDiversityFeedback(diversityFeedback?.value?.text && diversityFeedback.value.text.trim().length > 0)
+        setHasCoffeeFeedback(coffeeFeedback?.value?.text && coffeeFeedback.value.text.trim().length > 0)
+      }
+    }
+
+    fetchFeedbackPresence()
+  }, [uniqname])
 
   function handleCardClick() {
     // Capture scroll position before navigation
@@ -110,13 +137,41 @@ export default function RusheeTile({
                  hover:scale-105 cursor-pointer relative"
       onClick={handleCardClick}
     >
-      {/* Comment count icon in top left corner */}
-      <div
-        className="absolute top-2 left-2 bg-red-800 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs"
-        aria-label={`${commentCount} comments`}
-      >
-        <FaComment className="w-3 h-3" />
-        <span>{commentCount}</span>
+      {/* Icons in top left corner */}
+      <div className="absolute top-2 left-2 flex flex-col gap-1">
+        {/* Comment count icon */}
+        <div
+          className="bg-red-800 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs"
+          aria-label={`${commentCount} comments`}
+        >
+          <FaComment className="w-3 h-3" />
+          <span>{commentCount}</span>
+        </div>
+        
+        {/* Feedback icons */}
+        <div className="flex gap-1">
+          {/* Diversity Chat Feedback Icon */}
+          {hasDiversityFeedback && (
+            <div
+              className="bg-red-800 text-white rounded-full p-1 flex items-center justify-center"
+              aria-label="Has diversity chat feedback"
+              title="Diversity chat feedback available"
+            >
+              <FaUsers className="w-3 h-3" />
+            </div>
+          )}
+          
+          {/* Coffee Chat Feedback Icon */}
+          {hasCoffeeFeedback && (
+            <div
+              className="bg-red-800 text-white rounded-full p-1 flex items-center justify-center"
+              aria-label="Has coffee chat feedback"
+              title="Coffee chat feedback available"
+            >
+              <FaCoffee className="w-3 h-3" />
+            </div>
+          )}
+        </div>
       </div>
       {/* TOP SECTION (IMAGE + NAME) */}
       <div className="p-4 flex flex-col items-center">
