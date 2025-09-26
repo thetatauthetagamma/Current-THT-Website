@@ -159,6 +159,11 @@ export default function BroNavBar({isPledge}) {
                   <a>Family Tree</a>
                 </li>
               </Link>
+              <Link legacyBehavior href="/brothers/interviews">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>Interviews Database</a>
+                </li>
+              </Link>
               <Link legacyBehavior href="/brothers/rushbook">
                 <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
                   <a>RushBook</a>
