@@ -589,7 +589,7 @@ export default function Profile () {
                   Please add class names in this format: EECS 482, MECHENG 211, AEROSP 200
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {currentClasses.map((className, idx) => (
+                  {(currentClasses || []).map((className, idx) => (
                     <div key={idx} className="flex items-center">
                       <button
                         onClick={() => handleDeleteClass(idx)}
