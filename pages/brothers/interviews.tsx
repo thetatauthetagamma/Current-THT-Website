@@ -65,12 +65,16 @@ export default function Interviews() {
     }
 
     const { data, error } = await supabase
-      .from('InterviewDetails')
-      .select('*')
-      .textSearch('searchable', searchTerm, {
-        type: 'plain',  // Use plain text search for better partial matching
-        config: 'english'  // Use English dictionary for better word handling
-      });
+       .from('InterviewDetails')
+        .select('*')
+        .or(
+          `company.ilike.%${searchTerm}%,` +
+          `major.ilike.%${searchTerm}%,` +
+          `position.ilike.%${searchTerm}%,` +
+          `employment_type.ilike.%${searchTerm}%`
+        )
+        .order('first_interview_date', { ascending: false })  // Most recent interviews first
+        .limit(5);
     
     console.log('Search term:', searchTerm);
     console.log('Search results:', data);

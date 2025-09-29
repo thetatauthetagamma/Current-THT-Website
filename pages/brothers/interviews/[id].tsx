@@ -1,5 +1,6 @@
 import BroNavBar from "@/components/BroNavBar";
 import Link from "next/link";
+import InterviewHeader from "@/components/InterviewHeader";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import supabase from "@/supabase";
@@ -16,6 +17,7 @@ interface InterviewData {
   overall_experience: string;
   got_job: string;
   tips: string;
+  first_interview_date: string | null;
   interview_rounds: Array<{
     type: string;
     notes: string;
@@ -76,14 +78,7 @@ export default function ViewInterview() {
     <div className="flex md:flex-row flex-col min-h-screen">
       <BroNavBar isPledge={false}/>
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        {/* Header Section */}
-        <div className="flex justify-between items-center p-4 border-b border-[#a3000020] bg-white">
-          <div className="text-2xl font-bold text-[#8b0000]">THETA TAU GLASSDOOR: INTERVIEWS DATABASE</div>
-          <div className="space-x-8 mr-4">
-            <Link href="/brothers/interviews" className="text-[#8b0000] hover:underline">Search</Link>
-            <Link href="/brothers/interviews/add" className="text-[#8b0000] hover:underline">Add An Interview</Link>
-          </div>
-        </div>
+        <InterviewHeader />
 
         {/* Interview Content */}
         <div className="max-w-4xl mx-auto p-8">
@@ -104,6 +99,16 @@ export default function ViewInterview() {
                 <div>
                   <label className="block mb-1 font-medium">Email</label>
                   <p className="px-4 py-2 bg-gray-50 rounded-lg">{interview.email}</p>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">First Interview Date</label>
+                  <p className="px-4 py-2 bg-gray-50 rounded-lg">
+                    {interview.first_interview_date ? new Date(interview.first_interview_date).toLocaleDateString('en-US', {
+                      month: '2-digit',
+                      day: '2-digit',
+                      year: 'numeric'
+                    }) : 'Not provided'}
+                  </p>
                 </div>
                 <div>
                   <label className="block mb-1 font-medium">Company</label>

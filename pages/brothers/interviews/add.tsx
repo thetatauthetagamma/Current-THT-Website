@@ -1,5 +1,6 @@
 import BroNavBar from "@/components/BroNavBar";
 import Link from "next/link";
+import InterviewHeader from "@/components/InterviewHeader";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import supabase from "@/supabase";
@@ -16,6 +17,7 @@ interface FormData {
   overallExperience: string;
   gotJob: "Y" | "N";
   tips: string;
+  interviewDate: string;
   rounds: Array<{
     type: string;
     notes: string;
@@ -35,6 +37,7 @@ export default function AddInterview() {
     overallExperience: "",
     gotJob: "N",
     tips: "",
+    interviewDate: "",
     rounds: [{ type: "", notes: "" }]
   });
 
@@ -127,7 +130,8 @@ export default function AddInterview() {
             overall_experience: formData.overallExperience,
             got_job: formData.gotJob,
             interview_rounds: formData.rounds,
-            tips: formData.tips
+            tips: formData.tips,
+            first_interview_date: formData.interviewDate
           }
         ])
         .select();
@@ -151,14 +155,7 @@ export default function AddInterview() {
     <div className="flex md:flex-row flex-col min-h-screen">
       <BroNavBar isPledge={false}/>
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        {/* Header Section */}
-        <div className="flex justify-between items-center p-4 border-b border-[#a3000020] bg-white">
-          <div className="text-2xl font-bold text-[#8b0000]">THETA TAU GLASSDOOR: INTERVIEWS DATABASE</div>
-          <div className="space-x-8 mr-4">
-            <Link href="/brothers/interviews" className="text-[#8b0000] hover:underline">Search</Link>
-            <Link href="/brothers/interviews/add" className="text-[#8b0000] hover:underline">Add An Interview</Link>
-          </div>
-        </div>
+        <InterviewHeader />
 
         {/* Form Content */}
         <div className="max-w-4xl mx-auto p-8">
@@ -237,6 +234,19 @@ export default function AddInterview() {
                     required
                   />
                   {errors.position && <p className="text-red-500 text-sm mt-1">Position is required</p>}
+                </div>
+
+                <div>
+                  <label className="block mb-1">First Interview Date *</label>
+                  <input
+                    type="date"
+                    name="interviewDate"
+                    className={`w-full px-4 py-2 border ${errors.interviewDate ? 'border-red-500' : 'border-[#8b000020]'} rounded-lg focus:outline-none focus:border-[#8b0000] transition-colors`}
+                    value={formData.interviewDate}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  {errors.interviewDate && <p className="text-red-500 text-sm mt-1">First interview date is required</p>}
                 </div>
 
                 <div>
