@@ -1,6 +1,7 @@
 import BroNavBar from "@/components/BroNavBar";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import InterviewHeader from "@/components/InterviewHeader";
 import supabase from "@/supabase";
 
 interface Company {
@@ -45,11 +46,14 @@ export default function Interviews() {
       return acc;
     }, {});
 
-    // Convert to array of objects with company name and count
-    const uniqueCompanies = Object.entries(companyCounts).map(([company, count]) => ({
-      company,
-      count
-    }));
+    // Convert to array of objects with company name and count, sort by count, and take top 12
+    const uniqueCompanies = Object.entries(companyCounts)
+      .map(([company, count]) => ({
+        company,
+        count
+      }))
+      .sort((a, b) => b.count - a.count)  // Sort by count in descending order
+      .slice(0, 12);  // Take only top 12
 
     setCompanies(uniqueCompanies);
   };
@@ -68,10 +72,10 @@ export default function Interviews() {
        .from('InterviewDetails')
         .select('*')
         .or(
-          `company.ilike.%${searchTerm}%,` +
-          `major.ilike.%${searchTerm}%,` +
-          `position.ilike.%${searchTerm}%,` +
-          `employment_type.ilike.%${searchTerm}%`
+          `company.ilike.${searchTerm}%,` +
+          `major.ilike.${searchTerm}%,` +
+          `position.ilike.${searchTerm}%,` +
+          `employment_type.ilike.${searchTerm}%`
         )
         .order('first_interview_date', { ascending: false })  // Most recent interviews first
         .limit(5);
@@ -99,22 +103,12 @@ export default function Interviews() {
     <div className="flex md:flex-row flex-col min-h-screen">
       <BroNavBar isPledge={false}/>
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        {/* Header Section */}
-        <div className="flex justify-between items-center p-4 border-b border-[#a3000020] bg-white">
-          <div className="text-2xl font-bold text-[#8b0000]">THETA TAU GLASSDOOR: INTERVIEWS DATABASE</div>
-          <div className="space-x-8 mr-4">
-            <button 
-              onClick={() => {
-                setSearchQuery("");
-                setSearchResults([]);
-              }} 
-              className="text-[#8b0000] hover:underline"
-            >
-              Search
-            </button>
-            <Link href="/brothers/interviews/add" className="text-[#8b0000] hover:underline">Add An Interview</Link>
-          </div>
-        </div>
+         <InterviewHeader 
+           onSearchClick={() => {
+             setSearchQuery("");
+             setSearchResults([]);
+           }}
+         />
 
         {/* Main Content */}
         <div className="flex flex-col items-center p-8" style={{ paddingTop: '15vh' }}>

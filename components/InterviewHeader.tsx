@@ -3,17 +3,19 @@ import { useState } from "react";
 
 interface InterviewHeaderProps {
   onSearchClick?: () => void;  // Optional for the search page reset functionality
+  isPledge?: boolean;  // To determine which route to use
 }
 
-export default function InterviewHeader({ onSearchClick }: InterviewHeaderProps) {
+export default function InterviewHeader({ onSearchClick, isPledge = false }: InterviewHeaderProps) {
+  const baseRoute = isPledge ? '/members/interviews' : '/brothers/interviews';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="flex justify-between items-center p-4 border-b border-[#a3000020] bg-white relative">
-      <div className="text-2xl font-bold text-[#8b0000]">THETA TAU GLASSDOOR: INTERVIEWS DATABASE</div>
+      <Link href={baseRoute} className="text-2xl font-bold text-[#8b0000] hover:underline">Theta Tau Glassdoor: Interviews Database</Link>
       
       {/* Desktop Navigation */}
-      <div className="hidden md:flex space-x-8 mr-4">
+      <div className="hidden md:flex space-x-8 ml-[-100px]">
         {onSearchClick ? (
           <button 
             onClick={onSearchClick}
@@ -22,11 +24,11 @@ export default function InterviewHeader({ onSearchClick }: InterviewHeaderProps)
             Search
           </button>
         ) : (
-          <Link href="/brothers/interviews" className="text-[#8b0000] hover:underline">
+          <Link href={baseRoute} className="text-[#8b0000] hover:underline">
             Search
           </Link>
         )}
-        <Link href="/brothers/interviews/add" className="text-[#8b0000] hover:underline">
+        <Link href={`${baseRoute}/add`} className="text-[#8b0000] hover:underline">
           Add An Interview
         </Link>
       </div>
@@ -77,7 +79,7 @@ export default function InterviewHeader({ onSearchClick }: InterviewHeaderProps)
             </button>
           ) : (
             <Link 
-              href="/brothers/interviews" 
+              href={baseRoute}
               className="block px-4 py-2 text-[#8b0000] hover:bg-[#8b000010]"
               onClick={() => setIsMenuOpen(false)}
             >
@@ -85,7 +87,7 @@ export default function InterviewHeader({ onSearchClick }: InterviewHeaderProps)
             </Link>
           )}
           <Link 
-            href="/brothers/interviews/add" 
+            href={`${baseRoute}/add`}
             className="block px-4 py-2 text-[#8b0000] hover:bg-[#8b000010]"
             onClick={() => setIsMenuOpen(false)}
           >
