@@ -188,6 +188,9 @@ export default function Profile () {
     if (!profileIsPledge) {
       // It's a Brother
       try {
+        // Ensure classes is always an array
+        const classesToSave = Array.isArray(currentClasses) ? currentClasses : []
+        
         const { error } = await supabase
           .from('Brothers')
           .update({
@@ -197,7 +200,7 @@ export default function Profile () {
             major,
             phone,
             linkedin,
-            classes: currentClasses,
+            classes: classesToSave,
             pronouns
           })
           .eq('email', email)
@@ -244,6 +247,21 @@ export default function Profile () {
     } else {
       // It's a Pledge
       try {
+        // Ensure classes is always an array
+        const classesToSave = Array.isArray(currentClasses) ? currentClasses : []
+        
+        console.log('Updating pledge with data:', {
+          firstname,
+          lastname,
+          year,
+          major,
+          phone,
+          linkedin,
+          classes: classesToSave,
+          pronouns,
+          email
+        })
+        
         const { error } = await supabase
           .from('Pledges')
           .update({
@@ -253,13 +271,17 @@ export default function Profile () {
             major,
             phone,
             linkedin,
-            classes: currentClasses,
+            classes: classesToSave,
             pronouns
           })
           .eq('email', email)
 
         if (!error) {
           console.log('PNM profile updated successfully')
+        } else {
+          console.error('Supabase update error:', error)
+          alert(`Database error: ${error.message}`)
+          return // Exit early if there's a database error
         }
 
         // Upload the new profile photo if selected
@@ -297,6 +319,7 @@ export default function Profile () {
         })
       } catch (error) {
         console.error('Error updating PNM profile:', error.message)
+        alert(`Error updating profile: ${error.message}`)
       }
     }
   }
@@ -338,13 +361,15 @@ export default function Profile () {
 
   // Manage Current Classes
   const handleCurrentClassChange = (index, value) => {
-    const updatedClasses = [...currentClasses]
+    const classesArray = currentClasses || []
+    const updatedClasses = [...classesArray]
     updatedClasses[index] = value
     setCurrentClasses(updatedClasses)
   }
 
   const handleDeleteClass = index => {
-    const updatedClasses = [...currentClasses]
+    const classesArray = currentClasses || []
+    const updatedClasses = [...classesArray]
     updatedClasses.splice(index, 1)
     setCurrentClasses(updatedClasses)
   }
@@ -564,7 +589,7 @@ export default function Profile () {
                   Please add class names in this format: EECS 482, MECHENG 211, AEROSP 200
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {currentClasses.map((className, idx) => (
+                  {(currentClasses || []).map((className, idx) => (
                     <div key={idx} className="flex items-center">
                       <button
                         onClick={() => handleDeleteClass(idx)}
