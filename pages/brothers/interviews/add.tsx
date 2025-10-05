@@ -280,7 +280,7 @@ export default function AddInterview() {
                 <div>
                   <label className="block mb-1">Number of Interview Rounds *</label>
                   <input
-                    type="text"
+                    type="number"
                     name="numInterviewRounds"
                     placeholder="e.g., 3"
                     className={`w-full px-4 py-2 border ${errors.numInterviewRounds ? 'border-red-500' : 'border-[#8b000020]'} rounded-lg focus:outline-none focus:border-[#8b0000] transition-colors`}
