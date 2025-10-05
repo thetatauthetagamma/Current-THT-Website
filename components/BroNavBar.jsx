@@ -119,60 +119,77 @@ export default function BroNavBar({ isPledge }) {
                   <a>Family Tree</a>
                 </li>
               </Link>
-            </ul>
-          )
-            :
-            (
-              <ul className="space-y-2 font-bold space-5">
-                <Link legacyBehavior href="/brothers">
-                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                    <a>Calendar</a>
-                  </li>
-                </Link>
-                <Link legacyBehavior href={`/members/${userid}`}>
-                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                    <a>My Profile</a>
-                  </li>
-                </Link>
-                <Link legacyBehavior href="/brothers/pledgetracking">
-                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                    <a>PNM Tracking</a>
-                  </li>
-                </Link>
-                <Link legacyBehavior href="/brothers/broresources">
-                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                    <a>Resources</a>
-                  </li>
-                </Link>
-                <Link legacyBehavior href="/members/memberdirectory">
-                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                    <a>Member Directory</a>
-                  </li>
-                </Link>
-                <Link legacyBehavior href="/members/studybuddysearch">
-                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                    <a>Study Buddy 🔎</a>
-                  </li>
-                </Link>
-                <Link legacyBehavior href="/members/familytree">
-                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
-                    <a>Family Tree</a>
-                  </li>
-                </Link>
-                {/* <Link legacyBehavior href="/brothers/rushbook">
+              <Link legacyBehavior href="/brothers/interviews">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>Interviews Database</a>
+                </li>
+              </Link>
+              {/* <Link legacyBehavior href="/brothers/rushbook">
                 <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
                   <a>RushBook</a>
                 </li>
               </Link> */}
-                {isAdmin && (
+              {isAdmin && (
+                <>
                   <Link legacyBehavior href="/brothers/admin">
                     <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
                       <a>Admin</a>
                     </li>
                   </Link>
-                )}
-              </ul>
-            )
+                </>
+              )}
+            </ul>
+          ) : (
+            <ul className="space-y-2 font-bold space-5">
+              <Link legacyBehavior href={`/members/${userid}`}>
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>My Profile</a>
+                </li>
+              </Link>
+              <Link legacyBehavior href="/brothers/pledgetracking">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>PNM Tracking</a>
+                </li>
+              </Link>
+              <Link legacyBehavior href="/brothers/broresources">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>Resources</a>
+                </li>
+              </Link>
+              <Link legacyBehavior href="/members/memberdirectory">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>Member Directory</a>
+                </li>
+              </Link>
+              <Link legacyBehavior href="/members/studybuddysearch">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>Study Buddy 🔎</a>
+                </li>
+              </Link>
+              <Link legacyBehavior href="/members/familytree">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>Family Tree</a>
+                </li>
+              </Link>
+              <Link legacyBehavior href="/brothers/interviews">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>Interviews Database</a>
+                </li>
+              </Link>
+              {/* <Link legacyBehavior href="/brothers/rushbook">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>RushBook</a>
+                </li>
+              </Link> */}
+              {isAdmin && (
+                <Link legacyBehavior href="/brothers/admin">
+                  <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                    <a>Admin</a>
+                  </li>
+                </Link>
+              )}
+            </ul>
+          )
         }
       </div>
     </div>
