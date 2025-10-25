@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
 import ProgressBar from '@ramonak/react-progress-bar'
 import Image from 'next/image'
 import imageCompression from 'browser-image-compression'
@@ -17,6 +18,7 @@ import {
   DropdownItem
 } from '@nextui-org/react'
 const PledgeTile = ({ pledge, fetchPledges }) => {
+  const router = useRouter()
   const [interviews, setInterviews] = useState(pledge.interviews)
   const [interviewedBrothers, setInterviewedBrothers] = useState([])
   const [hasInterviewed, setHasInterviewed] = useState(false)
@@ -587,25 +589,33 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   }
 
   // ==========================================================
+  // Handle click to navigate to pledge profile
+  const handlePledgeClick = () => {
+    router.push(`/members/${pledge}`)
+  }
+
   // RENDER
   // ==========================================================
   return (
-    <div className='flex flex-col md:flex-row items-center bg-gray-100 p-2 rounded-2xl mb-4'>
+    <div 
+      className='flex flex-col md:flex-row items-center bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-4 cursor-pointer hover:shadow-lg hover:border-[#8B0000]/30 transition-all duration-300 hover:scale-[1.01]'
+      onClick={handlePledgeClick}
+    >
       {/* LEFT COLUMN: IMAGE + BASIC INFO + ADMIN EDIT */}
       <div className='flex flex-col items-center md:w-3/12'>
         {/* Profile image */}
-        <div className='mb-2 w-40 h-40'>
+        <div className='mb-4 w-40 h-40'>
           {imageUrl ? (
             <img
               src={imageUrl}
               alt='Pledge'
-              className='rounded-full w-full h-full object-cover'
+              className='rounded-full w-full h-full object-cover shadow-lg'
             />
           ) : (
             <Image
               src={thtlogo}
               alt='logo'
-              className='rounded-full w-full h-full object-cover'
+              className='rounded-full w-full h-full object-cover shadow-lg'
             />
           )}
         </div>
@@ -613,7 +623,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         {/* Admin can upload & save image */}
         {isAdmin && editableFields.imageUrl && (
           <div className='w-full flex justify-center'>
-            <label className='cursor-pointer bg-[#8b000070] py-1 text-white mx-1 rounded-md text-center px-2'>
+            <label className='cursor-pointer bg-[#8B0000] py-2 text-white mx-1 rounded-lg text-center px-4 font-medium hover:bg-[#8B0000]/90 transition-colors shadow-md'>
               Upload photo (JPEG only)
               <input
                 type='file'
@@ -624,8 +634,11 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             </label>
             {newImage && (
               <button
-                className='bg-green-500 text-white py-1 px-3 rounded-md hover:scale-105 ml-2'
-                onClick={handleImageSave}
+                className='bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 hover:scale-105 ml-2 font-medium shadow-md transition-all duration-200'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleImageSave()
+                }}
               >
                 Save Image
               </button>
@@ -647,16 +660,22 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             <div className='flex flex-col md:flex-row items-center justify-evenly w-full'>
               {!Object.values(editableFields).some(field => field) ? (
                 <button
-                  className='font-bold m-2 text-md bg-[#8b000070] p-2 rounded-md text-center'
-                  onClick={handleFieldEdit}
+                  className='font-bold m-2 text-md bg-[#8B0000] p-3 rounded-lg text-center text-white hover:bg-[#8B0000]/90 transition-colors shadow-md'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleFieldEdit()
+                  }}
                 >
                   Edit
                 </button>
               ) : (
                 <div className='flex flex-row m-2 items-center'>
                   <button
-                    className='font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center h-10'
-                    onClick={handleDeletePledge}
+                    className='font-bold mr-2 text-md bg-red-500 p-3 rounded-lg text-center h-12 text-white hover:bg-red-600 transition-colors shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeletePledge()
+                    }}
                   >
                     <Image
                       src={trash}
@@ -665,14 +684,20 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                     />
                   </button>
                   <button
-                    className='font-bold mr-2 text-md bg-[#8b000070] p-2 rounded-md text-center'
-                    onClick={handleFieldEdit}
+                    className='font-bold mr-2 text-md bg-gray-500 p-3 rounded-lg text-center text-white hover:bg-gray-600 transition-colors shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleFieldEdit()
+                    }}
                   >
                     Cancel
                   </button>
                   <button
-                    className='font-bold text-md bg-[#8b000070] p-2 rounded-md text-center'
-                    onClick={handleSave}
+                    className='font-bold text-md bg-green-500 p-3 rounded-lg text-center text-white hover:bg-green-600 transition-colors shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSave()
+                    }}
                   >
                     Save
                   </button>
@@ -756,10 +781,13 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         {/* Buttons for Interviews, PD, Committee Signoffs */}
         <div className='flex flex-col md:flex-row items-center m-4 w-full justify-evenly'>
           <button
-            onClick={handleInterviewClick}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleInterviewClick()
+            }}
             className={`flex-start ${
-              hasInterviewed ? 'bg-green-500' : 'bg-red-500'
-            } text-white py-2 px-2 rounded-md flex flex-col items-center m-2 justify-center md:w-1/4 hover:scale-105`}
+              hasInterviewed ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+            } text-white py-3 px-4 rounded-lg flex flex-col items-center m-2 justify-center md:w-1/4 hover:scale-105 transition-all duration-200 font-medium shadow-md`}
           >
             {hasInterviewed
               ? `${firstname} has interviewed me`
@@ -800,8 +828,11 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             </Dropdown>
 
             <button
-              onClick={handlePDSignOff}
-              className='ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105'
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePDSignOff()
+              }}
+              className='ml-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 hover:scale-105 transition-all duration-200 font-medium shadow-md'
             >
               Submit
             </button>
@@ -842,8 +873,11 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             </Dropdown>
 
             <button
-              onClick={handleCommitteeSignOffSubmit}
-              className='ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:scale-105'
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCommitteeSignOffSubmit()
+              }}
+              className='ml-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 hover:scale-105 transition-all duration-200 font-medium shadow-md'
             >
               Submit
             </button>
