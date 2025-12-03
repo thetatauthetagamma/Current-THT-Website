@@ -591,6 +591,10 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   // ==========================================================
   // Handle click to navigate to pledge profile
   const handlePledgeClick = () => {
+    // Don't navigate if we're in edit mode
+    if (Object.values(editableFields).some(field => field)) {
+      return
+    }
     router.push(`/members/${pledge}`)
   }
 
@@ -728,7 +732,16 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             </p>
             <p className='text-sm'>{numCommitteeSOs}</p>
           </div>
-          <div className='flex flex-col items-center md:border-x-2 border-black p-2'>
+          <div 
+            className='flex flex-col items-center md:border-x-2 border-black p-2'
+            onClick={(e) => {
+              e.stopPropagation()
+              // If admin and not in edit mode, enable editing
+              if (isAdmin && !editableFields.socialHours && !editableFields.academicHours) {
+                handleFieldEdit()
+              }
+            }}
+          >
             <p className='text-sm text-center font-bold mb-1'>
               # of Social Hours
             </p>
@@ -739,6 +752,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                   placeholder={socialHours}
                   value={socialHours}
                   onChange={e => setSocialHours(parseInt(e.target.value) || 0)}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                   className='whitespace-nowrap w-20 text-center border-2 border-[#8b000070]'
                 />
               ) : (
@@ -746,7 +761,16 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
               )}
             </p>
           </div>
-          <div className='flex flex-col items-center p-2'>
+          <div 
+            className='flex flex-col items-center p-2'
+            onClick={(e) => {
+              e.stopPropagation()
+              // If admin and not in edit mode, enable editing
+              if (isAdmin && !editableFields.socialHours && !editableFields.academicHours) {
+                handleFieldEdit()
+              }
+            }}
+          >
             <p className='text-sm text-center font-bold mb-1'>
               # of Academic Hours
             </p>
@@ -759,6 +783,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                   onChange={e =>
                     setAcademicHours(parseInt(e.target.value) || 0)
                   }
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                   className='whitespace-nowrap w-20 text-center border-2 border-[#8b000070]'
                 />
               ) : (

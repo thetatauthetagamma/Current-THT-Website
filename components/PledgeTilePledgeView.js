@@ -227,24 +227,59 @@ const PledgeTilePledgeView = ({ pledge }) => {
   useEffect(() => {
     fetchPledgePDSignoffs()
     fetchPledgeCommitteeSignoffs()
-  }, [userID])
+  }, [userID, pledge])
+
+  // Refresh signoffs periodically and when page comes into focus
+  useEffect(() => {
+    // Refresh immediately
+    fetchPledgePDSignoffs()
+    fetchPledgeCommitteeSignoffs()
+
+    // Set up periodic refresh every 5 seconds
+    const interval = setInterval(() => {
+      fetchPledgePDSignoffs()
+      fetchPledgeCommitteeSignoffs()
+    }, 5000)
+
+    // Refresh when page comes into focus
+    const handleFocus = () => {
+      fetchPledgePDSignoffs()
+      fetchPledgeCommitteeSignoffs()
+    }
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [pledge])
 
   // ============================
   //  Countdown to due date
   // ============================
   useEffect(() => {
+    if (!requirementDueDate) {
+      setCountdown('--')
+      return
+    }
+
     const interval = setInterval(() => {
       const now = moment().tz('America/Detroit').startOf('day')
       const eventDate = moment
         .tz(requirementDueDate, 'YYYY-MM-DD', 'America/Detroit')
         .startOf('day')
 
+      if (!eventDate.isValid()) {
+        setCountdown('--')
+        return
+      }
+
       const remainingTime = eventDate.diff(now, 'days') // diff in days
-      setCountdown(remainingTime)
+      setCountdown(remainingTime >= 0 ? remainingTime : 0)
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [requirementDueDate])
 
   // ============================
   //  Render
