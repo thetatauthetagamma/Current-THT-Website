@@ -159,7 +159,7 @@ const NewPledgeTile = ({ fetchPledges }) => {
           .eq('email', userID)
 
         if (error) throw error
-        if (data && data[0].adminrole === 'parent') {
+        if (data && data.length > 0 && data[0] && data[0].adminrole === 'parent') {
           // setIsAdmin(true) if you want
         }
       } catch (error) {

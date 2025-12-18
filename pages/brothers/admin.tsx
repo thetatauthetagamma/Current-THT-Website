@@ -6,6 +6,13 @@ import RushAdminPanel from '@/components/admin/RushAdminPanel';
 import BLPairAdder from '@/components/admin/BLPairAdder';
 import PledgeCommitteeManager from "@/components/admin/PledgeCommitteeUpdate";
 import PledgeAdminPanel from '@/components/admin/PledgeAdminPanel';
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Button
+} from '@nextui-org/react';
 
 
 interface RoleAssignments {
@@ -33,6 +40,8 @@ export default function Admin() {
   const [adminRole, setAdminRole] = useState('');
   const [roleAssignments, setRoleAssignments] = useState<RoleAssignments>({});
   const [pledges, setPledges] = useState<PledgeData[]>([]);
+  const [bulkSignoffLoading, setBulkSignoffLoading] = useState<{ [uniqname: string]: boolean }>({});
+  const [signOffEveryoneLoading, setSignOffEveryoneLoading] = useState<boolean>(false);
   const [rollEditingMode, setRollEditingMode] = useState<boolean>(false);
   const [eboardEditingMode, setEboardEditingMode] = useState<boolean>(false);
   const [rushEditingMode, setRushEditingMode] = useState<boolean>(false);
@@ -315,6 +324,112 @@ export default function Admin() {
     }
   };
 
+  const getAllRequirementIds = async () => {
+    // Fetch BOTH PD and COMMITTEE requirements separately to ensure we get both
+    const [pdResult, committeeResult] = await Promise.all([
+      supabase
+        .from('Pledge_Requirements_Update')
+        .select('id, type')
+        .eq('type', 'PD'),
+      supabase
+        .from('Pledge_Requirements_Update')
+        .select('id, type')
+        .eq('type', 'COMMITTEE')
+    ])
+
+    if (pdResult.error) throw pdResult.error
+    if (committeeResult.error) throw committeeResult.error
+
+    const pdReqs = pdResult.data || []
+    const committeeReqs = committeeResult.data || []
+
+    // Merge both lists and extract all IDs
+    const allReqs = [...pdReqs, ...committeeReqs]
+    const allIds = Array.from(
+      new Set(
+        allReqs
+          .map((r: any) => Number(r.id))
+          .filter((n: number) => Number.isFinite(n))
+      )
+    ).sort((a, b) => a - b) // Sort for consistency
+
+    return { allIds, pdReqs, committeeReqs }
+  }
+
+  const handleSignOffAllRequirementsForPledge = async (uniqname: string) => {
+    const isConfirmed = window.confirm(
+      `Sign off ALL PD + Committee requirements for ${uniqname}? This will overwrite their current signoffs list.`
+    )
+    if (!isConfirmed) return
+
+    setBulkSignoffLoading(prev => ({ ...prev, [uniqname]: true }))
+    try {
+      const { allIds, pdReqs, committeeReqs } = await getAllRequirementIds()
+
+      const { error: updateError } = await supabase
+        .from('Pledges')
+        .update({ signoffs: allIds })
+        .eq('uniqname', uniqname)
+
+      if (updateError) throw updateError
+
+      alert(
+        `Signed off ALL requirements for ${uniqname}.\n` +
+          `PD requirements: ${pdReqs.length}\n` +
+          `Committee requirements: ${committeeReqs.length}\n` +
+          `Total written: ${allIds.length}`
+      )
+      fetchPledges() // Refresh the list
+    } catch (err) {
+      console.error('Error signing off all requirements:', err)
+      alert('Error signing off all requirements. Check console for details.')
+    } finally {
+      setBulkSignoffLoading(prev => ({ ...prev, [uniqname]: false }))
+    }
+  }
+
+  const handleSignOffEveryoneForEverything = async () => {
+    const isConfirmed = window.confirm(
+      `Sign off ALL PNMs for ALL PD + Committee requirements? This will overwrite all current signoffs lists.\n\n` +
+      `This will affect ${pledges.length} PNM(s). Are you sure?`
+    )
+    if (!isConfirmed) return
+
+    setSignOffEveryoneLoading(true)
+    try {
+      const { allIds, pdReqs, committeeReqs } = await getAllRequirementIds()
+
+      // Update all pledges in parallel
+      const updatePromises = pledges.map(pledge =>
+        supabase
+          .from('Pledges')
+          .update({ signoffs: allIds })
+          .eq('uniqname', pledge.uniqname)
+      )
+
+      const results = await Promise.all(updatePromises)
+      const errors = results.filter(r => r.error)
+
+      if (errors.length > 0) {
+        throw new Error(`${errors.length} pledge(s) failed to update`)
+      }
+
+      alert(
+        `Signed off ALL requirements for ALL PNMs.\n` +
+          `PD requirements: ${pdReqs.length}\n` +
+          `Committee requirements: ${committeeReqs.length}\n` +
+          `Total written per PNM: ${allIds.length}\n` +
+          `PNMs affected: ${pledges.length}`
+      )
+      fetchPledges() // Refresh the list
+    } catch (err) {
+      console.error('Error signing off everyone:', err)
+      alert('Error signing off everyone. Check console for details.')
+    } finally {
+      setSignOffEveryoneLoading(false)
+    }
+  }
+
   const handleDeletePledge = async (uniqname: string) => {
     const { data, error } = await supabase
       .from('Pledges')
@@ -326,10 +441,11 @@ export default function Admin() {
     } else {
       fetchPledges()
     }
+    // Clear signoffs array (no separate table to delete from)
     await supabase
-      .from('Pledge_SignOffs')
-      .delete()
-      .eq('pledge', uniqname)
+      .from('Pledges')
+      .update({ signoffs: [] })
+      .eq('uniqname', uniqname)
 
   }
 
@@ -483,6 +599,77 @@ export default function Admin() {
                     >
                       Update PNM Committee
                     </button>
+                  )}
+                </div>
+              )}
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h3 className="text-lg font-semibold mb-2 text-[#8B0000]">
+                    Bulk Signoffs
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Sign off PNMs for all PD + Committee requirements (writes all requirement IDs to `Pledges.signoffs`).
+                  </p>
+                  
+                  {/* Sign off everyone button */}
+                  <div className="mb-4">
+                    <button
+                      onClick={handleSignOffEveryoneForEverything}
+                      disabled={signOffEveryoneLoading || pledges.length === 0}
+                      className={`font-bold py-2 px-4 rounded w-full ${
+                        signOffEveryoneLoading || pledges.length === 0
+                          ? 'bg-gray-300 text-gray-700 cursor-not-allowed'
+                          : 'bg-[#8B0000] text-white hover:bg-red-800'
+                      }`}
+                    >
+                      {signOffEveryoneLoading 
+                        ? `Signing off ${pledges.length} PNM(s)…` 
+                        : `Sign off ALL PNMs for ALL Requirements (${pledges.length} PNM(s))`}
+                    </button>
+                  </div>
+
+                  {/* Individual PNM dropdown */}
+                  {pledges.length === 0 ? (
+                    <div className="text-sm text-gray-500">No PNMs found.</div>
+                  ) : (
+                    <div className="mt-4">
+                      <Dropdown placement="bottom-start">
+                        <DropdownTrigger>
+                          <Button 
+                            variant="bordered" 
+                            className="w-full sm:w-auto bg-white border-gray-300 hover:bg-gray-50"
+                          >
+                            Sign off Individual PNM
+                          </Button>
+                        </DropdownTrigger>
+                        <DropdownMenu 
+                          aria-label="Select PNM to sign off"
+                          className="max-h-60 overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-md"
+                          itemClasses={{
+                            base: "data-[hover=true]:bg-gray-100",
+                          }}
+                        >
+                          {pledges.map((pledge) => (
+                            <DropdownItem
+                              key={`bulk-signoff-${pledge.uniqname}`}
+                              onClick={() => handleSignOffAllRequirementsForPledge(pledge.uniqname)}
+                              isDisabled={!!bulkSignoffLoading[pledge.uniqname]}
+                              className={bulkSignoffLoading[pledge.uniqname] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                              textValue={`${pledge.firstname} ${pledge.lastname} (${pledge.uniqname})`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span>
+                                  {pledge.firstname} {pledge.lastname} ({pledge.uniqname})
+                                </span>
+                                {bulkSignoffLoading[pledge.uniqname] && (
+                                  <span className="text-xs text-gray-500 ml-2">Signing off…</span>
+                                )}
+                              </div>
+                            </DropdownItem>
+                          ))}
+                        </DropdownMenu>
+                      </Dropdown>
+                    </div>
                   )}
                 </div>
               )}

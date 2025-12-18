@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import supabase from '@/supabase'
 
-// Simple types for a row in Pledge_Requirements
+// Simple types for a row in Pledge_Requirements_Update
 interface PledgeRequirement {
   id: number
-  type: 'pd' | 'committee'
+  type: 'PD' | 'COMMITTEE'
   requirement: string
 }
 
@@ -16,12 +16,12 @@ export default function PledgeRequirementsManager() {
   const [showEditor, setShowEditor] = useState(false)
 
   // State for new row inputs
-  const [newType, setNewType] = useState<'pd' | 'committee'>('pd')
+  const [newType, setNewType] = useState<'PD' | 'COMMITTEE'>('PD')
   const [newRequirement, setNewRequirement] = useState('')
 
   // For editing an existing row inline
   const [editRowId, setEditRowId] = useState<number | null>(null)
-  const [editType, setEditType] = useState<'pd' | 'committee'>('pd')
+  const [editType, setEditType] = useState<'PD' | 'COMMITTEE'>('PD')
   const [editRequirement, setEditRequirement] = useState('')
 
   // ─────────────────────────────────────────────────────────
@@ -30,11 +30,11 @@ export default function PledgeRequirementsManager() {
   useEffect(() => {
     const fetchRequirements = async () => {
       const { data, error } = await supabase
-        .from('Pledge_Requirements')
+        .from('Pledge_Requirements_Update')
         .select('*')
         .order('id', { ascending: true })
       if (error) {
-        console.error('Error fetching PNM_Requirements:', error)
+        console.error('Error fetching Pledge_Requirements_Update:', error)
       } else if (data) {
         setRequirements(data as PledgeRequirement[])
       }
@@ -54,7 +54,7 @@ export default function PledgeRequirementsManager() {
 
     // Insert row
     const { data, error } = await supabase
-      .from('Pledge_Requirements')
+      .from('Pledge_Requirements_Update')
       .insert([{ type: newType, requirement: newRequirement }])
       .select('*')
       .single()
@@ -70,7 +70,7 @@ export default function PledgeRequirementsManager() {
     }
     // Reset inputs
     setNewRequirement('')
-    setNewType('pd')
+    setNewType('PD')
   }
 
   // ─────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ export default function PledgeRequirementsManager() {
 
     // Update in DB
     const { data, error } = await supabase
-      .from('Pledge_Requirements')
+      .from('Pledge_Requirements_Update')
       .update({
         type: editType,
         requirement: editRequirement,
@@ -114,7 +114,7 @@ export default function PledgeRequirementsManager() {
     )
     // Clear edit mode
     setEditRowId(null)
-    setEditType('pd')
+    setEditType('PD')
     setEditRequirement('')
   }
 
@@ -126,7 +126,7 @@ export default function PledgeRequirementsManager() {
     if (!confirmDelete) return
 
     const { error } = await supabase
-      .from('Pledge_Requirements')
+      .from('Pledge_Requirements_Update')
       .delete()
       .eq('id', id)
 
@@ -139,8 +139,8 @@ export default function PledgeRequirementsManager() {
   }
 
   // Separate PD & Committee requirements for easy display
-  const pdRequirements = requirements.filter(r => r.type === 'pd')
-  const committeeRequirements = requirements.filter(r => r.type === 'committee')
+  const pdRequirements = requirements.filter(r => r.type === 'PD')
+  const committeeRequirements = requirements.filter(r => r.type === 'COMMITTEE')
 
   // Helper to render a single item
   function renderRequirementItem(item: PledgeRequirement) {
@@ -154,11 +154,11 @@ export default function PledgeRequirementsManager() {
         >
           <select
             value={editType}
-            onChange={e => setEditType(e.target.value as 'pd' | 'committee')}
+            onChange={e => setEditType(e.target.value as 'PD' | 'COMMITTEE')}
             className="border p-1 rounded"
           >
-            <option value="pd">PD</option>
-            <option value="committee">Committee</option>
+            <option value="PD">PD</option>
+            <option value="COMMITTEE">COMMITTEE</option>
           </select>
 
           <input
@@ -252,11 +252,11 @@ export default function PledgeRequirementsManager() {
       <div className="flex flex-col md:flex-row items-center gap-2 mb-6">
         <select
           value={newType}
-          onChange={e => setNewType(e.target.value as 'pd' | 'committee')}
+          onChange={e => setNewType(e.target.value as 'PD' | 'COMMITTEE')}
           className="border p-1 rounded"
         >
-          <option value="pd">PD</option>
-          <option value="committee">Committee</option>
+          <option value="PD">PD</option>
+          <option value="COMMITTEE">COMMITTEE</option>
         </select>
         <input
           type="text"

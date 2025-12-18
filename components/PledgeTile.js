@@ -43,8 +43,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   const [academicHours, setAcademicHours] = useState(0)
   const [completed, setCompleted] = useState(0)
   // Instead of storing requirement strings for selected, we store the "id" of the selected requirement
-  const [selectedCommittee, setSelectedCommittee] = useState('')
-  const [selectedPDSO, setselectedPDSO] = useState('')
+  const [selectedCommittee, setSelectedCommittee] = useState(null)
+  const [selectedPDSO, setselectedPDSO] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [userID, setUserID] = useState('')
 
@@ -124,6 +124,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         setInterviews(data.interviews)
         setAcademicHours(data.academicHours || 0)
         setSocialHours(data.socialHours || 0)
+        // Note: Signoffs validation happens in fetchPledgePDSignoffs/fetchPledgeCommitteeSignoffs
       }
     } catch (err) {
       console.error('Error fetching pledge details:', err)
@@ -315,87 +316,204 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     fetchCommitteeSignoffRequirements()
   }, [])
 
-  // Re-fetch signoffs whenever the user picks a new requirement to sign off
+  // Fetch signoffs once BOTH requirements are loaded to avoid race conditions
   useEffect(() => {
-    fetchPledgePDSignoffs()
-    fetchPledgeCommitteeSignoffs()
-  }, [selectedCommittee, selectedPDSO])
+    if (pdRequirements.length > 0 && committeeRequirements.length > 0) {
+      // Fetch both signoffs together to avoid race conditions
+      Promise.all([
+        fetchPledgePDSignoffs(),
+        fetchPledgeCommitteeSignoffs()
+      ]).then(() => {
+        // After both fetch, validate and clean signoffs ONCE
+        validateAndCleanSignoffsOnce()
+      })
+    }
+  }, [pledge, pdRequirements, committeeRequirements])
 
   async function fetchCommitteeSignoffRequirements () {
     try {
       const { data, error } = await supabase
-        .from('Pledge_Requirements')
+        .from('Pledge_Requirements_Update')
         .select('*')
-        .eq('type', 'committee')
-      if (error) throw error
+        .eq('type', 'COMMITTEE')
+      if (error) {
+        console.error('Error fetching committee requirements:', error)
+        setCommitteeRequirements([])
+        return
+      }
       setCommitteeRequirements(data || [])
     } catch (err) {
       console.error('Error fetching committee requirements:', err)
+      setCommitteeRequirements([])
     }
   }
 
   async function fetchPDSignOffRequirements () {
     try {
       const { data, error } = await supabase
-        .from('Pledge_Requirements')
+        .from('Pledge_Requirements_Update')
         .select('*')
-        .eq('type', 'pd')
-      if (error) throw error
+        .eq('type', 'PD')
+      if (error) {
+        console.error('Error fetching PD requirements:', error)
+        setPDRequirements([])
+        return
+      }
       setPDRequirements(data || [])
     } catch (err) {
       console.error('Error fetching PD requirements:', err)
+      setPDRequirements([])
+    }
+  }
+
+  // Validate signoffs - ensures each ID exists in the requirements table
+  function validateSignoffs (signoffIds, pdReqs = pdRequirements, committeeReqs = committeeRequirements) {
+    if (!Array.isArray(signoffIds) || signoffIds.length === 0) return []
+
+    // Build set of all valid requirement IDs from both PD and Committee
+    const allReqIds = new Set(
+      [...pdReqs, ...committeeReqs]
+        .map(r => Number(r.id))
+        .filter(n => Number.isFinite(n))
+    )
+
+    // If requirements aren't loaded yet, return original (don't filter)
+    if (allReqIds.size === 0) {
+      return signoffIds.map(Number).filter(n => Number.isFinite(n))
+    }
+
+    // Filter to only IDs that exist in the requirements table
+    const normalized = signoffIds.map(Number).filter(n => Number.isFinite(n))
+    return normalized.filter(id => allReqIds.has(id))
+  }
+
+  // Clean signoffs ONCE after both fetches complete - removes any IDs that don't exist in requirements table
+  async function validateAndCleanSignoffsOnce () {
+    try {
+      // Only clean if we have BOTH requirement types loaded
+      if (pdRequirements.length === 0 || committeeRequirements.length === 0) {
+        return
+      }
+
+      // Fetch current signoffs
+      const { data: pledgeData, error: pledgeError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
+        .eq('uniqname', pledge)
+        .single()
+
+      if (pledgeError) {
+        console.error('Error fetching signoffs for validation:', pledgeError)
+        return
+      }
+
+      const signoffIds = pledgeData?.signoffs || []
+      const validSignoffs = validateSignoffs(signoffIds, pdRequirements, committeeRequirements)
+      const normalized = signoffIds.map(Number).filter(n => Number.isFinite(n))
+      const invalidSignoffs = normalized.filter(id => !validSignoffs.includes(id))
+
+      // Only update DB if we found invalid IDs (IDs that don't exist in requirements table)
+      if (invalidSignoffs.length > 0) {
+        const { error: updateError } = await supabase
+          .from('Pledges')
+          .update({ signoffs: validSignoffs })
+          .eq('uniqname', pledge)
+        if (updateError) {
+          console.error('Error cleaning invalid signoffs:', updateError)
+        } else {
+          // Re-fetch after cleaning to update UI
+          await Promise.all([
+            fetchPledgePDSignoffs(),
+            fetchPledgeCommitteeSignoffs()
+          ])
+        }
+      }
+    } catch (err) {
+      console.error('Error in validateAndCleanSignoffsOnce:', err)
     }
   }
 
   // Fetch the pledge's signoffs for committees
   async function fetchPledgeCommitteeSignoffs () {
     try {
-      const { data, error } = await supabase
-        .from('Pledge_SignOffs')
-        .select(
-          `
-          id,
-          completed,
-          Pledge_Requirements: Pledge_Requirements!inner(*)
-        `
-        )
+      // Fetch pledge's signoffs array
+      const { data: pledgeData, error: pledgeError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
         .eq('uniqname', pledge)
-        .eq('Pledge_Requirements.type', 'committee')
+        .single()
 
-      if (error) throw error
+      if (pledgeError) {
+        console.error('Error fetching pledge signoffs:', pledgeError)
+        // Set empty state on error
+        setCommitteeSignOffs([])
+        setnumCommitteeSOs(0)
+        return
+      }
 
-      // data is an array of signoff records
-      const signOffCount = data.filter(item => item.completed).length
+      const signoffIds = pledgeData?.signoffs || []
+      
+      // Validate signoffs (don't write to DB here - that happens in validateAndCleanSignoffsOnce)
+      const validSignoffIds = validateSignoffs(signoffIds)
 
-      setCommitteeSignOffs(data)
-      setnumCommitteeSOs(signOffCount)
+      const committeeReqIdSet = new Set(
+        committeeRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n))
+      )
+
+      // Filter to only committee signoffs (ensure type consistency)
+      const committeeSignoffIds = validSignoffIds.filter(id => 
+        committeeReqIdSet.has(Number(id))
+      )
+
+      // Store signoff IDs (simplified structure)
+      setCommitteeSignOffs(committeeSignoffIds.map(id => ({ id })))
+      setnumCommitteeSOs(committeeSignoffIds.length)
     } catch (err) {
       console.error('Error fetching committee signoffs:', err)
+      setCommitteeSignOffs([])
+      setnumCommitteeSOs(0)
     }
   }
 
   // Fetch the pledge's signoffs for PD
   async function fetchPledgePDSignoffs () {
     try {
-      const { data, error } = await supabase
-        .from('Pledge_SignOffs')
-        .select(
-          `
-          id,
-          completed,
-          Pledge_Requirements: Pledge_Requirements!inner(*)
-        `
-        )
+      // Fetch pledge's signoffs array
+      const { data: pledgeData, error: pledgeError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
         .eq('uniqname', pledge)
-        .eq('Pledge_Requirements.type', 'pd')
+        .single()
 
-      if (error) throw error
+      if (pledgeError) {
+        console.error('Error fetching pledge signoffs:', pledgeError)
+        // Set empty state on error
+        setpdSOs([])
+        setPD(0)
+        return
+      }
 
-      const pdSignOffCount = data.filter(item => item.completed).length
-      setpdSOs(data)
-      setPD(pdSignOffCount)
+      const signoffIds = pledgeData?.signoffs || []
+      
+      // Validate signoffs (don't write to DB here - that happens in validateAndCleanSignoffsOnce)
+      const validSignoffIds = validateSignoffs(signoffIds)
+
+      const pdReqIdSet = new Set(
+        pdRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n))
+      )
+
+      // Filter to only PD signoffs (ensure type consistency)
+      const pdSignoffIds = validSignoffIds.filter(id => 
+        pdReqIdSet.has(Number(id))
+      )
+
+      // Store signoff IDs (simplified structure)
+      setpdSOs(pdSignoffIds.map(id => ({ id })))
+      setPD(pdSignoffIds.length)
     } catch (err) {
       console.error('Error fetching PD signoffs:', err)
+      setpdSOs([])
+      setPD(0)
     }
   }
 
@@ -409,27 +527,39 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         return
       }
 
-      // Upsert the signoff
-      const { error: upsertError } = await supabase
-        .from('Pledge_SignOffs')
-        .upsert(
-          [
-            {
-              uniqname: pledge,
-              id: selectedPDSO,
-              completed: true
-            }
-          ],
-          { onConflict: ['uniqname', 'id'] }
-        )
+      // Fetch current signoffs array
+      const { data: pledgeData, error: fetchError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
+        .eq('uniqname', pledge)
+        .single()
 
-      if (upsertError) throw upsertError
+      if (fetchError) throw fetchError
 
-      // Look up the actual requirement text from the DB
-      const pdReqItem = pdRequirements.find(r => r.id === selectedPDSO)
+      const currentSignoffsRaw = pledgeData?.signoffs || []
+      const currentSignoffs = Array.isArray(currentSignoffsRaw)
+        ? currentSignoffsRaw.map(Number).filter(n => Number.isFinite(n))
+        : []
+      
+      // Add the new signoff ID if not already present
+      const selectedId = Number(selectedPDSO)
+      const updatedSignoffs = currentSignoffs.includes(selectedId)
+        ? currentSignoffs
+        : [...currentSignoffs, selectedId]
+
+      // Update the signoffs array
+      const { error: updateError } = await supabase
+        .from('Pledges')
+        .update({ signoffs: updatedSignoffs })
+        .eq('uniqname', pledge)
+
+      if (updateError) throw updateError
+
+      // Look up the actual requirement name from the DB
+      const pdReqItem = pdRequirements.find(r => Number(r.id) === Number(selectedId))
       const reqTitle = pdReqItem
         ? pdReqItem.requirement
-        : `Req #${selectedPDSO}`
+        : `Req #${selectedId}`
 
       alert(`You have signed off ${pledge} for: ${reqTitle}.`)
 
@@ -447,30 +577,41 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         return
       }
 
-      const { error: upsertError } = await supabase
-        .from('Pledge_SignOffs')
-        .upsert(
-          [
-            {
-              uniqname: pledge,
-              id: selectedCommittee,
-              completed: true
-            }
-          ],
-          {
-            onConflict: ['uniqname', 'id']
-          }
-        )
+      // Fetch current signoffs array
+      const { data: pledgeData, error: fetchError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
+        .eq('uniqname', pledge)
+        .single()
 
-      if (upsertError) throw upsertError
+      if (fetchError) throw fetchError
 
-      // Look up the requirement text from the DB
+      const currentSignoffsRaw = pledgeData?.signoffs || []
+      const currentSignoffs = Array.isArray(currentSignoffsRaw)
+        ? currentSignoffsRaw.map(Number).filter(n => Number.isFinite(n))
+        : []
+      
+      // Add the new signoff ID if not already present
+      const selectedId = Number(selectedCommittee)
+      const updatedSignoffs = currentSignoffs.includes(selectedId)
+        ? currentSignoffs
+        : [...currentSignoffs, selectedId]
+
+      // Update the signoffs array
+      const { error: updateError } = await supabase
+        .from('Pledges')
+        .update({ signoffs: updatedSignoffs })
+        .eq('uniqname', pledge)
+
+      if (updateError) throw updateError
+
+      // Look up the requirement name from the DB
       const committeeReqItem = committeeRequirements.find(
-        r => r.id === selectedCommittee
+        r => Number(r.id) === Number(selectedId)
       )
       const reqTitle = committeeReqItem
         ? committeeReqItem.requirement
-        : `Req #${selectedCommittee}`
+        : `Req #${selectedId}`
 
       alert(`You have signed off pledge ${pledge} for: ${reqTitle}.`)
 
@@ -514,8 +655,15 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
       const numerator =
         interviewNum + hoursNum + pdCompleted + committeeCompleted
 
+      // Guard against division by zero - if denominator is 0, set progress to 0
+      if (denominator === 0) {
+        setCompleted(0)
+        return
+      }
+
       const totalProgress = Math.round((numerator / denominator) * 100)
-      setCompleted(totalProgress)
+      // Ensure progress is between 0 and 100
+      setCompleted(Math.max(0, Math.min(100, totalProgress)))
     }
     calculateProgress()
   }, [
@@ -525,7 +673,10 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     socialHours,
     academicHours,
     pdRequirements,
-    committeeRequirements
+    committeeRequirements,
+    interviewsRequired,
+    academicHoursRequired,
+    socialHoursRequired
   ])
 
   // ==========================================================
@@ -579,8 +730,8 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         .eq('uniqname', pledge)
       if (error) throw error
 
-      // Also remove signoffs from Pledge_SignOffs
-      await supabase.from('Pledge_SignOffs').delete().eq('uniqname', pledge)
+      // Clear signoffs array (no separate table to delete from)
+      await supabase.from('Pledges').update({ signoffs: [] }).eq('uniqname', pledge)
 
       fetchPledges()
     } catch (err) {
@@ -718,19 +869,19 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         <div className='flex flex-col md:flex-row items-center justify-evenly w-full pb-2'>
           <div className='flex flex-col items-center p-2'>
             <p className='text-sm font-bold mb-1'># of Interviews</p>
-            <p className='text-sm'>{interviews?.length || 0}</p>
+            <p className='text-sm'>{interviews?.length || 0}/{interviewsRequired || 0}</p>
           </div>
           <div className='flex flex-col items-center md:border-x-2 border-black p-2'>
             <p className='text-sm text-center font-bold mb-1'>
               # of PD Activities
             </p>
-            <p className='text-sm'>{pd}</p>
+            <p className='text-sm'>{pd}/{pdRequirements.length || 0}</p>
           </div>
           <div className='flex flex-col items-center p-2'>
             <p className='text-sm text-center font-bold mb-1'>
               # of Committee Signoffs
             </p>
-            <p className='text-sm'>{numCommitteeSOs}</p>
+            <p className='text-sm'>{numCommitteeSOs}/{committeeRequirements.length || 0}</p>
           </div>
           <div 
             className='flex flex-col items-center md:border-x-2 border-black p-2'
@@ -757,7 +908,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                   className='whitespace-nowrap w-20 text-center border-2 border-[#8b000070]'
                 />
               ) : (
-                socialHours
+                `${socialHours}/${socialHoursRequired || 0}`
               )}
             </p>
           </div>
@@ -788,7 +939,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                   className='whitespace-nowrap w-20 text-center border-2 border-[#8b000070]'
                 />
               ) : (
-                academicHours
+                `${academicHours}/${academicHoursRequired || 0}`
               )}
             </p>
           </div>
@@ -833,23 +984,25 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                 </button>
               </DropdownTrigger>
               <DropdownMenu className='bg-white shadow-lg rounded-md z-50'>
-                {pdRequirements.map(req => {
-                  const signoff = pdSOs.find(
-                    so => so.Pledge_Requirements.id === req.id
-                  )
-                  if (signoff && signoff.completed) {
-                    return null
-                  }
-                  return (
-                    <DropdownItem
-                      key={req.id}
-                      onClick={() => setselectedPDSO(req.id)}
-                      className='bg-gray-100 hover:bg-gray-200 p-2 rounded-md transition-colors'
-                    >
-                      {req.requirement || `Req #${req.id}`}
-                    </DropdownItem>
-                  )
-                })}
+                {pdRequirements && pdRequirements.length > 0 ? (
+                  pdRequirements
+                    .filter(req => {
+                      // Filter out requirements that are already signed off
+                      if (!pdSOs || pdSOs.length === 0) return true
+                      return !pdSOs.some(so => Number(so.id) === Number(req.id))
+                    })
+                    .map(req => (
+                      <DropdownItem
+                        key={req.id}
+                        onClick={() => setselectedPDSO(req.id)}
+                        className='bg-gray-100 hover:bg-gray-200 p-2 rounded-md transition-colors'
+                      >
+                        {req.requirement || `Req #${req.id}`}
+                      </DropdownItem>
+                    ))
+                ) : (
+                  <DropdownItem key="no-pd-reqs" isDisabled>No PD requirements available</DropdownItem>
+                )}
               </DropdownMenu>
             </Dropdown>
 
@@ -877,24 +1030,25 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
                 </button>
               </DropdownTrigger>
               <DropdownMenu className='bg-white shadow-lg rounded-md z-50'>
-                {committeeRequirements.map(req => {
-                  const signoff = committeeSignOffs.find(
-                    so => so.Pledge_Requirements.id === req.id
-                  )
-                  if (signoff && signoff.completed) {
-                    return null
-                  }
-
-                  return (
-                    <DropdownItem
-                      key={req.id}
-                      onClick={() => setSelectedCommittee(req.id)}
-                      className='bg-gray-100 hover:bg-gray-200 p-2 rounded-md transition-colors'
-                    >
-                      {req.requirement || `Req #${req.id}`}
-                    </DropdownItem>
-                  )
-                })}
+                {committeeRequirements && committeeRequirements.length > 0 ? (
+                  committeeRequirements
+                    .filter(req => {
+                      // Filter out requirements that are already signed off
+                      if (!committeeSignOffs || committeeSignOffs.length === 0) return true
+                      return !committeeSignOffs.some(so => Number(so.id) === Number(req.id))
+                    })
+                    .map(req => (
+                      <DropdownItem
+                        key={req.id}
+                        onClick={() => setSelectedCommittee(req.id)}
+                        className='bg-gray-100 hover:bg-gray-200 p-2 rounded-md transition-colors'
+                      >
+                        {req.requirement || `Req #${req.id}`}
+                      </DropdownItem>
+                    ))
+                ) : (
+                  <DropdownItem key="no-committee-reqs" isDisabled>No committee requirements available</DropdownItem>
+                )}
               </DropdownMenu>
             </Dropdown>
 
@@ -909,23 +1063,6 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
             </button>
           </div>
         </div>
-
-        {/* Brothers Interviewed (Admin Only) */}
-        {isAdmin && interviewedBrothers && (
-          <div className='flex flex-col items-start w-full mt-2'>
-            <div className='text-base font-semibold'>Brothers Interviewed:</div>
-            <div className='flex flex-wrap gap-2 mt-2'>
-              {interviewedBrothers.map((brother, idx) => (
-                <div
-                  key={idx}
-                  className='border-2 border-gray-400 rounded p-1 text-center transition-transform transform-gpu hover:scale-105 hover:border-[#8b0000]'
-                >
-                  {brother.firstname} {brother.lastname}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
