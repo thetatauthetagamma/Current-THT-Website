@@ -14,7 +14,7 @@ import moment from 'moment-timezone'
 
 const PledgeTilePledgeView = ({ pledge }) => {
   // array of brother emails who pledge has interviewed:
-  const [interviews, setInterviews] = useState(pledge.interviews)
+  const [interviews, setInterviews] = useState(pledge?.interviews || [])
   // array of brother firstname/lastname who pledge has interviewed:
   const [interviewedBrothers, setInterviewedBrothers] = useState([])
 
@@ -138,7 +138,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
 
   useEffect(() => {
     fetchPledgeDetails()
-  }, [userID])
+  }, [userID, pledge])
 
   // ============================
   //  PD & Committee Requirements from DB

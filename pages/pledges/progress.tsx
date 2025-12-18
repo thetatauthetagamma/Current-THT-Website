@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import supabase from '../../supabase';
 import BroNavBar from "@/components/BroNavBar";
 import PledgeTilePledgeView from '../../components/PledgeTilePledgeView';
@@ -7,13 +8,18 @@ import PledgeTilePledgeView from '../../components/PledgeTilePledgeView';
 /*
 This is the page that pledges see to view their own progress.
 Most of the logic for it is in the PledgeTilePledgeView component.
+Parent admins can view a specific pledge's progress by passing ?uniqname=xxx in the URL.
 
 */
 export default function progress() {
+  const router = useRouter();
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pledgeUniqname, setPledgeUniqname] = useState('');
+  const [isParentAdmin, setIsParentAdmin] = useState(false);
+  const [viewingAsParent, setViewingAsParent] = useState(false);
+
   //fetches the logged in users email from the session
   useEffect(() => {
     const fetchSession = async () => {
@@ -31,15 +37,42 @@ export default function progress() {
     console.log("Fidget Fam == Best Fam")
   }, []);
 
-  //fetches the uniqname of the pledge
+  // Check if user is parent admin
   useEffect(() => {
-    const fetchPledgeUniqname = () => {
+    const checkParentAdmin = async () => {
+      if (!userEmail) return;
+      try {
+        const { data, error } = await supabase
+          .from('Brothers')
+          .select('adminrole')
+          .eq('email', userEmail)
+          .single();
+
+        if (!error && data && data.adminrole === 'parent') {
+          setIsParentAdmin(true);
+        }
+      } catch (error) {
+        console.error('Error checking admin role:', error);
+      }
+    };
+    checkParentAdmin();
+  }, [userEmail]);
+
+  // Determine which pledge uniqname to use
+  useEffect(() => {
+    const queryUniqname = router.query.uniqname as string | undefined;
+    
+    // If there's a query parameter and user is parent admin, use that
+    if (queryUniqname && isParentAdmin) {
+      setPledgeUniqname(queryUniqname);
+      setViewingAsParent(true);
+    } else if (userEmail) {
+      // Otherwise, use the logged-in user's uniqname
       const truncatedEmail = userEmail.slice(0, -10);
       setPledgeUniqname(truncatedEmail);
-    };
-
-    fetchPledgeUniqname();
-  }, [userEmail]);
+      setViewingAsParent(false);
+    }
+  }, [router.query.uniqname, userEmail, isParentAdmin]);
 
   useEffect(() => {
     const fetchPledgeDetails = async () => {
@@ -70,7 +103,7 @@ export default function progress() {
 
   return (
     <div className="flex md:flex-row flex-col flex-grow  border-b-2 border-[#a3000020]">
-      <BroNavBar isPledge={true}/>
+      <BroNavBar isPledge={!viewingAsParent}/>
       <div className="flex-grow">
         <div className="flex-grow h-full m-4">
           {loading ? (

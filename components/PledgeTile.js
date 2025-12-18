@@ -46,6 +46,7 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
   const [selectedCommittee, setSelectedCommittee] = useState(null)
   const [selectedPDSO, setselectedPDSO] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isParentAdmin, setIsParentAdmin] = useState(false)
   const [userID, setUserID] = useState('')
 
   // Requirements fetched from DB
@@ -98,6 +99,9 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
         if (!error && data) {
           if (data.adminrole === 'parent' || data.adminrole === 'dev') {
             setIsAdmin(true)
+          }
+          if (data.adminrole === 'parent') {
+            setIsParentAdmin(true)
           }
         }
       } catch (error) {
@@ -749,6 +753,12 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
     router.push(`/members/${pledge}`)
   }
 
+  // Handle view details button click for parent admins
+  const handleViewDetails = (e) => {
+    e.stopPropagation()
+    router.push(`/pledges/progress?uniqname=${pledge}`)
+  }
+
   // RENDER
   // ==========================================================
   return (
@@ -811,18 +821,30 @@ const PledgeTile = ({ pledge, fetchPledges }) => {
           </p>
 
           {/* Admin Edit / Delete / Save Buttons */}
-          {isAdmin && (
+          {(isAdmin || isParentAdmin) && (
             <div className='flex flex-col md:flex-row items-center justify-evenly w-full'>
               {!Object.values(editableFields).some(field => field) ? (
-                <button
-                  className='font-bold m-2 text-md bg-[#8B0000] p-3 rounded-lg text-center text-white hover:bg-[#8B0000]/90 transition-colors shadow-md'
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleFieldEdit()
-                  }}
-                >
-                  Edit
-                </button>
+                <div className='flex flex-row items-center justify-center w-full'>
+                  {isParentAdmin && (
+                    <button
+                      className='font-bold m-2 text-md bg-[#8B0000] p-3 rounded-lg text-center text-white hover:bg-[#8B0000]/90 transition-colors shadow-md'
+                      onClick={handleViewDetails}
+                    >
+                      View Details
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      className='font-bold m-2 text-md bg-[#8B0000] p-3 rounded-lg text-center text-white hover:bg-[#8B0000]/90 transition-colors shadow-md'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleFieldEdit()
+                      }}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className='flex flex-row m-2 items-center'>
                   <button
