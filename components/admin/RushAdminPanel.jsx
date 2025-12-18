@@ -31,6 +31,16 @@ export default function RushAdminPanel() {
   const [csvFile, setCsvFile] = useState(null)
   const [parsedUnames, setParsedUnames] = useState([])
 
+  // ─────────────────────────────────────────────────────────
+  //  Rush Events
+  // ─────────────────────────────────────────────────────────
+  const [rushEvents, setRushEvents] = useState([])
+  const [showEventsSection, setShowEventsSection] = useState(false)
+  const [newEventName, setNewEventName] = useState('')
+  const [newEventDate, setNewEventDate] = useState(null)
+  const [newEventLocation, setNewEventLocation] = useState('')
+  const [newEventDescription, setNewEventDescription] = useState('')
+
   // 1) Let user select a CSV
   function handleFileSelect(e) {
     if (e.target.files && e.target.files.length > 0) {
@@ -174,6 +184,7 @@ export default function RushAdminPanel() {
   useEffect(() => {
     fetchRushInfo()
     fetchQuestions()
+    fetchRushEvents()
   }, [])
 
   // ─────────────────────────────────────────────────────────
@@ -335,6 +346,121 @@ export default function RushAdminPanel() {
   }
 
   // ─────────────────────────────────────────────────────────
+  // RUSH EVENTS
+  // ─────────────────────────────────────────────────────────
+  async function fetchRushEvents() {
+    try {
+      const { data, error } = await supabase
+        .from('RushEvents')
+        .select('*')
+        .order('date', { ascending: true })
+        .order('id', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching rush events:', error)
+        return
+      }
+      setRushEvents(data || [])
+    } catch (error) {
+      console.error('Error fetching rush events:', error)
+    }
+  }
+
+  // Helper function to get the next available ID
+  async function getNextAvailableId() {
+    try {
+      const { data, error } = await supabase
+        .from('RushEvents')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1)
+
+      if (error) {
+        console.error('Error fetching max ID:', error)
+        // If there's an error, default to 1
+        return 1
+      }
+
+      if (!data || data.length === 0) {
+        // No events exist yet, start at 1
+        return 1
+      }
+
+      // Return max ID + 1
+      return (data[0].id || 0) + 1
+    } catch (error) {
+      console.error('Error getting next available ID:', error)
+      return 1
+    }
+  }
+
+  async function handleAddRushEvent() {
+    if (!newEventName.trim()) {
+      alert('Please enter an event name')
+      return
+    }
+    if (!newEventDate) {
+      alert('Please select a date and time')
+      return
+    }
+
+    try {
+      // Get the next available ID
+      const nextId = await getNextAvailableId()
+
+      const { data, error } = await supabase
+        .from('RushEvents')
+        .insert([{
+          id: nextId,
+          name: newEventName.trim(),
+          date: newEventDate.toISOString(),
+          location: newEventLocation.trim() || null,
+          description: newEventDescription.trim() || null
+        }])
+        .select()
+
+      if (error) {
+        console.error('Error adding rush event:', error)
+        alert(`Failed to add rush event: ${error.message}`)
+        return
+      }
+      
+      alert('Rush event added!')
+      setNewEventName('')
+      setNewEventDate(null)
+      setNewEventLocation('')
+      setNewEventDescription('')
+      fetchRushEvents()
+    } catch (error) {
+      console.error('Error adding rush event:', error)
+      alert(`Failed to add rush event: ${error.message}`)
+    }
+  }
+
+  async function handleDeleteRushEvent(eventId) {
+    const isSure = window.confirm('Are you sure you want to delete this rush event?')
+    if (!isSure) return
+
+    try {
+      const { error } = await supabase
+        .from('RushEvents')
+        .delete()
+        .eq('id', eventId)
+
+      if (error) {
+        console.error('Error deleting rush event:', error)
+        alert('Failed to delete rush event')
+      } else {
+        alert('Rush event deleted!')
+        fetchRushEvents()
+      }
+    } catch (error) {
+      console.error('Error deleting rush event:', error)
+      alert('Failed to delete rush event')
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────
   return (
@@ -419,6 +545,124 @@ export default function RushAdminPanel() {
             >
               Save Rush Info
             </button>
+          </div>
+        )}
+      </div>
+
+      {/** RUSH EVENTS SECTION */}
+      <div className="mb-8 border border-gray-200 rounded-lg p-4 bg-gray-50">
+        <button
+          onClick={() => setShowEventsSection(!showEventsSection)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <h3 className="text-lg font-semibold text-[#8B0000]">
+            Rush Events
+          </h3>
+          <svg
+            className={`w-5 h-5 transform transition-transform ${showEventsSection ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {showEventsSection && (
+          <div className="mt-4 space-y-4">
+            {/* Add New Event Form */}
+            <div className="bg-white rounded p-4 border border-gray-300">
+              <h4 className="font-semibold mb-3 text-[#8B0000]">Add New Rush Event</h4>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Event Name *"
+                  value={newEventName}
+                  onChange={(e) => setNewEventName(e.target.value)}
+                  className="w-full border rounded p-2 outline-none"
+                />
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date & Time *</label>
+                  <DatePicker
+                    selected={newEventDate}
+                    onChange={(date) => setNewEventDate(date)}
+                    showTimeSelect
+                    dateFormat="yyyy-MM-dd h:mm aa"
+                    placeholderText="Select date and time"
+                    className="w-full border rounded p-2"
+                  />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Location (optional)"
+                  value={newEventLocation}
+                  onChange={(e) => setNewEventLocation(e.target.value)}
+                  className="w-full border rounded p-2 outline-none"
+                />
+                <textarea
+                  placeholder="Description (optional)"
+                  value={newEventDescription}
+                  onChange={(e) => setNewEventDescription(e.target.value)}
+                  className="w-full border rounded p-2 outline-none"
+                  rows={3}
+                />
+                <button
+                  onClick={handleAddRushEvent}
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                >
+                  Add Event
+                </button>
+              </div>
+            </div>
+
+            {/* Existing Events List */}
+            <div>
+              <h4 className="font-semibold mb-2 text-[#8B0000]">Existing Events ({rushEvents.length})</h4>
+              {rushEvents.length === 0 ? (
+                <p className="text-gray-600 text-sm">No rush events yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {rushEvents.map((event) => {
+                    const eventDate = event.date ? new Date(event.date) : null
+                    return (
+                      <div
+                        key={event.id}
+                        className="bg-white rounded p-3 border border-gray-300 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2"
+                      >
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-800">{event.name}</div>
+                          {eventDate && (
+                            <div className="text-sm text-gray-600">
+                              {eventDate.toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              })}
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="text-sm text-gray-500">📍 {event.location}</div>
+                          )}
+                          {event.description && (
+                            <div className="text-sm text-gray-600 mt-1">{event.description}</div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteRushEvent(event.id)}
+                          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm whitespace-nowrap"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
