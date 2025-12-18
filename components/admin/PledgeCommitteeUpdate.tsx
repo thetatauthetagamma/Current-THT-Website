@@ -120,22 +120,22 @@ export default function PledgeCommitteeManager({
     }, []);
   
     return (
-      <div className="bg-white rounded-md shadow-md p-4">
-        <h2 className="text-xl font-semibold text-[#8B0000] mb-2">PNM Committee Management</h2>
+      <div>
+        <h3 className="text-lg font-semibold text-[#8B0000] mb-4">PNM Committee Management</h3>
   
         {/* Current Members */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold">Current PNM Committee</h3>
+          <h4 className="text-md font-semibold mb-2">Current PNM Committee</h4>
           {pledgeCommittee.length > 0 ? (
-            <ul>
+            <ul className="space-y-2">
               {pledgeCommittee.map((member) => (
-                <li key={member.userid} className="flex justify-between items-center border-b py-2">
-                  <span>
+                <li key={member.userid} className="flex justify-between items-center border-b border-gray-200 py-2">
+                  <span className="font-medium">
                     {member.firstname} {member.lastname}
                   </span>
                   <button
                     onClick={() => removePledgeMember(member.userid)}
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 font-bold"
                   >
                     Remove
                   </button>
@@ -143,38 +143,42 @@ export default function PledgeCommitteeManager({
               ))}
             </ul>
           ) : (
-            <p>No members in the PNM Committee.</p>
+            <p className="text-gray-600">No members in the PNM Committee.</p>
           )}
         </div>
   
         {/* Add New Member */}
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Add Brother to PNM</h3>
-          <Select
-            options={searchResults.map((brother) => ({
-              value: brother.userid,
-              label: `${brother.firstname} ${brother.lastname}`,
-            }))}
-            onInputChange={(newValue) => handleSearchChange(newValue)}
-            onChange={(selectedOption) => {
-              const brother = searchResults.find((b) => b.userid === selectedOption?.value);
-              setSelectedBrother(brother || null);
-            }}
-            placeholder="Search for a brother..."
-            isClearable
-          />
-          <button
-            onClick={addPledgeMember}
-            className="bg-green-600 text-white px-3 py-2 mt-2 rounded hover:bg-green-700"
-          >
-            Add to PNM Committee
-          </button>
+        <div className="mb-4">
+          <h4 className="text-md font-semibold mb-2">Add Brother to PNM</h4>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex-1">
+              <Select
+                options={searchResults.map((brother) => ({
+                  value: brother.userid,
+                  label: `${brother.firstname} ${brother.lastname}`,
+                }))}
+                onInputChange={(newValue) => handleSearchChange(newValue)}
+                onChange={(selectedOption) => {
+                  const brother = searchResults.find((b) => b.userid === selectedOption?.value);
+                  setSelectedBrother(brother || null);
+                }}
+                placeholder="Search for a brother..."
+                isClearable
+              />
+            </div>
+            <button
+              onClick={addPledgeMember}
+              className="bg-[#8B0000] text-white font-bold px-4 py-2 rounded hover:bg-red-800"
+            >
+              Add to PNM Committee
+            </button>
+          </div>
         </div>
   
         {/* Done Updating Button */}
         <button
           onClick={() => setPledgeEditingMode(false)}
-          className="bg-gray-400 text-white px-3 py-2 mt-4 rounded hover:bg-gray-500"
+          className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full"
         >
           Done Updating PNM Committee
         </button>
