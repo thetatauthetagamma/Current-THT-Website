@@ -64,6 +64,7 @@ export default function Application() {
   const [session, setSession] = useState(null)
   const [isUmichEmail, setIsUmichEmail] = useState(false)
   const [userId, setUserId] = useState(null)
+  const [isBrother, setIsBrother] = useState(false)
 
   // Application logic
   const [questions, setQuestions] = useState([])
@@ -79,6 +80,7 @@ export default function Application() {
   const [major, setMajor] = useState('')
   const [year, setYear] = useState('')
   const [pronouns, setPronouns] = useState('')
+  const [phone, setPhone] = useState('')
   const [answers, setAnswers] = useState({})
 
   // Keep track of lastUpdated from the DB
@@ -125,6 +127,31 @@ export default function Application() {
         supabase.auth.signOut()
       }
     }
+  }, [session])
+
+  // ─────────────────────────────────────────────────────────
+  // 2a. Check if user is a brother
+  // ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const checkIfBrother = async () => {
+      if (!session?.user?.email) return
+      const email = session.user.email
+      try {
+        const { data, error } = await supabase
+          .from('Brothers')
+          .select('*')
+          .eq('email', email)
+        if (data && data.length > 0 && !error) {
+          setIsBrother(true)
+        } else {
+          setIsBrother(false)
+        }
+      } catch (err) {
+        console.error('Error checking brother status:', err)
+        setIsBrother(false)
+      }
+    }
+    checkIfBrother()
   }, [session])
 
   // ─────────────────────────────────────────────────────────
@@ -197,6 +224,7 @@ export default function Application() {
           setMajor(personalInfo.major || '');
           setYear(personalInfo.year || '');
           setPronouns(personalInfo.pronouns || '');
+          setPhone(personalInfo.phone || '');
         }
 
         // Restore answers from local storage
@@ -220,6 +248,7 @@ export default function Application() {
           setMajor(userData.major || '')
           setYear(userData.year || '')
           setPronouns(userData.pronouns || '')
+          setPhone(userData.phone || '')
         }
 
         if (userData.updated_at) {
@@ -271,6 +300,7 @@ export default function Application() {
     else if (name === 'major') setMajor(value)
     else if (name === 'year') setYear(value)
     else if (name === 'pronouns') setPronouns(value)
+    else if (name === 'phone') setPhone(value)
 
     // Cache form data changes to local storage
     saveToLocalStorage(userId, {
@@ -280,6 +310,7 @@ export default function Application() {
         major: name === 'major' ? value : major,
         year: name === 'year' ? value : year,
         pronouns: name === 'pronouns' ? value : pronouns,
+        phone: name === 'phone' ? value : phone,
       },
       answers,
     });
@@ -300,6 +331,7 @@ export default function Application() {
         major,
         year,
         pronouns,
+        phone,
       },
       answers: updatedAnswers,
     });
@@ -347,7 +379,7 @@ export default function Application() {
   // ─────────────────────────────────────────────────────────
   const handleSubmit = async e => {
     e.preventDefault()
-    if (isPastDue) {
+    if (isPastDue && !isBrother) {
       alert('Application deadline has passed.')
       return
     }
@@ -400,6 +432,7 @@ export default function Application() {
             major,
             year,
             pronouns,
+            phone,
             updated_at: new Date()
           },
           { onConflict: 'uniqname' }
@@ -540,8 +573,8 @@ export default function Application() {
     )
   }
 
-  // If before start date
-  if (isBeforeStart) {
+  // If before start date (skip check for brothers)
+  if (isBeforeStart && !isBrother) {
     return (
       <div>
         <h1 className='text-2xl font-bold mb-4'>Application</h1>
@@ -561,8 +594,8 @@ export default function Application() {
     )
   }
 
-  // If past due and no submission
-  if (isPastDue && lastUpdated === null) {
+  // If past due and no submission (skip check for brothers)
+  if (isPastDue && lastUpdated === null && !isBrother) {
     return (
       <div>
         <h1 className='text-2xl font-bold mb-4'>Application</h1>
@@ -606,7 +639,7 @@ export default function Application() {
           {dayjs(dueDate).format('MMMM D, YYYY[, 11:59 PM]')}
         </div>
       )}
-      {isPastDue && (
+      {isPastDue && !isBrother && (
         <p className='text-red-600 mb-4'>
           Application deadline has passed. You can no longer update your
           answers.
@@ -620,7 +653,7 @@ export default function Application() {
             {/* Photo Upload / Crop */}
             <div className='w-full md:w-1/2 flex flex-col items-center'>
               {/* Show existing/cropped profile image if available */}
-              {croppingImageUrl && isPastDue ? (
+              {croppingImageUrl && isPastDue && !isBrother ? (
                 <div className='relative w-48 h-48 bg-gray-200 overflow-hidden rounded-full'>
                   <img
                     src={croppingImageUrl}
@@ -629,11 +662,11 @@ export default function Application() {
                   />
                 </div>
               ) : (
-                isPastDue && <p>No profile photo uploaded.</p>
+                isPastDue && !isBrother && <p>No profile photo uploaded.</p>
               )}
 
-              {/* Only allow new file selection if not past due */}
-              {!isPastDue && (
+              {/* Only allow new file selection if not past due (or if brother) */}
+              {(!isPastDue || isBrother) && (
                 <div className='mt-2'>
                   <label className='bg-blue-500 text-white px-3 py-2 rounded cursor-pointer'>
                     Select Profile Photo (JPEG ONLY)
@@ -642,14 +675,14 @@ export default function Application() {
                       accept='image/jpeg'
                       className='hidden'
                       onChange={handleImageSelect}
-                      disabled={isPastDue}
+                      disabled={isPastDue && !isBrother}
                     />
                   </label>
                 </div>
               )}
 
-              {/* Show cropping UI if we have an image and not past due */}
-              {croppingImageUrl && !isPastDue && (
+              {/* Show cropping UI if we have an image and not past due (or if brother) */}
+              {croppingImageUrl && (!isPastDue || isBrother) && (
                 <div className='relative w-48 h-48 bg-gray-200 overflow-hidden rounded-full mt-3'>
                   <Cropper
                     image={croppingImageUrl}
@@ -666,7 +699,7 @@ export default function Application() {
               )}
 
               {/* Zoom slider */}
-              {croppingImageUrl && !isPastDue && (
+              {croppingImageUrl && (!isPastDue || isBrother) && (
                 <div className='mt-2 flex flex-col items-center'>
                   <label>Zoom</label>
                   <input
@@ -691,7 +724,7 @@ export default function Application() {
                   name='firstname'
                   value={firstname}
                   onChange={handlePersonalInfoChange}
-                  disabled={isPastDue}
+                  disabled={isPastDue && !isBrother}
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
@@ -702,7 +735,7 @@ export default function Application() {
                   name='lastname'
                   value={lastname}
                   onChange={handlePersonalInfoChange}
-                  disabled={isPastDue}
+                  disabled={isPastDue && !isBrother}
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
@@ -713,7 +746,7 @@ export default function Application() {
                   name='major'
                   value={major}
                   onChange={handlePersonalInfoChange}
-                  disabled={isPastDue}
+                  disabled={isPastDue && !isBrother}
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
@@ -723,7 +756,7 @@ export default function Application() {
                   name='year'
                   value={year}
                   onChange={handlePersonalInfoChange}
-                  disabled={isPastDue}
+                  disabled={isPastDue && !isBrother}
                   className='border p-2 rounded max-w-sm'
                 >
                   <option value='2025'>2025</option>
@@ -740,7 +773,19 @@ export default function Application() {
                   name='pronouns'
                   value={pronouns}
                   onChange={handlePersonalInfoChange}
-                  disabled={isPastDue}
+                  disabled={isPastDue && !isBrother}
+                  className='border p-2 rounded max-w-sm'
+                />
+              </div>
+              <div className='flex flex-col'>
+                <label className='font-semibold mb-1'>Phone Number</label>
+                <input
+                  type='tel'
+                  name='phone'
+                  value={phone}
+                  onChange={handlePersonalInfoChange}
+                  disabled={isPastDue && !isBrother}
+                  placeholder='(xxx)-xxx-xxxx'
                   className='border p-2 rounded max-w-sm'
                 />
               </div>
@@ -774,7 +819,7 @@ export default function Application() {
                   rows={4}
                   className='border rounded p-2 w-full whitespace-pre-wrap break-words'
                   value={currentAnswer}
-                  disabled={isPastDue}
+                  disabled={isPastDue && !isBrother}
                   onChange={e => handleAnswerChange(q.id, e.target.value)}
                 />
                 {isOverLimit && (
@@ -789,7 +834,7 @@ export default function Application() {
 
         {/* SUBMIT BUTTON + LAST UPDATED */}
         <div className='flex items-center gap-4'>
-          {!isPastDue && (
+          {(!isPastDue || isBrother) && (
             <div className='flex flex-col'>
               <div className='flex gap-2'>
                 <button
