@@ -49,3 +49,24 @@ export const isAdmin = async (userEmail) => {
     return false;
   }
 };
+
+export const isParentAdmin = async (userEmail) => {
+  try {
+    if (userEmail) {
+      const { data, error } = await supabase
+        .from('Brothers')
+        .select('adminrole')
+        .eq('email', userEmail.value)
+
+      if (error || !data || data.length === 0) {
+        return false;
+      }
+
+      return data[0].adminrole === 'parent';
+    }
+    return false;
+  } catch (error) {
+    console.error('Error checking parent admin status:', error);
+    return false;
+  }
+};

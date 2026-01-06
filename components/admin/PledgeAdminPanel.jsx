@@ -7,6 +7,7 @@ import PledgeRequirementsManager from '@/components/admin/PledgeRequirementsMana
 export default function PledgeAdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [userID, setUserID] = useState('')
+  const [adminRole, setAdminRole] = useState('')
 
   // The single row from Pledge_Info (or null if none)
   const [pledgeInfo, setPledgeInfo] = useState(null)
@@ -45,6 +46,7 @@ export default function PledgeAdminPanel() {
         .single()
 
       if (!error && data) {
+        setAdminRole(data.adminrole || '')
         if (data.adminrole === 'parent' || data.adminrole === 'dev') {
           setIsAdmin(true)
         }
@@ -285,7 +287,7 @@ export default function PledgeAdminPanel() {
           >
             Save PNM Info
           </button>
-          <PledgeRequirementsManager/>
+          <PledgeRequirementsManager adminRole={adminRole} />
         </div>
       )}
     </div>

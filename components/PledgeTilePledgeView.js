@@ -14,7 +14,7 @@ import moment from 'moment-timezone'
 
 const PledgeTilePledgeView = ({ pledge }) => {
   // array of brother emails who pledge has interviewed:
-  const [interviews, setInterviews] = useState(pledge.interviews)
+  const [interviews, setInterviews] = useState(pledge?.interviews || [])
   // array of brother firstname/lastname who pledge has interviewed:
   const [interviewedBrothers, setInterviewedBrothers] = useState([])
 
@@ -138,7 +138,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
 
   useEffect(() => {
     fetchPledgeDetails()
-  }, [userID])
+  }, [userID, pledge])
 
   // ============================
   //  PD & Committee Requirements from DB
@@ -146,26 +146,96 @@ const PledgeTilePledgeView = ({ pledge }) => {
   async function fetchPDRequirements() {
     try {
       const { data, error } = await supabase
-        .from('Pledge_Requirements')
+        .from('Pledge_Requirements_Update')
         .select('*')
-        .eq('type', 'pd')
+        .eq('type', 'PD')
       if (error) throw error
       setPDRequirements(data || [])
     } catch (err) {
       console.error('Error fetching PD requirements:', err)
+      setPDRequirements([])
     }
   }
 
   async function fetchCommitteeRequirements() {
     try {
       const { data, error } = await supabase
-        .from('Pledge_Requirements')
+        .from('Pledge_Requirements_Update')
         .select('*')
-        .eq('type', 'committee')
+        .eq('type', 'COMMITTEE')
       if (error) throw error
       setCommitteeRequirements(data || [])
     } catch (err) {
       console.error('Error fetching committee requirements:', err)
+      setCommitteeRequirements([])
+    }
+  }
+
+  // Validate signoffs - ensures each ID exists in the requirements table
+  function validateSignoffs(signoffIds, pdReqs = pdRequirements, committeeReqs = committeeRequirements) {
+    if (!Array.isArray(signoffIds) || signoffIds.length === 0) return []
+
+    // Build set of all valid requirement IDs from both PD and Committee
+    const allReqIds = new Set(
+      [...pdReqs, ...committeeReqs]
+        .map(r => Number(r.id))
+        .filter(n => Number.isFinite(n))
+    )
+
+    // If requirements aren't loaded yet, return original (don't filter)
+    if (allReqIds.size === 0) {
+      return signoffIds.map(Number).filter(n => Number.isFinite(n))
+    }
+
+    // Filter to only IDs that exist in the requirements table
+    const normalized = signoffIds.map(Number).filter(n => Number.isFinite(n))
+    return normalized.filter(id => allReqIds.has(id))
+  }
+
+  // Clean signoffs ONCE after both fetches complete - removes any IDs that don't exist in requirements table
+  async function validateAndCleanSignoffsOnce() {
+    try {
+      // Only clean if we have BOTH requirement types loaded
+      if (pdRequirements.length === 0 || committeeRequirements.length === 0) {
+        return
+      }
+
+      // Fetch current signoffs
+      const { data: pledgeData, error: pledgeError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
+        .eq('uniqname', pledge)
+        .single()
+
+      if (pledgeError) {
+        console.error('Error fetching signoffs for validation:', pledgeError)
+        return
+      }
+
+      const signoffIds = pledgeData?.signoffs || []
+      const validSignoffs = validateSignoffs(signoffIds, pdRequirements, committeeRequirements)
+      const normalized = signoffIds.map(Number).filter(n => Number.isFinite(n))
+      const invalidSignoffs = normalized.filter(id => !validSignoffs.includes(id))
+
+      // Only update DB if we found invalid IDs (IDs that don't exist in requirements table)
+      if (invalidSignoffs.length > 0) {
+        const { error: updateError } = await supabase
+          .from('Pledges')
+          .update({ signoffs: validSignoffs })
+          .eq('uniqname', pledge)
+
+        if (updateError) {
+          console.error('Error cleaning invalid signoffs:', updateError)
+        } else {
+          // Re-fetch after cleaning to update UI
+          await Promise.all([
+            fetchPledgePDSignoffs(),
+            fetchPledgeCommitteeSignoffs()
+          ])
+        }
+      }
+    } catch (err) {
+      console.error('Error in validateAndCleanSignoffsOnce:', err)
     }
   }
 
@@ -174,47 +244,67 @@ const PledgeTilePledgeView = ({ pledge }) => {
   // ============================
   async function fetchPledgePDSignoffs() {
     try {
-      const { data, error } = await supabase
-        .from('Pledge_SignOffs')
-        .select(`
-          id,
-          completed,
-          Pledge_Requirements: Pledge_Requirements!inner(*)
-        `)
+      // Fetch pledge's signoffs array
+      const { data: pledgeData, error: pledgeError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
         .eq('uniqname', pledge)
-        .eq('Pledge_Requirements.type', 'pd')
+        .single()
 
-      if (error) throw error
+      if (pledgeError) throw pledgeError
 
-      setPDSignOffs(data || [])
-      // Count how many are completed
-      const count = data.filter(item => item.completed).length
-      setPDCompletedCount(count)
+      const signoffIds = pledgeData?.signoffs || []
+      
+      // Validate signoffs (don't write to DB here - that happens in validateAndCleanSignoffsOnce)
+      const validSignoffIds = validateSignoffs(signoffIds)
+
+      // Filter to only PD signoffs
+      const pdReqIdSet = new Set(
+        pdRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n))
+      )
+      const pdSignoffIds = validSignoffIds.filter(id => 
+        pdReqIdSet.has(Number(id))
+      )
+
+      setPDSignOffs(pdSignoffIds.map(id => ({ id })))
+      setPDCompletedCount(pdSignoffIds.length)
     } catch (err) {
       console.error('Error fetching PD signoffs:', err)
+      setPDSignOffs([])
+      setPDCompletedCount(0)
     }
   }
 
   async function fetchPledgeCommitteeSignoffs() {
     try {
-      const { data, error } = await supabase
-        .from('Pledge_SignOffs')
-        .select(`
-          id,
-          completed,
-          Pledge_Requirements: Pledge_Requirements!inner(*)
-        `)
+      // Fetch pledge's signoffs array
+      const { data: pledgeData, error: pledgeError } = await supabase
+        .from('Pledges')
+        .select('signoffs')
         .eq('uniqname', pledge)
-        .eq('Pledge_Requirements.type', 'committee')
+        .single()
 
-      if (error) throw error
+      if (pledgeError) throw pledgeError
 
-      setCommitteeSignOffs(data || [])
-      // Count how many are completed
-      const count = data.filter(item => item.completed).length
-      setCommitteeCompletedCount(count)
+      const signoffIds = pledgeData?.signoffs || []
+      
+      // Validate signoffs (don't write to DB here - that happens in validateAndCleanSignoffsOnce)
+      const validSignoffIds = validateSignoffs(signoffIds)
+
+      // Filter to only committee signoffs
+      const committeeReqIdSet = new Set(
+        committeeRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n))
+      )
+      const committeeSignoffIds = validSignoffIds.filter(id => 
+        committeeReqIdSet.has(Number(id))
+      )
+
+      setCommitteeSignOffs(committeeSignoffIds.map(id => ({ id })))
+      setCommitteeCompletedCount(committeeSignoffIds.length)
     } catch (err) {
       console.error('Error fetching committee signoffs:', err)
+      setCommitteeSignOffs([])
+      setCommitteeCompletedCount(0)
     }
   }
 
@@ -224,18 +314,28 @@ const PledgeTilePledgeView = ({ pledge }) => {
     fetchCommitteeRequirements()
   }, [])
 
+  // Fetch signoffs once BOTH requirements are loaded to avoid race conditions
   useEffect(() => {
-    fetchPledgePDSignoffs()
-    fetchPledgeCommitteeSignoffs()
-  }, [userID, pledge])
+    if (pdRequirements.length > 0 && committeeRequirements.length > 0) {
+      // Fetch both signoffs together to avoid race conditions
+      Promise.all([
+        fetchPledgePDSignoffs(),
+        fetchPledgeCommitteeSignoffs()
+      ]).then(() => {
+        // After both fetch, validate and clean signoffs ONCE
+        validateAndCleanSignoffsOnce()
+      })
+    }
+  }, [userID, pledge, pdRequirements, committeeRequirements])
 
-  // Refresh signoffs periodically and when page comes into focus
+  // Refresh signoffs periodically and when page comes into focus (without validation to avoid overwrites)
   useEffect(() => {
-    // Refresh immediately
-    fetchPledgePDSignoffs()
-    fetchPledgeCommitteeSignoffs()
+    // Only set up periodic refresh if requirements are loaded
+    if (pdRequirements.length === 0 || committeeRequirements.length === 0) {
+      return
+    }
 
-    // Set up periodic refresh every 5 seconds
+    // Set up periodic refresh every 5 seconds (just refresh, don't validate/clean)
     const interval = setInterval(() => {
       fetchPledgePDSignoffs()
       fetchPledgeCommitteeSignoffs()
@@ -252,7 +352,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
       clearInterval(interval)
       window.removeEventListener('focus', handleFocus)
     }
-  }, [pledge])
+  }, [pledge, pdRequirements, committeeRequirements])
 
   // ============================
   //  Countdown to due date
@@ -314,7 +414,9 @@ const PledgeTilePledgeView = ({ pledge }) => {
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round((Math.min(numInterviews, interviewsRequired) * 100) / interviewsRequired)}
+          completed={interviewsRequired > 0 
+            ? Math.round((Math.min(numInterviews, interviewsRequired) * 100) / interviewsRequired)
+            : 0}
           bgColor='#22c55e'
           height='40px'
         />
@@ -339,9 +441,9 @@ const PledgeTilePledgeView = ({ pledge }) => {
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round(
-            (committeeCompletedCount * 100) / committeeRequirements.length
-          )}
+          completed={committeeRequirements.length > 0
+            ? Math.round((committeeCompletedCount * 100) / committeeRequirements.length)
+            : 0}
           bgColor='#22c55e'
           height='40px'
         />
@@ -349,11 +451,8 @@ const PledgeTilePledgeView = ({ pledge }) => {
           Sign Offs:
           <div>
             {committeeRequirements.map((req) => {
-              // see if there's a signoff for this requirement
-              const signoff = committeeSignOffs.find(
-                (so) => so.Pledge_Requirements.id === req.id
-              )
-              const isCompleted = signoff?.completed || false
+              // Check if this requirement is signed off
+              const isCompleted = committeeSignOffs.some(so => so.id === req.id)
 
               return (
                 <div key={req.id} className='flex items-center space-x-2'>
@@ -379,9 +478,9 @@ const PledgeTilePledgeView = ({ pledge }) => {
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round(
-            (pdCompletedCount * 100) / pdRequirements.length
-          )}
+          completed={pdRequirements.length > 0
+            ? Math.round((pdCompletedCount * 100) / pdRequirements.length)
+            : 0}
           bgColor='#22c55e'
           height='40px'
         />
@@ -389,10 +488,8 @@ const PledgeTilePledgeView = ({ pledge }) => {
           Sign Offs:
           <div>
             {pdRequirements.map((req) => {
-              const signoff = pdSignOffs.find(
-                (so) => so.Pledge_Requirements.id === req.id
-              )
-              const isCompleted = signoff?.completed || false
+              // Check if this requirement is signed off
+              const isCompleted = pdSignOffs.some(so => so.id === req.id)
 
               return (
                 <div key={req.id} className='flex items-center space-x-2'>
@@ -419,10 +516,9 @@ const PledgeTilePledgeView = ({ pledge }) => {
         </div>
         <ProgressBar
           className='w-full py-2'
-          completed={Math.round(
-            ((academicHours + socialHours) * 100) /
-              (numSocialHoursRequired + numAcademicHoursRequired)
-          )}
+          completed={(numSocialHoursRequired + numAcademicHoursRequired) > 0
+            ? Math.round(((academicHours + socialHours) * 100) / (numSocialHoursRequired + numAcademicHoursRequired))
+            : 0}
           bgColor='#22c55e'
           height='40px'
         />

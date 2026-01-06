@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import supabase from '@/supabase'
 
-// Simple types for a row in Pledge_Requirements
+// Simple types for a row in Pledge_Requirements_Update
 interface PledgeRequirement {
   id: number
-  type: 'pd' | 'committee'
+  type: 'PD' | 'COMMITTEE'
   requirement: string
 }
 
-export default function PledgeRequirementsManager() {
+interface PledgeRequirementsManagerProps {
+  adminRole?: string
+}
+
+export default function PledgeRequirementsManager({ adminRole }: PledgeRequirementsManagerProps) {
   // State to hold all rows from the DB
   const [requirements, setRequirements] = useState<PledgeRequirement[]>([])
 
@@ -16,31 +20,68 @@ export default function PledgeRequirementsManager() {
   const [showEditor, setShowEditor] = useState(false)
 
   // State for new row inputs
-  const [newType, setNewType] = useState<'pd' | 'committee'>('pd')
+  const [newType, setNewType] = useState<'PD' | 'COMMITTEE'>('PD')
   const [newRequirement, setNewRequirement] = useState('')
 
   // For editing an existing row inline
   const [editRowId, setEditRowId] = useState<number | null>(null)
-  const [editType, setEditType] = useState<'pd' | 'committee'>('pd')
+  const [editType, setEditType] = useState<'PD' | 'COMMITTEE'>('PD')
   const [editRequirement, setEditRequirement] = useState('')
 
   // ─────────────────────────────────────────────────────────
-  // 1) Fetch all existing requirements on mount
+  // 1) Fetch all existing requirements
   // ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchRequirements = async () => {
-      const { data, error } = await supabase
-        .from('Pledge_Requirements')
-        .select('*')
-        .order('id', { ascending: true })
-      if (error) {
-        console.error('Error fetching PNM_Requirements:', error)
-      } else if (data) {
-        setRequirements(data as PledgeRequirement[])
-      }
+  const fetchRequirements = async () => {
+    const { data, error } = await supabase
+      .from('Pledge_Requirements_Update')
+      .select('*')
+      .order('id', { ascending: true })
+    if (error) {
+      console.error('Error fetching Pledge_Requirements_Update:', error)
+    } else if (data) {
+      setRequirements(data as PledgeRequirement[])
     }
+  }
+
+  // Fetch on mount
+  useEffect(() => {
     fetchRequirements()
   }, [])
+
+  // Refresh when editor opens to ensure we have latest data
+  useEffect(() => {
+    if (showEditor) {
+      fetchRequirements()
+    }
+  }, [showEditor])
+
+  // ─────────────────────────────────────────────────────────
+  // Helper: Calculate minimum available ID (> 0)
+  // ─────────────────────────────────────────────────────────
+  function getMinimumAvailableId(): number {
+    if (requirements.length === 0) {
+      return 1
+    }
+
+    // Get all existing IDs as numbers, sorted
+    const existingIds = requirements
+      .map(r => Number(r.id))
+      .filter(id => Number.isFinite(id) && id > 0)
+      .sort((a, b) => a - b)
+
+    // Find the first gap starting from 1
+    let candidate = 1
+    for (const id of existingIds) {
+      if (candidate < id) {
+        // Found a gap
+        return candidate
+      }
+      candidate = id + 1
+    }
+
+    // No gap found, return the next ID after the highest
+    return candidate
+  }
 
   // ─────────────────────────────────────────────────────────
   // 2) Add a new requirement
@@ -52,25 +93,30 @@ export default function PledgeRequirementsManager() {
       return
     }
 
-    // Insert row
+    // Calculate the minimum available ID
+    const newId = getMinimumAvailableId()
+
+    // Insert row with the calculated ID
     const { data, error } = await supabase
-      .from('Pledge_Requirements')
-      .insert([{ type: newType, requirement: newRequirement }])
+      .from('Pledge_Requirements_Update')
+      .insert([{ id: newId, type: newType, requirement: newRequirement }])
       .select('*')
       .single()
 
     if (error) {
       console.error('Error inserting requirement:', error)
+      alert(`Error adding requirement: ${error.message}`)
       return
     }
 
     // If successful, push the new row into local state
     if (data) {
-      setRequirements(prev => [...prev, data])
+      setRequirements(prev => [...prev, data as PledgeRequirement].sort((a, b) => a.id - b.id))
+      alert(`Added ${newType} requirement with ID ${newId}`)
     }
     // Reset inputs
     setNewRequirement('')
-    setNewType('pd')
+    setNewType('PD')
   }
 
   // ─────────────────────────────────────────────────────────
@@ -94,7 +140,7 @@ export default function PledgeRequirementsManager() {
 
     // Update in DB
     const { data, error } = await supabase
-      .from('Pledge_Requirements')
+      .from('Pledge_Requirements_Update')
       .update({
         type: editType,
         requirement: editRequirement,
@@ -114,7 +160,7 @@ export default function PledgeRequirementsManager() {
     )
     // Clear edit mode
     setEditRowId(null)
-    setEditType('pd')
+    setEditType('PD')
     setEditRequirement('')
   }
 
@@ -122,25 +168,29 @@ export default function PledgeRequirementsManager() {
   // 5) Delete a row
   // ─────────────────────────────────────────────────────────
   async function handleDelete(id: number) {
-    const confirmDelete = window.confirm('Are you sure you want to delete this row?')
+    const requirement = requirements.find(r => r.id === id)
+    const reqText = requirement ? `${requirement.type}: ${requirement.requirement}` : `ID ${id}`
+    const confirmDelete = window.confirm(`Are you sure you want to delete this requirement?\n\n${reqText}`)
     if (!confirmDelete) return
 
     const { error } = await supabase
-      .from('Pledge_Requirements')
+      .from('Pledge_Requirements_Update')
       .delete()
       .eq('id', id)
 
     if (error) {
       console.error('Error deleting requirement:', error)
+      alert(`Error deleting requirement: ${error.message}`)
       return
     }
     // Remove from local
     setRequirements(prev => prev.filter(row => row.id !== id))
+    alert(`Deleted requirement: ${reqText}`)
   }
 
   // Separate PD & Committee requirements for easy display
-  const pdRequirements = requirements.filter(r => r.type === 'pd')
-  const committeeRequirements = requirements.filter(r => r.type === 'committee')
+  const pdRequirements = requirements.filter(r => r.type === 'PD')
+  const committeeRequirements = requirements.filter(r => r.type === 'COMMITTEE')
 
   // Helper to render a single item
   function renderRequirementItem(item: PledgeRequirement) {
@@ -154,11 +204,11 @@ export default function PledgeRequirementsManager() {
         >
           <select
             value={editType}
-            onChange={e => setEditType(e.target.value as 'pd' | 'committee')}
+            onChange={e => setEditType(e.target.value as 'PD' | 'COMMITTEE')}
             className="border p-1 rounded"
           >
-            <option value="pd">PD</option>
-            <option value="committee">Committee</option>
+            <option value="PD">PD</option>
+            <option value="COMMITTEE">COMMITTEE</option>
           </select>
 
           <input
@@ -193,20 +243,24 @@ export default function PledgeRequirementsManager() {
     return (
       <li
         key={item.id}
-        className="flex flex-col md:flex-row items-start md:items-center gap-2 mb-1"
+        className="flex flex-col md:flex-row items-start md:items-center gap-2 mb-2 p-2 border border-gray-200 rounded hover:bg-gray-50"
       >
-        <span className="flex-1">{item.requirement}</span>
+        <div className="flex-1">
+          <span className="font-semibold text-[#8B0000]">ID {item.id}</span>
+          <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{item.type}</span>
+          <span className="ml-2">{item.requirement}</span>
+        </div>
 
         <div className="flex gap-2">
           <button
             onClick={() => handleStartEdit(item)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded font-medium"
           >
             Edit
           </button>
           <button
             onClick={() => handleDelete(item.id)}
-            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded font-medium"
           >
             Delete
           </button>
@@ -219,6 +273,11 @@ export default function PledgeRequirementsManager() {
   // Rendering
   // ─────────────────────────────────────────────────────────
 
+  // Only show to dev role
+  if (adminRole !== 'dev') {
+    return null
+  }
+
   // If not in editing mode, just show a button
   if (!showEditor) {
     return (
@@ -227,7 +286,7 @@ export default function PledgeRequirementsManager() {
           onClick={() => setShowEditor(true)}
           className="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded"
         >
-          Update Committee/PD Requirements
+          Manage PD/Committee Signoffs
         </button>
       </div>
     )
@@ -249,28 +308,35 @@ export default function PledgeRequirementsManager() {
       </div>
 
       {/* ADD NEW Requirement */}
-      <div className="flex flex-col md:flex-row items-center gap-2 mb-6">
-        <select
-          value={newType}
-          onChange={e => setNewType(e.target.value as 'pd' | 'committee')}
-          className="border p-1 rounded"
-        >
-          <option value="pd">PD</option>
-          <option value="committee">Committee</option>
-        </select>
-        <input
-          type="text"
-          placeholder="Requirement text..."
-          value={newRequirement}
-          onChange={e => setNewRequirement(e.target.value)}
-          className="border p-2 rounded flex-1"
-        />
-        <button
-          onClick={handleAdd}
-          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-        >
-          Add
-        </button>
+      <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 mb-6">
+        <h3 className="text-lg font-semibold mb-3 text-[#8B0000]">Add New Signoff</h3>
+        <div className="flex flex-col md:flex-row items-center gap-2">
+          <select
+            value={newType}
+            onChange={e => setNewType(e.target.value as 'PD' | 'COMMITTEE')}
+            className="border p-2 rounded font-medium"
+          >
+            <option value="PD">PD</option>
+            <option value="COMMITTEE">COMMITTEE</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Enter requirement description..."
+            value={newRequirement}
+            onChange={e => setNewRequirement(e.target.value)}
+            onKeyPress={e => e.key === 'Enter' && handleAdd()}
+            className="border p-2 rounded flex-1"
+          />
+          <button
+            onClick={handleAdd}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold"
+          >
+            Add Signoff
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          New signoff will be assigned the minimum available ID (starting from 1)
+        </p>
       </div>
 
       {/* PD Requirements */}

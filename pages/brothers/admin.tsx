@@ -1,11 +1,18 @@
 import BroNavBar from "@/components/BroNavBar";
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import supabase from '@/supabase';
 import Select from 'react-select';
 import RushAdminPanel from '@/components/admin/RushAdminPanel';
 import BLPairAdder from '@/components/admin/BLPairAdder';
 import PledgeCommitteeManager from "@/components/admin/PledgeCommitteeUpdate";
 import PledgeAdminPanel from '@/components/admin/PledgeAdminPanel';
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Button
+} from '@nextui-org/react';
 
 
 interface RoleAssignments {
@@ -33,10 +40,20 @@ export default function Admin() {
   const [adminRole, setAdminRole] = useState('');
   const [roleAssignments, setRoleAssignments] = useState<RoleAssignments>({});
   const [pledges, setPledges] = useState<PledgeData[]>([]);
+  const [bulkSignoffLoading, setBulkSignoffLoading] = useState<{ [uniqname: string]: boolean }>({});
+  const [signOffEveryoneLoading, setSignOffEveryoneLoading] = useState<boolean>(false);
   const [rollEditingMode, setRollEditingMode] = useState<boolean>(false);
   const [eboardEditingMode, setEboardEditingMode] = useState<boolean>(false);
   const [rushEditingMode, setRushEditingMode] = useState<boolean>(false);
   const [pledgeEditingMode, setPledgeEditingMode] = useState<boolean>(false);
+  
+  // Dropdown states for categories
+  const [openCategories, setOpenCategories] = useState<{ [key: string]: boolean }>({
+    rush: false,
+    pnms: false,
+    brotherhood: false,
+    system: false,
+  });
   const [eboardMembers, setEboardMembers] = useState<BrotherData[]>([]);
   const [newRoleNames, setNewRoleNames] = useState<{ [key: string]: string }>({});
   const [searchResults, setSearchResults] = useState<BrotherData[]>([]);
@@ -307,6 +324,112 @@ export default function Admin() {
     }
   };
 
+  const getAllRequirementIds = async () => {
+    // Fetch BOTH PD and COMMITTEE requirements separately to ensure we get both
+    const [pdResult, committeeResult] = await Promise.all([
+      supabase
+        .from('Pledge_Requirements_Update')
+        .select('id, type')
+        .eq('type', 'PD'),
+      supabase
+        .from('Pledge_Requirements_Update')
+        .select('id, type')
+        .eq('type', 'COMMITTEE')
+    ])
+
+    if (pdResult.error) throw pdResult.error
+    if (committeeResult.error) throw committeeResult.error
+
+    const pdReqs = pdResult.data || []
+    const committeeReqs = committeeResult.data || []
+
+    // Merge both lists and extract all IDs
+    const allReqs = [...pdReqs, ...committeeReqs]
+    const allIds = Array.from(
+      new Set(
+        allReqs
+          .map((r: any) => Number(r.id))
+          .filter((n: number) => Number.isFinite(n))
+      )
+    ).sort((a, b) => a - b) // Sort for consistency
+
+    return { allIds, pdReqs, committeeReqs }
+  }
+
+  const handleSignOffAllRequirementsForPledge = async (uniqname: string) => {
+    const isConfirmed = window.confirm(
+      `Sign off ALL PD + Committee requirements for ${uniqname}? This will overwrite their current signoffs list.`
+    )
+    if (!isConfirmed) return
+
+    setBulkSignoffLoading(prev => ({ ...prev, [uniqname]: true }))
+    try {
+      const { allIds, pdReqs, committeeReqs } = await getAllRequirementIds()
+
+      const { error: updateError } = await supabase
+        .from('Pledges')
+        .update({ signoffs: allIds })
+        .eq('uniqname', uniqname)
+
+      if (updateError) throw updateError
+
+      alert(
+        `Signed off ALL requirements for ${uniqname}.\n` +
+          `PD requirements: ${pdReqs.length}\n` +
+          `Committee requirements: ${committeeReqs.length}\n` +
+          `Total written: ${allIds.length}`
+      )
+      fetchPledges() // Refresh the list
+    } catch (err) {
+      console.error('Error signing off all requirements:', err)
+      alert('Error signing off all requirements. Check console for details.')
+    } finally {
+      setBulkSignoffLoading(prev => ({ ...prev, [uniqname]: false }))
+    }
+  }
+
+  const handleSignOffEveryoneForEverything = async () => {
+    const isConfirmed = window.confirm(
+      `Sign off ALL PNMs for ALL PD + Committee requirements? This will overwrite all current signoffs lists.\n\n` +
+      `This will affect ${pledges.length} PNM(s). Are you sure?`
+    )
+    if (!isConfirmed) return
+
+    setSignOffEveryoneLoading(true)
+    try {
+      const { allIds, pdReqs, committeeReqs } = await getAllRequirementIds()
+
+      // Update all pledges in parallel
+      const updatePromises = pledges.map(pledge =>
+        supabase
+          .from('Pledges')
+          .update({ signoffs: allIds })
+          .eq('uniqname', pledge.uniqname)
+      )
+
+      const results = await Promise.all(updatePromises)
+      const errors = results.filter(r => r.error)
+
+      if (errors.length > 0) {
+        throw new Error(`${errors.length} pledge(s) failed to update`)
+      }
+
+      alert(
+        `Signed off ALL requirements for ALL PNMs.\n` +
+          `PD requirements: ${pdReqs.length}\n` +
+          `Committee requirements: ${committeeReqs.length}\n` +
+          `Total written per PNM: ${allIds.length}\n` +
+          `PNMs affected: ${pledges.length}`
+      )
+      fetchPledges() // Refresh the list
+    } catch (err) {
+      console.error('Error signing off everyone:', err)
+      alert('Error signing off everyone. Check console for details.')
+    } finally {
+      setSignOffEveryoneLoading(false)
+    }
+  }
+
   const handleDeletePledge = async (uniqname: string) => {
     const { data, error } = await supabase
       .from('Pledges')
@@ -318,10 +441,11 @@ export default function Admin() {
     } else {
       fetchPledges()
     }
+    // Clear signoffs array (no separate table to delete from)
     await supabase
-      .from('Pledge_SignOffs')
-      .delete()
-      .eq('pledge', uniqname)
+      .from('Pledges')
+      .update({ signoffs: [] })
+      .eq('uniqname', uniqname)
 
   }
 
@@ -365,6 +489,57 @@ export default function Admin() {
 
   const currentMember = eboardMembers.find(member => member.adminrole === selectedRole);
 
+  const toggleCategory = (category: string) => {
+    setOpenCategories((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  };
+
+  // Helper component for collapsible category sections
+  const CategorySection = ({ 
+    title, 
+    category, 
+    children, 
+    requiredRoles 
+  }: { 
+    title: string; 
+    category: string; 
+    children: React.ReactNode;
+    requiredRoles: string[];
+  }) => {
+    const hasAccess = requiredRoles.some(role => adminRole === role);
+    if (!hasAccess) return null;
+
+    const isOpen = openCategories[category];
+
+    return (
+      <div className="bg-white rounded-md shadow-md p-4 w-full">
+        <button
+          onClick={() => toggleCategory(category)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <h2 className="text-xl font-semibold text-[#8B0000]">
+            {title}
+          </h2>
+          <svg
+            className={`w-5 h-5 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isOpen && (
+          <div className="mt-4">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex md:flex-row flex-col flex-grow border-b-2 border-[#a3000020] min-h-screen">
       <BroNavBar isPledge={false} />
@@ -373,50 +548,159 @@ export default function Admin() {
         <h1 className="text-3xl font-bold text-[#8B0000] mb-4">
           Admin Dashboard
         </h1>
-        <h2> your admin role : {adminRole}</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-          {/* COLUMN 1: Rush Admin Panel (if user is rush or dev) */}
-          {(adminRole === 'rush' || adminRole === 'dev') && (
-            <div className="w-full lg:w-full">
-              <RushAdminPanel />
+        <h2 className="text-gray-600 mb-6">Your admin role: <span className="font-semibold">{adminRole}</span></h2>
+        
+        <div className="flex flex-col space-y-4 w-full max-w-6xl">
+          {/* RUSH CATEGORY */}
+          <CategorySection 
+            title="Rush Management" 
+            category="rush"
+            requiredRoles={['rush', 'dev', 'regent', 'vice']}
+          >
+            <div className="space-y-4">
+              {(adminRole === 'rush' || adminRole === 'dev') && (
+                <RushAdminPanel />
+              )}
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'vice' || adminRole === 'rush') && (
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  {rushEditingMode ? (
+                    <RushCommitteeManager setRushEditingMode={setRushEditingMode} />
+                  ) : (
+                    <button 
+                      onClick={() => setRushEditingMode(true)} 
+                      className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+                    >
+                      Update Rush Committee
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          </CategorySection>
 
-          {/* COLUMN 2: Additional Settings */}
-          <div className="flex flex-col space-y-6">
-            {/* Update Statuses (regent, scribe, dev) */}
-
-            <div className="bg-white rounded-md shadow-md p-4">
-
-              <h2 className="text-xl font-semibold text-[#8B0000] mb-2">Update Statuses</h2>
-
-              {/* Roll-Editing Mode */}
+          {/* PNMs CATEGORY */}
+          <CategorySection 
+            title="PNM Management" 
+            category="pnms"
+            requiredRoles={['regent', 'dev', 'scribe', 'parent']}
+          >
+            <div className="space-y-4">
+              {(adminRole === 'dev' || adminRole === 'parent') && (
+                <PledgeAdminPanel />
+              )}
               {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
-                <div>
-                  {rollEditingMode ? (
-                    <div className="bg-[#fff0f0] p-4 rounded-md">
-                      <h3 className="text-lg font-bold mb-2">
-                        Assign potential new members roll numbers
-                      </h3>
-                      {pledges.map((pledge) => (
-                        <div
-                          key={pledge.uniqname}
-                          className="flex flex-col sm:flex-row mb-2 w-full items-center"
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  {pledgeEditingMode ? (
+                    <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} />
+                  ) : (
+                    <button 
+                      onClick={() => setPledgeEditingMode(true)} 
+                      className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+                    >
+                      Update PNM Committee
+                    </button>
+                  )}
+                </div>
+              )}
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h3 className="text-lg font-semibold mb-2 text-[#8B0000]">
+                    Bulk Signoffs
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Sign off PNMs for all PD + Committee requirements (writes all requirement IDs to `Pledges.signoffs`).
+                  </p>
+                  
+                  {/* Sign off everyone button */}
+                  <div className="mb-4">
+                    <button
+                      onClick={handleSignOffEveryoneForEverything}
+                      disabled={signOffEveryoneLoading || pledges.length === 0}
+                      className={`font-bold py-2 px-4 rounded w-full ${
+                        signOffEveryoneLoading || pledges.length === 0
+                          ? 'bg-gray-300 text-gray-700 cursor-not-allowed'
+                          : 'bg-[#8B0000] text-white hover:bg-red-800'
+                      }`}
+                    >
+                      {signOffEveryoneLoading 
+                        ? `Signing off ${pledges.length} PNM(s)…` 
+                        : `Sign off ALL PNMs for ALL Requirements (${pledges.length} PNM(s))`}
+                    </button>
+                  </div>
+
+                  {/* Individual PNM dropdown */}
+                  {pledges.length === 0 ? (
+                    <div className="text-sm text-gray-500">No PNMs found.</div>
+                  ) : (
+                    <div className="mt-4">
+                      <Dropdown placement="bottom-start">
+                        <DropdownTrigger>
+                          <Button 
+                            variant="bordered" 
+                            className="w-full sm:w-auto bg-white border-gray-300 hover:bg-gray-50"
+                          >
+                            Sign off Individual PNM
+                          </Button>
+                        </DropdownTrigger>
+                        <DropdownMenu 
+                          aria-label="Select PNM to sign off"
+                          className="max-h-60 overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-md"
+                          itemClasses={{
+                            base: "data-[hover=true]:bg-gray-100",
+                          }}
                         >
-                          <p className="sm:w-2/5 font-semibold">
-                            {pledge.firstname} {pledge.lastname}
-                          </p>
-                          <input
-                            type="text"
-                            placeholder="Assign Roll Number"
-                            className="border-2 border-[#8b000070] rounded ml-2 p-1"
-                            onChange={(e) =>
-                              handleRoleNumberChange(pledge.uniqname, e.target.value)
-                            }
-                          />
-                        </div>
-                      ))}
-                      <div className="flex space-x-2 mt-4">
+                          {pledges.map((pledge) => (
+                            <DropdownItem
+                              key={`bulk-signoff-${pledge.uniqname}`}
+                              onClick={() => handleSignOffAllRequirementsForPledge(pledge.uniqname)}
+                              isDisabled={!!bulkSignoffLoading[pledge.uniqname]}
+                              className={bulkSignoffLoading[pledge.uniqname] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                              textValue={`${pledge.firstname} ${pledge.lastname} (${pledge.uniqname})`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span>
+                                  {pledge.firstname} {pledge.lastname} ({pledge.uniqname})
+                                </span>
+                                {bulkSignoffLoading[pledge.uniqname] && (
+                                  <span className="text-xs text-gray-500 ml-2">Signing off…</span>
+                                )}
+                              </div>
+                            </DropdownItem>
+                          ))}
+                        </DropdownMenu>
+                      </Dropdown>
+                    </div>
+                  )}
+                </div>
+              )}
+              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  {rollEditingMode ? (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-[#8B0000]">
+                        Assign Roll Numbers to New Members
+                      </h3>
+                      <div className="space-y-3 mb-4">
+                        {pledges.map((pledge) => (
+                          <div
+                            key={pledge.uniqname}
+                            className="flex flex-col sm:flex-row items-center gap-2"
+                          >
+                            <p className="sm:w-2/5 font-semibold">
+                              {pledge.firstname} {pledge.lastname}
+                            </p>
+                            <input
+                              type="text"
+                              placeholder="Assign Roll Number"
+                              className="border-2 border-[#8b000070] rounded p-2 flex-1"
+                              onChange={(e) =>
+                                handleRoleNumberChange(pledge.uniqname, e.target.value)
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex space-x-2">
                         <button
                           onClick={handleCancel}
                           className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded"
@@ -439,21 +723,28 @@ export default function Admin() {
                       Initiate Potential New Members
                     </button>
                   )}
-                </div>)}
+                </div>
+              )}
+            </div>
+          </CategorySection>
 
-
-              {/* Eboard Editing */}
+          {/* BROTHERHOOD CATEGORY */}
+          <CategorySection 
+            title="Brotherhood Management" 
+            category="brotherhood"
+            requiredRoles={['regent', 'dev', 'scribe']}
+          >
+            <div className="space-y-4">
               {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe') && (
-                <div>
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                   {eboardEditingMode ? (
-                    <div className="bg-[#fff0f0] p-4 rounded-md mt-4">
-                      <h3 className="text-lg font-bold mb-2">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2 text-[#8B0000]">
                         Update Eboard and Committee Heads
                       </h3>
                       <p className="text-sm text-gray-600 mb-4">
                         (Update yourself last to avoid losing admin access)
                       </p>
-                      {/* Choose Role */}
                       <div className="mb-4">
                         <Select
                           options={eboardPositions.map(({ role, label }) => ({
@@ -474,8 +765,8 @@ export default function Admin() {
                               ? `${currentMember.firstname} ${currentMember.lastname}`
                               : 'None'}
                           </p>
-                          <div className="flex flex-col sm:flex-row items-center">
-                            <div className="w-full sm:w-2/3 mb-2 sm:mb-0 sm:mr-2">
+                          <div className="flex flex-col sm:flex-row items-center gap-2">
+                            <div className="w-full sm:w-2/3">
                               <Select
                                 options={searchResults.map((brother) => ({
                                   value: brother.userid,
@@ -496,7 +787,7 @@ export default function Admin() {
                             </div>
                             <button
                               onClick={() => handleEboardSubmit(selectedRole)}
-                              className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
+                              className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full sm:w-auto"
                             >
                               Submit
                             </button>
@@ -513,53 +804,40 @@ export default function Admin() {
                   ) : (
                     <button
                       onClick={handleUpdateEboard}
-                      className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full"
+                      className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
                     >
                       Update EBoard
                     </button>
-                  )}</div>
+                  )}
+                </div>
               )}
-
-
-              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'vice' || adminRole === 'rush') && (
-                <div>
-                  {rushEditingMode ? <RushCommitteeManager setRushEditingMode={setRushEditingMode} /> : (<button onClick={() => setRushEditingMode(!rushEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Rush Committee</button>)}
-                </div>)}
-              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
-                <div>
-                  {pledgeEditingMode ? <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} /> : (<button onClick={() => setPledgeEditingMode(!pledgeEditingMode)} className="bg-[#8B0000] text-white font-bold py-2 px-4 mt-4 rounded hover:bg-red-800 w-full">Update Potential New Member Committee</button>)}
-                </div>)}
-            </div>
-
-
-            {/* Misc Settings (academic, dev) */}
-            {(adminRole === 'academic' || adminRole === 'dev') && (
-              <div className="bg-white rounded-md shadow-md p-4">
-                <h2 className="text-xl font-semibold text-[#8B0000] mb-2">
-                  Misc Settings
-                </h2>
-                <button
-                  onClick={handleArchiveClasses}
-                  className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
-                >
-                  Archive Classes
-                </button>
-              </div>
-            )}
-            {(adminRole === 'dev' || adminRole === 'parent') && (
-              <div className="mt-8">
-                <PledgeAdminPanel />
-              </div>
-            )}
-            {/* Big Little Pairing */}
-            {(adminRole === 'dev' || adminRole === 'parent') && (
-              <div className="mt-8">
+              {(adminRole === 'dev' || adminRole === 'parent') && (
                 <BLPairAdder />
-              </div>
-            )}
-            {/* Show the PledgeRequirementsManager if adminrole is dev or parent */}
+              )}
+            </div>
+          </CategorySection>
 
-          </div>
+          {/* SYSTEM CATEGORY */}
+          <CategorySection 
+            title="System Settings" 
+            category="system"
+            requiredRoles={['academic', 'dev']}
+          >
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <h3 className="text-lg font-semibold mb-4 text-[#8B0000]">
+                Archive Classes
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Archive all current classes for all brothers and pledges. This should only be done at the end of a semester.
+              </p>
+              <button
+                onClick={handleArchiveClasses}
+                className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+              >
+                Archive Classes
+              </button>
+            </div>
+          </CategorySection>
         </div>
       </div>
     </div>
@@ -664,22 +942,22 @@ function RushCommitteeManager({
   }, []);
 
   return (
-    <div className="bg-white rounded-md shadow-md p-4">
-      <h2 className="text-xl font-semibold text-[#8B0000] mb-2">Rush Committee Management</h2>
+    <div>
+      <h3 className="text-lg font-semibold text-[#8B0000] mb-4">Rush Committee Management</h3>
 
       {/* Current Members */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold">Current Rush Committee</h3>
+        <h4 className="text-md font-semibold mb-2">Current Rush Committee</h4>
         {rushCommittee.length > 0 ? (
-          <ul>
+          <ul className="space-y-2">
             {rushCommittee.map((member) => (
-              <li key={member.userid} className="flex justify-between items-center border-b py-2">
-                <span>
+              <li key={member.userid} className="flex justify-between items-center border-b border-gray-200 py-2">
+                <span className="font-medium">
                   {member.firstname} {member.lastname}
                 </span>
                 <button
                   onClick={() => removeRushMember(member.userid)}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 font-bold"
                 >
                   Remove
                 </button>
@@ -687,38 +965,42 @@ function RushCommitteeManager({
             ))}
           </ul>
         ) : (
-          <p>No members in the Rush Committee.</p>
+          <p className="text-gray-600">No members in the Rush Committee.</p>
         )}
       </div>
 
       {/* Add New Member */}
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Add Brother to Rush</h3>
-        <Select
-          options={searchResults.map((brother) => ({
-            value: brother.userid,
-            label: `${brother.firstname} ${brother.lastname}`,
-          }))}
-          onInputChange={(newValue) => handleSearchChange(newValue)}
-          onChange={(selectedOption) => {
-            const brother = searchResults.find((b) => b.userid === selectedOption?.value);
-            setSelectedBrother(brother || null);
-          }}
-          placeholder="Search for a brother..."
-          isClearable
-        />
-        <button
-          onClick={addRushMember}
-          className="bg-green-600 text-white px-3 py-2 mt-2 rounded hover:bg-green-700"
-        >
-          Add to Rush Committee
-        </button>
+      <div className="mb-4">
+        <h4 className="text-md font-semibold mb-2">Add Brother to Rush</h4>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex-1">
+            <Select
+              options={searchResults.map((brother) => ({
+                value: brother.userid,
+                label: `${brother.firstname} ${brother.lastname}`,
+              }))}
+              onInputChange={(newValue) => handleSearchChange(newValue)}
+              onChange={(selectedOption) => {
+                const brother = searchResults.find((b) => b.userid === selectedOption?.value);
+                setSelectedBrother(brother || null);
+              }}
+              placeholder="Search for a brother..."
+              isClearable
+            />
+          </div>
+          <button
+            onClick={addRushMember}
+            className="bg-[#8B0000] text-white font-bold px-4 py-2 rounded hover:bg-red-800"
+          >
+            Add to Rush Committee
+          </button>
+        </div>
       </div>
 
       {/* Done Updating Button */}
       <button
         onClick={() => setRushEditingMode(false)}
-        className="bg-gray-400 text-white px-3 py-2 mt-4 rounded hover:bg-gray-500"
+        className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full"
       >
         Done Updating Rush Committee
       </button>
