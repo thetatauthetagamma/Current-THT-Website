@@ -71,6 +71,7 @@ export default function RusheeProfile() {
   // Comments
   const [feedback, setFeedback] = useState([])
   const [newComment, setNewComment] = useState('')
+  const [isApplicationReview, setIsApplicationReview] = useState(false)
 
   // Coffee Chats
   const [coffeeChatFeedback, setCoffeeChatFeedback] = useState('')
@@ -255,6 +256,7 @@ export default function RusheeProfile() {
   // ─────────────────────────────────────────────────────────
   // 5) Fetch comments (Application_Feedback)
   //    Also fetch the brother's firstname + lastname from Brothers
+  //    Includes both 'comment' and 'app_comment' value types
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!uniqname) return
@@ -271,7 +273,7 @@ export default function RusheeProfile() {
         `
         )
         .eq('rushee', uniqname)
-        .eq('value_type', 'comment')
+        .in('value_type', ['comment', 'app_comment'])
         .order('time', { ascending: true })
       if (!error && data) {
         setFeedback(data)
@@ -410,7 +412,7 @@ export default function RusheeProfile() {
         {
           rushee: uniqname,
           brother: brotherID,
-          value_type: 'comment',
+          value_type: isApplicationReview ? 'app_comment' : 'comment',
           value: { text: newComment },
           time: new Date(),
           parent_id: null,
@@ -433,6 +435,7 @@ export default function RusheeProfile() {
     } else if (data) {
       setFeedback(prev => [...prev, data])
       setNewComment('')
+      setIsApplicationReview(false)
     }
   }
 
@@ -863,6 +866,8 @@ export default function RusheeProfile() {
                     // Grab the first+last name from the joined data
                     const brotherFirst = parent.brotherDetails?.firstname
                     const brotherLast = parent.brotherDetails?.lastname
+                    const authorName = brotherFirst && brotherLast ? `${brotherFirst} ${brotherLast}` : null
+                    const isAppReview = parent.value_type === 'app_comment'
 
                     // Map emphasis => "Firstname Lastname"
                     const emphasizedByNames = (parent.emphasis || []).map(uniq => {
@@ -873,18 +878,25 @@ export default function RusheeProfile() {
                     const canClickEmphasis = parent.brother !== brotherID
 
                     return (
-                      <div key={parent.id} className='flex flex-col space-y-1'>
+                      <div key={parent.id} className={`flex flex-col space-y-1 ${isAppReview ? 'bg-yellow-50 border-l-4 border-yellow-400 pl-3 py-2 rounded' : ''}`}>
                         {/* Single comment container */}
                         <div className='flex items-start justify-between'>
                           <div>
-                            {/* Show only timestamp, no name */}
+                            {/* Show author name if application review, otherwise Anonymous */}
                             <p className='font-bold text-sm'>
-                              Anonymous{' '}
+                              {isAppReview && authorName ? (
+                                <>
+                                  <span className='text-yellow-700'>{authorName}</span>
+                                  <span className='text-xs text-yellow-600 ml-2 bg-yellow-200 px-2 py-0.5 rounded'>Application Review</span>
+                                </>
+                              ) : (
+                                'Anonymous'
+                              )}{' '}
                               <span className='text-xs text-gray-400 ml-2'>
                                 {new Date(parent.time).toLocaleString()}
                               </span>
                             </p>
-                            <p className='text-sm text-gray-800 mb-1'>
+                            <p className={`text-sm mb-1 ${isAppReview ? 'text-gray-900' : 'text-gray-800'}`}>
                               {textOf(parent)}
                             </p>
                           </div>
@@ -1143,6 +1155,19 @@ export default function RusheeProfile() {
                   placeholder='Write a comment...'
                   rows={2}
                 />
+                <div className='flex items-center mt-2'>
+                  <label className='flex items-center cursor-pointer'>
+                    <input
+                      type='checkbox'
+                      checked={isApplicationReview}
+                      onChange={e => setIsApplicationReview(e.target.checked)}
+                      className='mr-2 h-4 w-4 text-[#8B0000] border-gray-300 rounded focus:ring-[#8B0000]'
+                    />
+                    <span className='text-sm text-gray-700'>
+                      Mark as Application Review (will show your name)
+                    </span>
+                  </label>
+                </div>
                 <button
                   onClick={handleAddComment}
                   className='bg-[#8B0000] text-white px-4 py-2 mt-2 rounded hover:bg-red-800'
