@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import supabase from '@/supabase'
 import Papa from 'papaparse'
+import QRCodeModal from './QRCodeModal'
 
 // Import react-datepicker
 import DatePicker from 'react-datepicker'
@@ -40,6 +41,10 @@ export default function RushAdminPanel() {
   const [newEventDate, setNewEventDate] = useState(null)
   const [newEventLocation, setNewEventLocation] = useState('')
   const [newEventDescription, setNewEventDescription] = useState('')
+  
+  // QR Code Modal
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [selectedEventForQR, setSelectedEventForQR] = useState(null)
 
   // 1) Let user select a CSV
   function handleFileSelect(e) {
@@ -651,12 +656,23 @@ export default function RushAdminPanel() {
                             <div className="text-sm text-gray-600 mt-1">{event.description}</div>
                           )}
                         </div>
-                        <button
-                          onClick={() => handleDeleteRushEvent(event.id)}
-                          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm whitespace-nowrap"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-2 flex-col sm:flex-row">
+                          <button
+                            onClick={() => {
+                              setSelectedEventForQR(event)
+                              setQrModalOpen(true)
+                            }}
+                            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm whitespace-nowrap"
+                          >
+                            QR Code
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRushEvent(event.id)}
+                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm whitespace-nowrap"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     )
                   })}
@@ -853,6 +869,17 @@ export default function RushAdminPanel() {
           Finalize PC!!!!!!!!!!
         </button>
       </div>
+
+      {/* QR Code Modal */}
+      <QRCodeModal
+        isOpen={qrModalOpen}
+        onClose={() => {
+          setQrModalOpen(false)
+          setSelectedEventForQR(null)
+        }}
+        eventId={selectedEventForQR?.id}
+        eventName={selectedEventForQR?.name}
+      />
     </div>
   )
 }
