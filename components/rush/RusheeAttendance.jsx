@@ -11,26 +11,7 @@ import supabase from '@/supabase';
  * @param {string} uniqname - The uniqname of the rushee
  */
 const RusheeAttendance = ({ uniqname }) => {
-    // Event definitions for both rounds
-    const EVENTS = {
-        round1: [
-            'Info Session - CCCB',
-            'Info Session - League',
-            'Resume Workshop',
-            'Diversity Workshop',
-            'Social Event'
-        ],
-        round2: [
-            'Committee Highlights',
-            'Natural Disaster Survival',
-            'Speed Dating'
-        ]
-    };
-
-    const [attendanceData, setAttendanceData] = useState({
-        round1: [],
-        round2: []
-    });
+    const [attendanceData, setAttendanceData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [hoveredEvent, setHoveredEvent] = useState(null);
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
@@ -45,56 +26,55 @@ const RusheeAttendance = ({ uniqname }) => {
                 // Trim the uniqname to handle cases with whitespace
                 const trimmedUniqname = uniqname.trim();
 
-                const { data, error } = await supabase
+                // Fetch required events (where attendance = true) from RushEvents
+                const { data: requiredEvents, error: eventsError } = await supabase
+                    .from('RushEvents')
+                    .select('id, name, date')
+                    .eq('attendance', true)
+                    .order('date', { ascending: true })
+                    .order('id', { ascending: true });
+
+                if (eventsError) {
+                    console.error('Error fetching required events:', eventsError);
+                    setLoading(false);
+                    return;
+                }
+
+                // Fetch the rushee's attendance records
+                const { data: attendanceRecords, error: attendanceError } = await supabase
                     .from('Rushee_Attendance')
                     .select('event_name, uniqname')
                     .eq('uniqname', trimmedUniqname);
 
-                if (error) {
-                    console.error('Error fetching attendance data:', error);
+                if (attendanceError) {
+                    console.error('Error fetching attendance data:', attendanceError);
+                    setLoading(false);
                     return;
                 }
 
-                // Process the attendance data into round1 and round2 arrays
-                const round1Events = [];
-                const round2Events = [];
-
                 // Create a set of events the rushee has attended
                 const attendedEvents = new Set();
-                if (data && data.length > 0) {
-                    data.forEach(record => {
-                        // Trim whitespace from event_name to handle cases with extra spaces
+                if (attendanceRecords && attendanceRecords.length > 0) {
+                    attendanceRecords.forEach(record => {
                         if (record.event_name) {
                             attendedEvents.add(record.event_name.trim());
                         }
                     });
                 }
 
-                // Process Round 1 events
-                EVENTS.round1.forEach((eventName, index) => {
-                    const isAttended = attendedEvents.has(eventName.trim());
-                    round1Events.push({
+                // Process required events and match with attendance
+                const processedEvents = (requiredEvents || []).map((event, index) => {
+                    const isAttended = attendedEvents.has(event.name.trim());
+                    return {
+                        eventId: event.id,
                         eventNumber: index + 1,
                         attended: isAttended,
-                        eventName: eventName
-                    });
+                        eventName: event.name,
+                        eventDate: event.date
+                    };
                 });
 
-                // Process Round 2 events
-                EVENTS.round2.forEach((eventName, index) => {
-                    const isAttended = attendedEvents.has(eventName.trim());
-                    round2Events.push({
-                        eventNumber: index + 1,
-                        attended: isAttended,
-                        eventName: eventName
-                    });
-                });
-
-                // Events are already in order from EVENTS arrays; no need to sort
-                setAttendanceData({
-                    round1: round1Events,
-                    round2: round2Events
-                });
+                setAttendanceData(processedEvents);
             } catch (error) {
                 console.error('Unexpected error fetching attendance:', error);
             } finally {
@@ -105,47 +85,41 @@ const RusheeAttendance = ({ uniqname }) => {
         fetchAttendanceData();
     }, [uniqname]);
 
-    const handleMouseEnter = (event, e, roundName) => {
+    const handleMouseEnter = (event, e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         setTooltipPosition({
             top: rect.top - 40,
             left: rect.left
         });
-        setHoveredEvent({ ...event, roundName });
+        setHoveredEvent(event);
     };
 
     const handleMouseLeave = () => {
         setHoveredEvent(null);
     };
 
-    const renderAttendanceBlocks = (events, roundName) => {
-        if (events.length === 0) {
+    const renderAttendanceBlocks = () => {
+        if (attendanceData.length === 0) {
             return (
                 <div className="flex flex-col items-start">
-                    <span className="text-xs text-gray-500 mb-1">{roundName}</span>
-                    <div className="flex gap-1">
-                        {Array.from({ length: roundName === 'Round 1' ? 5 : 3 }, (_, index) => (
-                            <div
-                                key={index}
-                                className="w-4 h-4 bg-gray-200 rounded-sm"
-                            />
-                        ))}
-                    </div>
+                    <span className="text-xs text-gray-500 mb-1">Required Events</span>
+                    <div className="text-xs text-gray-400">No required events found</div>
                 </div>
             );
         }
 
         return (
             <div className="flex flex-col items-start">
-                <span className="text-xs text-gray-500 mb-1">{roundName}</span>
-                <div className="flex gap-1">
-                    {events.map((event, index) => (
+                <span className="text-xs text-gray-500 mb-1">Required Events ({attendanceData.length})</span>
+                <div className="flex gap-1 flex-wrap">
+                    {attendanceData.map((event, index) => (
                         <div
-                            key={index}
+                            key={event.eventId || index}
                             className={`w-4 h-4 rounded-sm transition-all cursor-pointer hover:opacity-80 ${event.attended ? 'bg-green-500' : 'bg-red-500'
                                 }`}
-                            onMouseEnter={(e) => handleMouseEnter(event, e, roundName)}
+                            onMouseEnter={(e) => handleMouseEnter(event, e)}
                             onMouseLeave={handleMouseLeave}
+                            title={`${event.eventName} - ${event.attended ? 'Attended' : 'Missed'}`}
                         />
                     ))}
                 </div>
@@ -156,15 +130,9 @@ const RusheeAttendance = ({ uniqname }) => {
     if (loading) {
         return (
             <div className="flex flex-col space-y-1 ml-2">
-                <div className="h-4 bg-gray-200 rounded w-20 mb-1"></div>
+                <div className="h-4 bg-gray-200 rounded w-32 mb-1 animate-pulse"></div>
                 <div className="flex gap-1">
                     {Array.from({ length: 5 }, (_, index) => (
-                        <div key={index} className="w-4 h-4 bg-gray-200 rounded-sm animate-pulse"></div>
-                    ))}
-                </div>
-                <div className="h-4 bg-gray-200 rounded w-20 mb-1 mt-1"></div>
-                <div className="flex gap-1">
-                    {Array.from({ length: 3 }, (_, index) => (
                         <div key={index} className="w-4 h-4 bg-gray-200 rounded-sm animate-pulse"></div>
                     ))}
                 </div>
@@ -174,8 +142,7 @@ const RusheeAttendance = ({ uniqname }) => {
 
     return (
         <div className="flex flex-col space-y-2 relative">
-            {renderAttendanceBlocks(attendanceData.round1, 'Round 1')}
-            {renderAttendanceBlocks(attendanceData.round2, 'Round 2')}
+            {renderAttendanceBlocks()}
 
             {hoveredEvent && (
                 <div
@@ -185,7 +152,7 @@ const RusheeAttendance = ({ uniqname }) => {
                         left: `${tooltipPosition.left}px`
                     }}
                 >
-                    {hoveredEvent.roundName}: {hoveredEvent.eventName}
+                    {hoveredEvent.eventName}
                     {hoveredEvent.attended ? ' (Attended)' : ' (Missed)'}
                 </div>
             )}
