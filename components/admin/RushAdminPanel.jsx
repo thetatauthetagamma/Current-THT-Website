@@ -41,6 +41,15 @@ export default function RushAdminPanel() {
   const [newEventDate, setNewEventDate] = useState(null)
   const [newEventLocation, setNewEventLocation] = useState('')
   const [newEventDescription, setNewEventDescription] = useState('')
+  const [newEventOpen, setNewEventOpen] = useState(true) // Default to open/public
+  const [newEventAttendance, setNewEventAttendance] = useState(false) // Default to no attendance
+  
+  // Editing event
+  const [editingEventId, setEditingEventId] = useState(null)
+  const [editingEventName, setEditingEventName] = useState('')
+  const [editingEventDate, setEditingEventDate] = useState(null)
+  const [editingEventLocation, setEditingEventLocation] = useState('')
+  const [editingEventDescription, setEditingEventDescription] = useState('')
   
   // QR Code Modal
   const [qrModalOpen, setQrModalOpen] = useState(false)
@@ -420,7 +429,9 @@ export default function RushAdminPanel() {
           name: newEventName.trim(),
           date: newEventDate.toISOString(),
           location: newEventLocation.trim() || null,
-          description: newEventDescription.trim() || null
+          description: newEventDescription.trim() || null,
+          open: newEventOpen,
+          attendance: newEventAttendance
         }])
         .select()
 
@@ -435,10 +446,90 @@ export default function RushAdminPanel() {
       setNewEventDate(null)
       setNewEventLocation('')
       setNewEventDescription('')
+      setNewEventOpen(true)
+      setNewEventAttendance(false)
       fetchRushEvents()
     } catch (error) {
       console.error('Error adding rush event:', error)
       alert(`Failed to add rush event: ${error.message}`)
+    }
+  }
+
+  function handleEditEvent(event) {
+    setEditingEventId(event.id)
+    setEditingEventName(event.name)
+    setEditingEventDate(event.date ? new Date(event.date) : null)
+    setEditingEventLocation(event.location || '')
+    setEditingEventDescription(event.description || '')
+  }
+
+  function handleCancelEditEvent() {
+    setEditingEventId(null)
+    setEditingEventName('')
+    setEditingEventDate(null)
+    setEditingEventLocation('')
+    setEditingEventDescription('')
+  }
+
+  async function handleSaveEventEdit(eventId) {
+    if (!editingEventName.trim()) {
+      alert('Please enter an event name')
+      return
+    }
+    if (!editingEventDate) {
+      alert('Please select a date and time')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('RushEvents')
+        .update({
+          name: editingEventName.trim(),
+          date: editingEventDate.toISOString(),
+          location: editingEventLocation.trim() || null,
+          description: editingEventDescription.trim() || null
+        })
+        .eq('id', eventId)
+
+      if (error) {
+        console.error('Error updating event:', error)
+        alert('Failed to update event')
+      } else {
+        alert('Event updated!')
+        handleCancelEditEvent()
+        fetchRushEvents()
+      }
+    } catch (error) {
+      console.error('Error updating event:', error)
+      alert('Failed to update event')
+    }
+  }
+
+  async function handleUpdateEventFields(eventId, field, value) {
+    try {
+      const { error } = await supabase
+        .from('RushEvents')
+        .update({ [field]: value })
+        .eq('id', eventId)
+
+      if (error) {
+        console.error(`Error updating event ${field}:`, error)
+        alert(`Failed to update event ${field}`)
+        // Refresh to revert UI changes
+        fetchRushEvents()
+      } else {
+        // Update local state immediately for better UX
+        setRushEvents(prevEvents =>
+          prevEvents.map(event =>
+            event.id === eventId ? { ...event, [field]: value } : event
+          )
+        )
+      }
+    } catch (error) {
+      console.error(`Error updating event ${field}:`, error)
+      alert(`Failed to update event ${field}`)
+      fetchRushEvents()
     }
   }
 
@@ -611,6 +702,26 @@ export default function RushAdminPanel() {
                   className="w-full border rounded p-2 outline-none"
                   rows={3}
                 />
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newEventOpen}
+                      onChange={(e) => setNewEventOpen(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">Publicly Visible (Open)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newEventAttendance}
+                      onChange={(e) => setNewEventAttendance(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">Take Attendance</span>
+                  </label>
+                </div>
                 <button
                   onClick={handleAddRushEvent}
                   className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
@@ -629,50 +740,146 @@ export default function RushAdminPanel() {
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {rushEvents.map((event) => {
                     const eventDate = event.date ? new Date(event.date) : null
+                    const isEditing = editingEventId === event.id
+                    
                     return (
                       <div
                         key={event.id}
-                        className="bg-white rounded p-3 border border-gray-300 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2"
+                        className="bg-white rounded p-3 border border-gray-300 flex flex-col gap-2"
                       >
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-800">{event.name}</div>
-                          {eventDate && (
-                            <div className="text-sm text-gray-600">
-                              {eventDate.toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                hour12: true
-                              })}
+                        {isEditing ? (
+                          // Edit Mode
+                          <div className="w-full space-y-3">
+                            <input
+                              type="text"
+                              placeholder="Event Name *"
+                              value={editingEventName}
+                              onChange={(e) => setEditingEventName(e.target.value)}
+                              className="w-full border rounded p-2 outline-none"
+                            />
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Date & Time *</label>
+                              <DatePicker
+                                selected={editingEventDate}
+                                onChange={(date) => setEditingEventDate(date)}
+                                showTimeSelect
+                                dateFormat="yyyy-MM-dd h:mm aa"
+                                placeholderText="Select date and time"
+                                className="w-full border rounded p-2"
+                              />
                             </div>
-                          )}
-                          {event.location && (
-                            <div className="text-sm text-gray-500">📍 {event.location}</div>
-                          )}
-                          {event.description && (
-                            <div className="text-sm text-gray-600 mt-1">{event.description}</div>
-                          )}
-                        </div>
-                        <div className="flex gap-2 flex-col sm:flex-row">
-                          <button
-                            onClick={() => {
-                              setSelectedEventForQR(event)
-                              setQrModalOpen(true)
-                            }}
-                            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm whitespace-nowrap"
-                          >
-                            QR Code
-                          </button>
-                          <button
-                            onClick={() => handleDeleteRushEvent(event.id)}
-                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm whitespace-nowrap"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                            <input
+                              type="text"
+                              placeholder="Location (optional)"
+                              value={editingEventLocation}
+                              onChange={(e) => setEditingEventLocation(e.target.value)}
+                              className="w-full border rounded p-2 outline-none"
+                            />
+                            <textarea
+                              placeholder="Description (optional)"
+                              value={editingEventDescription}
+                              onChange={(e) => setEditingEventDescription(e.target.value)}
+                              className="w-full border rounded p-2 outline-none"
+                              rows={3}
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleSaveEventEdit(event.id)}
+                                className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800 text-sm"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={handleCancelEditEvent}
+                                className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          // Display Mode
+                          <>
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="font-semibold text-gray-800 flex items-center gap-2 mb-2">
+                                  {event.name}
+                                  {event.open && (
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Public</span>
+                                  )}
+                                  {event.attendance && (
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Attendance</span>
+                                  )}
+                                </div>
+                                {eventDate && (
+                                  <div className="text-sm text-gray-600">
+                                    {eventDate.toLocaleDateString('en-US', {
+                                      weekday: 'long',
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}
+                                  </div>
+                                )}
+                                {event.location && (
+                                  <div className="text-sm text-gray-500">📍 {event.location}</div>
+                                )}
+                                {event.description && (
+                                  <div className="text-sm text-gray-600 mt-1">{event.description}</div>
+                                )}
+                                {/* Edit checkboxes */}
+                                <div className="flex gap-4 mt-2 pt-2 border-t border-gray-200">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={event.open || false}
+                                      onChange={(e) => handleUpdateEventFields(event.id, 'open', e.target.checked)}
+                                      className="w-4 h-4"
+                                    />
+                                    <span className="text-xs font-medium text-gray-700">Publicly Visible</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={event.attendance || false}
+                                      onChange={(e) => handleUpdateEventFields(event.id, 'attendance', e.target.checked)}
+                                      className="w-4 h-4"
+                                    />
+                                    <span className="text-xs font-medium text-gray-700">Take Attendance</span>
+                                  </label>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 flex-col sm:flex-row">
+                                <button
+                                  onClick={() => handleEditEvent(event)}
+                                  className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm whitespace-nowrap"
+                                >
+                                  Edit
+                                </button>
+                                {event.attendance && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedEventForQR(event)
+                                      setQrModalOpen(true)
+                                    }}
+                                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm whitespace-nowrap"
+                                  >
+                                    QR Code
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteRushEvent(event.id)}
+                                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm whitespace-nowrap"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )
                   })}

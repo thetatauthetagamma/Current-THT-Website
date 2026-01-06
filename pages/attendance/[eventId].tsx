@@ -10,6 +10,8 @@ interface RushEvent {
   date: string
   location: string | null
   description: string | null
+  open: boolean
+  attendance: boolean
 }
 
 export default function AttendancePage() {
@@ -22,6 +24,46 @@ export default function AttendancePage() {
   const [attendanceRecorded, setAttendanceRecorded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [recording, setRecording] = useState(false)
+
+  // Helper function to check if attendance can still be taken
+  const canTakeAttendance = (eventDate: string | null): { allowed: boolean; message?: string } => {
+    // If no date specified, attendance can be taken anytime
+    if (!eventDate) {
+      return { allowed: true }
+    }
+
+    try {
+      const eventDateObj = new Date(eventDate)
+      const today = new Date()
+      
+      // Set to end of day for the event (23:59:59.999)
+      const eventEndOfDay = new Date(eventDateObj)
+      eventEndOfDay.setHours(23, 59, 59, 999)
+      
+      // Set to end of day for today
+      const todayEndOfDay = new Date(today)
+      todayEndOfDay.setHours(23, 59, 59, 999)
+      
+      // Check if today is after the end of the event day
+      if (todayEndOfDay > eventEndOfDay) {
+        const eventDateStr = eventDateObj.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+        return {
+          allowed: false,
+          message: `Attendance can only be taken until the end of the event day (${eventDateStr}).`
+        }
+      }
+      
+      return { allowed: true }
+    } catch (err) {
+      console.error('Error parsing event date:', err)
+      // If date parsing fails, allow attendance (fail open)
+      return { allowed: true }
+    }
+  }
 
   // Check session on mount
   useEffect(() => {
@@ -68,6 +110,23 @@ export default function AttendancePage() {
           return
         }
 
+        // Check if attendance is enabled for this event
+        if (data && !data.attendance) {
+          setError('Attendance is not enabled for this event.')
+          setEvent(data) // Still set event so we can display it
+          return
+        }
+
+        // Check if attendance can still be taken (date validation)
+        if (data) {
+          const dateCheck = canTakeAttendance(data.date)
+          if (!dateCheck.allowed) {
+            setError(dateCheck.message || 'Attendance deadline has passed.')
+            setEvent(data) // Still set event so we can display it
+            return
+          }
+        }
+
         setEvent(data)
       } catch (err) {
         console.error('Error fetching event:', err)
@@ -83,6 +142,13 @@ export default function AttendancePage() {
     if (!session || !isUmichEmail || !event || attendanceRecorded || recording || error) return
 
     const recordAttendance = async () => {
+      // Check if attendance can still be taken (date validation)
+      const dateCheck = canTakeAttendance(event.date)
+      if (!dateCheck.allowed) {
+        setError(dateCheck.message || 'Attendance deadline has passed.')
+        return
+      }
+
       setRecording(true)
       const email = session.user.email?.toLowerCase()
       if (!email) {
@@ -222,8 +288,58 @@ export default function AttendancePage() {
     )
   }
 
+  // Check if attendance is disabled for this event
+  if (event && !event.attendance) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Head>
+          <title>Attendance Disabled - {event.name}</title>
+        </Head>
+        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-md">
+          <div className="text-xl font-semibold text-red-600 mb-2">Attendance Not Available</div>
+          <div className="mb-4">
+            <div className="text-lg font-semibold text-gray-800 mb-2">{event.name}</div>
+            <div className="text-gray-700">Attendance is not enabled for this event.</div>
+          </div>
+          <button
+            onClick={() => router.push('/')}
+            className="bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // Not signed in
   if (!session) {
+    // Check if attendance deadline has passed
+    const dateCheck = event ? canTakeAttendance(event.date) : { allowed: true }
+    
+    if (event && !dateCheck.allowed) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <Head>
+            <title>Attendance Closed - {event.name}</title>
+          </Head>
+          <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-md">
+            <div className="text-xl font-semibold text-red-600 mb-2">Attendance Closed</div>
+            <div className="mb-4">
+              <div className="text-lg font-semibold text-gray-800 mb-2">{event.name}</div>
+              <div className="text-gray-700">{dateCheck.message || 'Attendance deadline has passed.'}</div>
+            </div>
+            <button
+              onClick={() => router.push('/')}
+              className="bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Head>
