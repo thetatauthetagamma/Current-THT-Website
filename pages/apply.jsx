@@ -86,6 +86,9 @@ export default function Application() {
   // Keep track of lastUpdated from the DB
   const [lastUpdated, setLastUpdated] = useState(null)
 
+  // Track save success state
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
   // Photo / Crop
   const [profileImageFile, setProfileImageFile] = useState(null)
   const [croppingImageUrl, setCroppingImageUrl] = useState(null)
@@ -473,6 +476,13 @@ export default function Application() {
 
       // Update state to reflect no unsaved changes
       setHasLocalDrafts(false);
+
+      // Show success indicator
+      setSaveSuccess(true);
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 5000);
     } catch (err) {
       console.error('Unexpected error while saving:', err)
       alert('Unexpected error while saving. Check console for details.')
@@ -836,7 +846,7 @@ export default function Application() {
         <div className='flex items-center gap-4'>
           {(!isPastDue || isBrother) && (
             <div className='flex flex-col'>
-              <div className='flex gap-2'>
+              <div className='flex gap-2 items-center'>
                 <button
                   type='submit'
                   className={`px-4 py-2 rounded text-white ${questions.some(q => {
@@ -854,6 +864,11 @@ export default function Application() {
                 >
                   Save Application
                 </button>
+                {saveSuccess && (
+                  <span className='text-green-600 text-sm font-semibold transition-opacity duration-300'>
+                    ✓ Application saved successfully!
+                  </span>
+                )}
               </div>
 
               {questions.some(q => {

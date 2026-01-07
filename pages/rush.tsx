@@ -38,7 +38,7 @@ export default function rush() {
             className="w-8/12 aspect-video"
             //width="1000"
             //height="560"
-            src={`https://www.youtube.com/embed/GUQS9pmzn8c?si=V3Hq09TQWQlxdlxM`}
+            src={`https://www.youtube.com/embed/eUDkd2Gi2H0?si=BWHp0XNpUMTq1Hkj`}
             allow="autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             title="RushVideo"
