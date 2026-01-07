@@ -80,6 +80,10 @@ export default function RusheeProfile() {
   const [coffeeChatRating, setCoffeeChatRating] = useState(RusheeStatus.NEUTRAL)
   const [diversityChatRating, setDiversityChatRating] = useState(RusheeStatus.NEUTRAL)
 
+  // Save success indicators
+  const [diversitySaveSuccess, setDiversitySaveSuccess] = useState(false)
+  const [coffeeSaveSuccess, setCoffeeSaveSuccess] = useState(false)
+
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editTexts, setEditTexts] = useState({})
 
@@ -644,6 +648,19 @@ export default function RusheeProfile() {
         setCoffeeChatFeedback(text);
       }
     }
+
+    // Show success indicator based on field type
+    if (field === 'diversity') {
+      setDiversitySaveSuccess(true);
+      setTimeout(() => {
+        setDiversitySaveSuccess(false);
+      }, 5000);
+    } else if (field === 'coffee') {
+      setCoffeeSaveSuccess(true);
+      setTimeout(() => {
+        setCoffeeSaveSuccess(false);
+      }, 5000);
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -824,21 +841,21 @@ export default function RusheeProfile() {
             <hr className='my-4' />
 
             {/* APPLICATION RESPONSES */}
-            <div className='mb-6'>
+            <div className='mb-6 overflow-x-hidden'>
               <h3 className='text-xl font-semibold mb-2'>Application Responses</h3>
               {questions.length === 0 ? (
                 <p>No questions found.</p>
               ) : (
-                <div className='space-y-4'>
+                <div className='space-y-4 overflow-x-hidden'>
                   {questions.map(q => {
                     const foundAns = answers.find(a => a.question_id === q.id)
                     const displayAns = foundAns ? foundAns.answer : 'No answer'
                     return (
-                      <div key={q.id} className='border p-2 rounded'>
+                      <div key={q.id} className='border p-2 rounded overflow-x-hidden'>
                         <p className='font-semibold mb-1'>
                           Q{q.id}: {q.question}
                         </p>
-                        <p className='whitespace-pre-wrap break-words'>
+                        <p className='whitespace-pre-wrap break-words max-w-full' style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                           {displayAns}
                         </p>
                       </div>
@@ -1210,18 +1227,25 @@ export default function RusheeProfile() {
                   </select>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  handleAddFeedback(
-                    diversityChatFeedback,
-                    'diversity_chat_feedback',
-                    'diversity'
-                  );
-                }}
-                className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
-              >
-                Save Diversity Chat Feedback
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    handleAddFeedback(
+                      diversityChatFeedback,
+                      'diversity_chat_feedback',
+                      'diversity'
+                    );
+                  }}
+                  className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+                >
+                  Save Diversity Chat Feedback
+                </button>
+                {diversitySaveSuccess && (
+                  <span className="text-green-600 text-sm font-semibold transition-opacity duration-300">
+                    ✓ Saved successfully!
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Coffee Chat Feedback */}
@@ -1257,18 +1281,25 @@ export default function RusheeProfile() {
                   </select>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  handleAddFeedback(
-                    coffeeChatFeedback,
-                    'coffee_chat_feedback',
-                    'coffee'
-                  );
-                }}
-                className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
-              >
-                Save Coffee Chat Feedback
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    handleAddFeedback(
+                      coffeeChatFeedback,
+                      'coffee_chat_feedback',
+                      'coffee'
+                    );
+                  }}
+                  className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+                >
+                  Save Coffee Chat Feedback
+                </button>
+                {coffeeSaveSuccess && (
+                  <span className="text-green-600 text-sm font-semibold transition-opacity duration-300">
+                    ✓ Saved successfully!
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

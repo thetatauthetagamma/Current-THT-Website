@@ -54,10 +54,16 @@ function FormSyncHandler({ hasUnsavedChanges, userId }) {
   return null;
 };
 
-// Helper function to count words in text
-const countWords = (text) => {
+// Helper function to count characters in text (including spaces and punctuation)
+const countCharacters = (text) => {
   if (!text || typeof text !== 'string') return 0;
-  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  return text.length;
+};
+
+// Helper function to get character limit from word limit (10x the word limit)
+const getCharacterLimit = (wordLimit) => {
+  if (!wordLimit) return null;
+  return wordLimit * 10;
 };
 
 export default function Application() {
@@ -387,18 +393,19 @@ export default function Application() {
       return
     }
 
-    // Check if any answers exceed word limits
+    // Check if any answers exceed character limits
     const overLimitQuestions = questions.filter(q => {
       const wordLimit = q.word_limit;
       if (!wordLimit) return false;
+      const characterLimit = getCharacterLimit(wordLimit);
       const currentAnswer = answers[q.id] || '';
-      const wordCount = countWords(currentAnswer);
-      return wordCount > wordLimit;
+      const characterCount = countCharacters(currentAnswer);
+      return characterCount > characterLimit;
     });
 
     if (overLimitQuestions.length > 0) {
       const questionNumbers = overLimitQuestions.map(q => `Q${q.id}`).join(', ');
-      alert(`Cannot submit: The following questions exceed their word limits: ${questionNumbers}. Please review and reduce your responses.`);
+      alert(`Cannot submit: The following questions exceed their character limits: ${questionNumbers}. Please review and reduce your responses.`);
       return;
     }
 
@@ -622,7 +629,7 @@ export default function Application() {
 
   // If user is properly signed in & domain is umich
   return (
-    <div className='container mx-auto p-4 max-w-4xl'>
+    <div className='container mx-auto p-4 max-w-4xl overflow-x-hidden'>
       <FormSyncHandler hasUnsavedChanges={hasUnsavedChanges()} userId={userId} />
       {/* Header */}
       <div className='flex justify-between items-center mb-6'>
@@ -804,37 +811,44 @@ export default function Application() {
         </div>
 
         {/* QUESTIONS SECTION */}
-        <div className='bg-gray-100 p-4 rounded shadow-sm'>
+        <div className='bg-gray-100 p-4 rounded shadow-sm overflow-x-hidden'>
           <h2 className='font-semibold text-lg mb-3'>Questions</h2>
           {questions.map(q => {
             const currentAnswer = answers[q.id] || '';
-            const wordCount = countWords(currentAnswer);
+            const characterCount = countCharacters(currentAnswer);
             const wordLimit = q.word_limit;
-            const isOverLimit = wordLimit && wordCount > wordLimit;
+            const characterLimit = getCharacterLimit(wordLimit);
+            const isOverLimit = characterLimit && characterCount > characterLimit;
 
             return (
               <div key={q.id} className='mb-4'>
                 <div className='flex items-center justify-between mb-1'>
                   <p className='font-semibold'>{q.question}</p>
                   <div className='text-gray-400 text-sm'>
-                    {wordCount} word{wordCount !== 1 ? 's' : ''}
+                    {characterCount} character{characterCount !== 1 ? 's' : ''}
+                    {characterLimit && (
+                      <span className='ml-2'>
+                        (character limit: {characterLimit})
+                      </span>
+                    )}
                     {q.word_count && (
                       <span className='ml-2'>
-                        (suggested: {q.word_count})
+                        (suggested: {q.word_count} words)
                       </span>
                     )}
                   </div>
                 </div>
                 <textarea
                   rows={4}
-                  className='border rounded p-2 w-full whitespace-pre-wrap break-words'
+                  className='border rounded p-2 w-full whitespace-pre-wrap break-words overflow-wrap-anywhere max-w-full'
+                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                   value={currentAnswer}
                   disabled={isPastDue && !isBrother}
                   onChange={e => handleAnswerChange(q.id, e.target.value)}
                 />
                 {isOverLimit && (
                   <p className='text-red-600 text-xs mt-1'>
-                    Your response is {wordCount - wordLimit} word{(wordCount - wordLimit) !== 1 ? 's' : ''} over the limit.
+                    Your response is {characterCount - characterLimit} character{(characterCount - characterLimit) !== 1 ? 's' : ''} over the limit.
                   </p>
                 )}
               </div>
@@ -852,9 +866,10 @@ export default function Application() {
                   className={`px-4 py-2 rounded text-white ${questions.some(q => {
                     const wordLimit = q.word_limit;
                     if (!wordLimit) return false;
+                    const characterLimit = getCharacterLimit(wordLimit);
                     const currentAnswer = answers[q.id] || '';
-                    const wordCount = countWords(currentAnswer);
-                    return wordCount > wordLimit;
+                    const characterCount = countCharacters(currentAnswer);
+                    return characterCount > characterLimit;
                   })
                     ? 'bg-red-600 hover:bg-red-700'
                     : hasUnsavedChanges()
@@ -874,12 +889,13 @@ export default function Application() {
               {questions.some(q => {
                 const wordLimit = q.word_limit;
                 if (!wordLimit) return false;
+                const characterLimit = getCharacterLimit(wordLimit);
                 const currentAnswer = answers[q.id] || '';
-                const wordCount = countWords(currentAnswer);
-                return wordCount > wordLimit;
+                const characterCount = countCharacters(currentAnswer);
+                return characterCount > characterLimit;
               }) && (
                   <p className='text-red-600 text-xs mt-1'>
-                    Some responses exceed word limits
+                    Some responses exceed character limits
                   </p>
                 )}
             </div>
