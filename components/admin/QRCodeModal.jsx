@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 
-export default function QRCodeModal({ isOpen, onClose, eventId, eventName }) {
+export default function QRCodeModal({ isOpen, onClose, eventId, eventName, attendanceKey }) {
   const [attendanceUrl, setAttendanceUrl] = useState('')
 
   useEffect(() => {
-    if (isOpen && eventId) {
-      // Generate the full URL for the attendance page
+    if (isOpen && attendanceKey) {
+      // Generate the full URL for the attendance page using attendance_key
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      setAttendanceUrl(`${baseUrl}/attendance/${attendanceKey}`)
+    } else if (isOpen && eventId) {
+      // Fallback to eventId for backward compatibility (shouldn't happen with new events)
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
       setAttendanceUrl(`${baseUrl}/attendance/${eventId}`)
     }
-  }, [isOpen, eventId])
+  }, [isOpen, attendanceKey, eventId])
 
   if (!isOpen) return null
 
