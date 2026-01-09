@@ -55,6 +55,10 @@ export default function RushAdminPanel() {
   const [qrModalOpen, setQrModalOpen] = useState(false)
   const [selectedEventForQR, setSelectedEventForQR] = useState(null)
 
+  // Admin role
+  const [adminRole, setAdminRole] = useState('')
+  const [isDevAdmin, setIsDevAdmin] = useState(false)
+
   // 1) Let user select a CSV
   function handleFileSelect(e) {
     if (e.target.files && e.target.files.length > 0) {
@@ -199,7 +203,30 @@ export default function RushAdminPanel() {
     fetchRushInfo()
     fetchQuestions()
     fetchRushEvents()
+    fetchAdminRole()
   }, [])
+
+  // Fetch admin role
+  async function fetchAdminRole() {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData?.session?.user?.email) return
+
+      const email = sessionData.session.user.email
+      const { data, error } = await supabase
+        .from('Brothers')
+        .select('adminrole')
+        .eq('email', email)
+        .single()
+
+      if (!error && data) {
+        setAdminRole(data.adminrole || '')
+        setIsDevAdmin(data.adminrole === 'dev')
+      }
+    } catch (error) {
+      console.error('Error fetching admin role:', error)
+    }
+  }
 
   // ─────────────────────────────────────────────────────────
   // RUSH INFO
@@ -408,6 +435,16 @@ export default function RushAdminPanel() {
     }
   }
 
+  // Helper function to generate a hard-to-guess attendance key
+  function generateAttendanceKey() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let key = ''
+    for (let i = 0; i < 32; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return key
+  }
+
   async function handleAddRushEvent() {
     if (!newEventName.trim()) {
       alert('Please enter an event name')
@@ -422,6 +459,9 @@ export default function RushAdminPanel() {
       // Get the next available ID
       const nextId = await getNextAvailableId()
 
+      // Generate a hard-to-guess attendance key
+      const attendanceKey = generateAttendanceKey()
+
       const { data, error } = await supabase
         .from('RushEvents')
         .insert([{
@@ -431,7 +471,8 @@ export default function RushAdminPanel() {
           location: newEventLocation.trim() || null,
           description: newEventDescription.trim() || null,
           open: newEventOpen,
-          attendance: newEventAttendance
+          attendance: newEventAttendance,
+          attendance_key: attendanceKey
         }])
         .select()
 
@@ -553,6 +594,31 @@ export default function RushAdminPanel() {
     } catch (error) {
       console.error('Error deleting rush event:', error)
       alert('Failed to delete rush event')
+    }
+  }
+
+  async function handleRegenerateAttendanceKey(eventId) {
+    const isSure = window.confirm('Are you sure you want to regenerate the attendance key? The old link will no longer work.')
+    if (!isSure) return
+
+    try {
+      const attendanceKey = generateAttendanceKey()
+      
+      const { error } = await supabase
+        .from('RushEvents')
+        .update({ attendance_key: attendanceKey })
+        .eq('id', eventId)
+
+      if (error) {
+        console.error('Error regenerating attendance key:', error)
+        alert('Failed to regenerate attendance key')
+      } else {
+        alert('Attendance key regenerated successfully!')
+        fetchRushEvents()
+      }
+    } catch (error) {
+      console.error('Error regenerating attendance key:', error)
+      alert('Failed to regenerate attendance key')
     }
   }
 
@@ -870,6 +936,15 @@ export default function RushAdminPanel() {
                                     QR Code
                                   </button>
                                 )}
+                                {isDevAdmin && event.attendance && (
+                                  <button
+                                    onClick={() => handleRegenerateAttendanceKey(event.id)}
+                                    className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 text-sm whitespace-nowrap"
+                                    title="Regenerate attendance key (dev only)"
+                                  >
+                                    Regenerate Key
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => handleDeleteRushEvent(event.id)}
                                   className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm whitespace-nowrap"
@@ -1086,6 +1161,7 @@ export default function RushAdminPanel() {
         }}
         eventId={selectedEventForQR?.id}
         eventName={selectedEventForQR?.name}
+        attendanceKey={selectedEventForQR?.attendance_key}
       />
     </div>
   )

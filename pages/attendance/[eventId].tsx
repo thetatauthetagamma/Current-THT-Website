@@ -12,6 +12,7 @@ interface RushEvent {
   description: string | null
   open: boolean
   attendance: boolean
+  attendance_key: string | null
 }
 
 export default function AttendancePage() {
@@ -92,16 +93,18 @@ export default function AttendancePage() {
     }
   }, [session])
 
+
   // Fetch event details
   useEffect(() => {
     if (!eventId) return
 
     const fetchEvent = async () => {
       try {
+        // Look up event by attendance_key only
         const { data, error } = await supabase
           .from('RushEvents')
           .select('*')
-          .eq('id', eventId)
+          .eq('attendance_key', eventId)
           .single()
 
         if (error) {
@@ -135,7 +138,7 @@ export default function AttendancePage() {
     }
 
     fetchEvent()
-  }, [eventId])
+  }, [eventId, router])
 
   // Record attendance when user is logged in with valid email
   useEffect(() => {
