@@ -11,6 +11,10 @@ import Anthony from  '../public/eboard/Anthony.jpg';
 import Elliot from '../public/eboard/Elliot.jpeg';
 import Michelle from '../public/eboard/Michelle.jpg';
 import Michael from '../public/eboard/Micheal.jpeg';
+import Will from '../public/eboard/Will.jpeg';
+import Robbie from '../public/eboard/Robbie.jpeg';
+import Faith from '../public/eboard/Faith.jpeg';
+import Kaya from '../public/eboard/Kaya.jpeg';
 import JV from '../public/eboard/JV.jpeg';
 import image1 from '../public/companies/1.jpg';
 import image2 from '../public/companies/2.jpg';
@@ -135,56 +139,64 @@ export default function members() {
            <div className="flex flex-col md:flex-row items-center justify-around md:text-md text-sm  md:pt-8 pt-4 pb-4  top-0">
             
             <div className='flex-col text-center md:w-1/5 w-3/4 md:pb-0 pb-4 pr-1 pr-3 pl-3 md:self-start'>
-              <div className='w-full h-full'>
-              <Image
-                src={JV}
-                alt="Gear icon"
-                className='w-full h-full rounded-full object-cover'
-              />
+              <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
+                <Image
+                  src={Elliot}
+                  alt="Gear icon"
+                  className='w-full h-full rounded-full object-cover'
+                />
               </div>
               <h1 className="font-semibold text-lg pt-4" >{regentFirst} {regentLast}</h1>
               <h1 className="md:text-lg text-md" >Regent</h1>
             </div>
 
             <div className='flex-col text-center md:w-1/5 w-3/4 md:pb-0 pb-4 pr-3 pl-3 md:self-start'>
-              <Image
-                src={Anthony}
-                alt="Gear icon"
-                className='w-full h-full rounded-full'
-              />
+              <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
+                <Image
+                  src={Kaya}
+                  alt="Gear icon"
+                  className='w-full h-full rounded-full object-cover'
+                />
+              </div>
               <h1 className="font-semibold md:text-lg text-md pt-4" >{viceFirst} {viceLast}</h1>
               <h1 className=" md:text-lg sm:text-sm text-md" >Vice Regent</h1>
             </div>
 
             <div className='flex-col text-center md:w-1/5 w-3/4 md:pb-0 pb-4 pr-3 pl-3 md:self-start'>
-              <Image
-                src={Ella}
-                alt="Gear icon"
-                className='w-full h-full rounded-full'
-              />
+              <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
+                <Image
+                  src={Will}
+                  alt="Gear icon"
+                  className='w-full h-full rounded-full object-cover'
+                />
+              </div>
               <h1 className="font-semibold md:text-lg text-md pt-4" >{scribeFirst} {scribeLast}</h1>
               <h1 className="md:text-lg text-md" >Scribe</h1>
             </div>
 
             <div className='flex-col text-center md:w-1/5 w-3/4 md:pb-0 pb-4  pr-3 pl-3 md:self-start'>
-              <Image
-                src={Michael}
-                alt="Gear icon"
-                className='w-full h-full rounded-full'
-              />
+              <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
+                <Image
+                  src={Robbie}
+                  alt="Gear icon"
+                  className='w-full h-full rounded-full object-cover'
+                />
+              </div>
               <h1 className="font-semibold md:text-lg text-md pt-4" >{treasurerFirst} {treasurerLast}</h1>
               <h1 className="md:text-lg text-md" >Treasurer</h1>
             </div>
 
             <div className='flex-col text-center md:w-1/5 w-3/4 pr-3 pl-3 md:self-start'>
+              <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
                 <Image
-                  src={Elliot}
+                  src={Faith}
                   alt="Gear icon"
-                  className='w-full h-full rounded-full'
+                  className='w-full h-full rounded-full object-cover'
                 />
-                <h1 className="font-semibold md:text-lg text-md pt-4" >{corsecFirst} {corsecLast}</h1>
-                <h1 className="md:text-lg text-md" >Corresponding Secretary</h1>
               </div>
+              <h1 className="font-semibold md:text-lg text-md pt-4" >{corsecFirst} {corsecLast}</h1>
+              <h1 className="md:text-lg text-md" >Corresponding Secretary</h1>
+            </div>
 
            </div>
         </div>

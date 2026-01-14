@@ -184,7 +184,12 @@ export default function RushBook() {
 
               {/* Page Title */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                <h1 className="text-2xl font-bold">Rush Book</h1>
+                <div>
+                  <h1 className="text-2xl font-bold">Rush Book</h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {rushees.length} active {rushees.length === 1 ? 'rushee' : 'rushees'}
+                  </p>
+                </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2 sm:mt-0">
                   {/* Star Count Display */}
                   {isAdmin && (
