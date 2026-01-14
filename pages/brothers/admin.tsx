@@ -43,7 +43,6 @@ export default function Admin() {
   const [bulkSignoffLoading, setBulkSignoffLoading] = useState<{ [uniqname: string]: boolean }>({});
   const [signOffEveryoneLoading, setSignOffEveryoneLoading] = useState<boolean>(false);
   const [rollEditingMode, setRollEditingMode] = useState<boolean>(false);
-  const [eboardEditingMode, setEboardEditingMode] = useState<boolean>(false);
   const [rushEditingMode, setRushEditingMode] = useState<boolean>(false);
   const [pledgeEditingMode, setPledgeEditingMode] = useState<boolean>(false);
   
@@ -54,11 +53,12 @@ export default function Admin() {
     brotherhood: false,
     system: false,
   });
+  const [eboardEditingMode, setEboardEditingMode] = useState<boolean>(false);
   const [eboardMembers, setEboardMembers] = useState<BrotherData[]>([]);
+  const [selectedRole, setSelectedRole] = useState<string>('');
   const [newRoleNames, setNewRoleNames] = useState<{ [key: string]: string }>({});
   const [searchResults, setSearchResults] = useState<BrotherData[]>([]);
   const [selectedBrother, setSelectedBrother] = useState<{ [key: string]: string }>({});
-  const [selectedRole, setSelectedRole] = useState<string>('');
   const eboardPositions = [
     { role: "regent", label: "Regent" },
     { role: "vice", label: "Vice Regent" },
@@ -91,25 +91,6 @@ export default function Admin() {
     console.log(newRoleNames);
   };
 
-  const fetchEboardMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('Brothers')
-        .select('userid, firstname, lastname, adminrole')
-        .in('adminrole', ['regent', 'vice', 'scribe', 'treasurer', 'corsec', 'parents', 'academic', 'rush']);
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        setEboardMembers(data as BrotherData[]);
-        console.log(eboardMembers);
-      }
-    } catch (error) {
-      console.error('Error fetching EBoard members:', error);
-    }
-  };
 
   const handleArchiveClasses = async () => {
     const isConfirmed = window.confirm(
@@ -173,16 +154,25 @@ export default function Admin() {
   };
 
   const handleSearchChange = async (inputValue: string) => {
-    if (inputValue.length < 2) {
+    // Clear results if input is empty
+    if (!inputValue || inputValue.trim().length === 0) {
+      setSearchResults([]);
+      return;
+    }
+
+    // Only search if at least 1 character (reduced from 2 for better UX)
+    if (inputValue.trim().length < 1) {
       setSearchResults([]);
       return;
     }
 
     try {
+      const searchTerm = inputValue.trim();
       const { data, error } = await supabase
         .from('Brothers')
         .select('userid, firstname, lastname')
-        .or(`firstname.ilike.%${inputValue}%,lastname.ilike.%${inputValue}%`);
+        .or(`firstname.ilike.%${searchTerm}%,lastname.ilike.%${searchTerm}%,userid.ilike.%${searchTerm}%`)
+        .limit(50);
 
       if (error) {
         throw error;
@@ -190,14 +180,22 @@ export default function Admin() {
 
       if (data) {
         setSearchResults(data as BrotherData[]);
+      } else {
+        setSearchResults([]);
       }
     } catch (error) {
       console.error('Error searching brothers:', error);
+      setSearchResults([]);
     }
   };
 
   const handleInputChange = (newValue: string, role: string) => {
-    handleSearchChange(newValue);
+    // Handle the input change and trigger search
+    if (newValue === '') {
+      setSearchResults([]);
+    } else {
+      handleSearchChange(newValue);
+    }
   };
 
   const handleSelectChange = (selectedOption: any, role: string) => {
@@ -211,35 +209,111 @@ export default function Admin() {
     }));
   };
 
-  const handleEboardSubmit = async (adminRole: string) => {
-    try {
-      const newMemberUpdate = { adminrole: adminRole };
-      console.log(newRoleNames[adminRole]);
-      await supabase
-        .from('Brothers')
-        .update([newMemberUpdate])
-        .eq('userid', newRoleNames[adminRole]);
 
-      for (const member of eboardMembers) {
-        if (member.adminrole === adminRole && (member.userid != newRoleNames[adminRole])) {
-          await supabase
-            .from('Brothers')
-            .update({ adminrole: null })
-            .eq('userid', member.userid);
+  const fetchEboardMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('Brothers')
+        .select('userid, firstname, lastname, adminrole')
+        .in('adminrole', ['regent', 'vice', 'scribe', 'treasurer', 'corsec', 'parents', 'academic', 'rush']);
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setEboardMembers(data as BrotherData[]);
+      }
+    } catch (error) {
+      console.error('Error fetching EBoard members:', error);
+    }
+  };
+
+  const handleEboardSubmit = async (adminRole: string) => {
+    const selectedUserId = newRoleNames[adminRole];
+    
+    if (!selectedUserId) {
+      alert('Please select a brother for this role');
+      return;
+    }
+
+    try {
+      // First, remove adminrole from the current member holding this position
+      const currentMember = eboardMembers.find(member => member.adminrole === adminRole);
+      if (currentMember && currentMember.userid !== selectedUserId) {
+        const { error: removeError } = await supabase
+          .from('Brothers')
+          .update({ adminrole: null })
+          .eq('userid', currentMember.userid);
+
+        if (removeError) {
+          throw removeError;
         }
       }
-      fetchEboardMembers();
 
-      console.log('EBoard updated successfully');
+      // Then, assign the new adminrole to the selected brother
+      const { error: updateError } = await supabase
+        .from('Brothers')
+        .update({ adminrole: adminRole })
+        .eq('userid', selectedUserId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Refresh the eboard members list
+      await fetchEboardMembers();
+      
+      // Reset the form
+      setNewRoleNames((prev) => {
+        const updated = { ...prev };
+        delete updated[adminRole];
+        return updated;
+      });
+      setSelectedRole('');
+      setSearchResults([]);
+      
+      alert('EBoard updated successfully!');
     } catch (error) {
       console.error('Error updating EBoard:', error);
+      alert('Error updating EBoard. Please try again.');
     }
+  };
+
+  const handleCancelEBoard = () => {
+    setEboardEditingMode(false);
+    setSelectedRole('');
+    setNewRoleNames({});
+    setSearchResults([]);
+  };
+
+  const handleUpdateEboard = () => {
+    setEboardEditingMode(true);
+  };
+
+  const handleRoleChange = (selectedOption: any) => {
+    const newRole = selectedOption ? selectedOption.value : '';
+    setSelectedRole(newRole);
+    // Clear the selected brother for this role when changing roles
+    if (selectedOption) {
+      setNewRoleNames((prev) => {
+        const updated = { ...prev };
+        delete updated[selectedOption.value];
+        return updated;
+      });
+    } else {
+      // Clear all selections if role is cleared
+      setNewRoleNames({});
+    }
+    setSearchResults([]);
   };
 
   useEffect(() => {
     fetchPledges();
     fetchEboardMembers();
   }, []);
+
+  const currentMember = eboardMembers.find(member => member.adminrole === selectedRole);
 
   const handleRoleNumberChange = (uniqname: string, roleNumber: string) => {
     setRoleAssignments((prevAssignments) => ({
@@ -273,12 +347,6 @@ export default function Admin() {
   const handleCancel = () => {
     setRollEditingMode(false);
   };
-  const handleCancelEBoard = () => {
-    setEboardEditingMode(false);
-  };
-  const handleUpdateEboard = () => {
-    setEboardEditingMode(true);
-  }
 
   const handleSubmit = async () => {
     const isConfirmed = window.confirm(
@@ -483,11 +551,6 @@ export default function Admin() {
     fetchAdminRole();
   }, [userID])
 
-  const handleRoleChange = (selectedOption: any) => {
-    setSelectedRole(selectedOption ? selectedOption.value : '');
-  };
-
-  const currentMember = eboardMembers.find(member => member.adminrole === selectedRole);
 
   const toggleCategory = (category: string) => {
     setOpenCategories((prev) => ({
@@ -728,6 +791,101 @@ export default function Admin() {
             </div>
           </CategorySection>
 
+          {/* EBOARD UPDATER - STANDALONE */}
+          {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe') && (
+            <div className="mb-6">
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                {eboardEditingMode ? (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2 text-[#8B0000]">
+                      Update Eboard and Committee Heads
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      (Update yourself last to avoid losing admin access)
+                    </p>
+                    <div className="mb-4">
+                      <Select
+                        options={eboardPositions.map(({ role, label }) => ({
+                          value: role,
+                          label,
+                        }))}
+                        onChange={handleRoleChange}
+                        placeholder="Select role to update"
+                        isClearable
+                      />
+                    </div>
+
+                    {selectedRole && (
+                      <div className="mb-4">
+                        <p className="mb-1 text-sm text-gray-700">
+                          Current {eboardPositions.find((pos) => pos.role === selectedRole)?.label}:{' '}
+                          {currentMember
+                            ? `${currentMember.firstname} ${currentMember.lastname}`
+                            : 'None'}
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                          <div className="w-full sm:w-2/3">
+                            <Select
+                              options={searchResults.map((brother) => ({
+                                value: brother.userid,
+                                label: `${brother.firstname} ${brother.lastname} (${brother.userid})`,
+                              }))}
+                              onInputChange={(newValue) => {
+                                handleInputChange(newValue, selectedRole);
+                              }}
+                              onChange={(selectedOption) => {
+                                setNewRoleNames((prev) => ({
+                                  ...prev,
+                                  [selectedRole]: selectedOption ? selectedOption.value : '',
+                                }));
+                              }}
+                              placeholder={`Search new ${eboardPositions.find((pos) => pos.role === selectedRole)?.label}...`}
+                              isClearable
+                              isSearchable
+                              filterOption={() => true}
+                              noOptionsMessage={({ inputValue }) => 
+                                inputValue.length < 1 
+                                  ? 'Start typing to search...' 
+                                  : 'No brothers found'
+                              }
+                              value={newRoleNames[selectedRole] 
+                                ? searchResults.find(b => b.userid === newRoleNames[selectedRole]) 
+                                  ? {
+                                      value: newRoleNames[selectedRole],
+                                      label: `${searchResults.find(b => b.userid === newRoleNames[selectedRole])?.firstname} ${searchResults.find(b => b.userid === newRoleNames[selectedRole])?.lastname} (${newRoleNames[selectedRole]})`
+                                    }
+                                  : null
+                                : null}
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleEboardSubmit(selectedRole)}
+                            className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full sm:w-auto"
+                          >
+                            Submit
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleCancelEBoard}
+                      className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full sm:w-auto mt-4"
+                    >
+                      Done Updating
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleUpdateEboard}
+                    className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+                  >
+                    Update EBoard
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* BROTHERHOOD CATEGORY */}
           <CategorySection 
             title="Brotherhood Management" 
@@ -735,82 +893,6 @@ export default function Admin() {
             requiredRoles={['regent', 'dev', 'scribe']}
           >
             <div className="space-y-4">
-              {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe') && (
-                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  {eboardEditingMode ? (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2 text-[#8B0000]">
-                        Update Eboard and Committee Heads
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        (Update yourself last to avoid losing admin access)
-                      </p>
-                      <div className="mb-4">
-                        <Select
-                          options={eboardPositions.map(({ role, label }) => ({
-                            value: role,
-                            label,
-                          }))}
-                          onChange={handleRoleChange}
-                          placeholder="Select role to update"
-                          isClearable
-                        />
-                      </div>
-
-                      {selectedRole && (
-                        <div className="mb-4">
-                          <p className="mb-1 text-sm text-gray-700">
-                            Current {eboardPositions.find((pos) => pos.role === selectedRole)?.label}:{' '}
-                            {currentMember
-                              ? `${currentMember.firstname} ${currentMember.lastname}`
-                              : 'None'}
-                          </p>
-                          <div className="flex flex-col sm:flex-row items-center gap-2">
-                            <div className="w-full sm:w-2/3">
-                              <Select
-                                options={searchResults.map((brother) => ({
-                                  value: brother.userid,
-                                  label: `${brother.firstname} ${brother.lastname}`,
-                                }))}
-                                onInputChange={(newValue) =>
-                                  handleInputChange(newValue, selectedRole)
-                                }
-                                onChange={(selectedOption) =>
-                                  setNewRoleNames((prev) => ({
-                                    ...prev,
-                                    [selectedRole]: selectedOption ? selectedOption.value : '',
-                                  }))
-                                }
-                                placeholder={`Search new ${eboardPositions.find((pos) => pos.role === selectedRole)?.label}`}
-                                isClearable
-                              />
-                            </div>
-                            <button
-                              onClick={() => handleEboardSubmit(selectedRole)}
-                              className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full sm:w-auto"
-                            >
-                              Submit
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      <button
-                        onClick={handleCancelEBoard}
-                        className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full sm:w-auto"
-                      >
-                        Done Updating
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleUpdateEboard}
-                      className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
-                    >
-                      Update EBoard
-                    </button>
-                  )}
-                </div>
-              )}
               {(adminRole === 'dev' || adminRole === 'parent') && (
                 <BLPairAdder />
               )}
