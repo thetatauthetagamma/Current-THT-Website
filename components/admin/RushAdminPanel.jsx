@@ -43,6 +43,7 @@ export default function RushAdminPanel() {
   const [newEventDescription, setNewEventDescription] = useState('')
   const [newEventOpen, setNewEventOpen] = useState(true) // Default to open/public
   const [newEventAttendance, setNewEventAttendance] = useState(false) // Default to no attendance
+  const [nonBrotherAttendanceCounts, setNonBrotherAttendanceCounts] = useState({}) // { eventId: count }
   
   // Editing event
   const [editingEventId, setEditingEventId] = useState(null)
@@ -205,6 +206,13 @@ export default function RushAdminPanel() {
     fetchRushEvents()
     fetchAdminRole()
   }, [])
+
+  // Fetch non-brother attendance counts when rush events change
+  useEffect(() => {
+    if (rushEvents.length > 0) {
+      fetchNonBrotherAttendanceCounts()
+    }
+  }, [rushEvents])
 
   // Fetch admin role
   async function fetchAdminRole() {
@@ -401,9 +409,76 @@ export default function RushAdminPanel() {
         console.error('Error fetching rush events:', error)
         return
       }
-      setRushEvents(data || [])
+      const eventsData = data || []
+      setRushEvents(eventsData)
+      // Fetch attendance counts with the fresh data
+      if (eventsData.length > 0) {
+        fetchNonBrotherAttendanceCounts(eventsData)
+      } else {
+        setNonBrotherAttendanceCounts({})
+      }
     } catch (error) {
       console.error('Error fetching rush events:', error)
+    }
+  }
+
+  // Fetch non-brother attendance counts for all events
+  async function fetchNonBrotherAttendanceCounts(events = null) {
+    try {
+      // Use provided events or fall back to state
+      const eventsToUse = events || rushEvents
+      
+      // Get all unique event IDs that have attendance enabled
+      const eventsWithAttendance = eventsToUse.filter(e => e.attendance).map(e => e.id)
+      
+      if (eventsWithAttendance.length === 0) {
+        setNonBrotherAttendanceCounts({})
+        return
+      }
+
+      // Fetch all brothers' uniqnames (userid field)
+      const { data: brothers, error: brothersError } = await supabase
+        .from('Brothers')
+        .select('userid')
+
+      if (brothersError) {
+        console.error('Error fetching brothers:', brothersError)
+        return
+      }
+
+      // Create a Set of brother uniqnames for quick lookup
+      const brotherUniqnames = new Set((brothers || []).map(b => b.userid?.toLowerCase().trim()).filter(Boolean))
+
+      // Fetch all attendance records for these events
+      const { data: attendanceRecords, error: attendanceError } = await supabase
+        .from('Rushee_Attendance')
+        .select('event_id, uniqname')
+        .in('event_id', eventsWithAttendance)
+
+      if (attendanceError) {
+        console.error('Error fetching attendance records:', attendanceError)
+        return
+      }
+
+      // Count non-brother attendance per event
+      const counts = {}
+      eventsWithAttendance.forEach(eventId => {
+        counts[eventId] = 0
+      })
+
+      if (attendanceRecords && attendanceRecords.length > 0) {
+        attendanceRecords.forEach(record => {
+          const uniqname = record.uniqname?.toLowerCase().trim()
+          if (uniqname && !brotherUniqnames.has(uniqname)) {
+            // This person is not a brother, count them
+            counts[record.event_id] = (counts[record.event_id] || 0) + 1
+          }
+        })
+      }
+
+      setNonBrotherAttendanceCounts(counts)
+    } catch (error) {
+      console.error('Error fetching non-brother attendance counts:', error)
     }
   }
 
@@ -489,7 +564,7 @@ export default function RushAdminPanel() {
       setNewEventDescription('')
       setNewEventOpen(true)
       setNewEventAttendance(false)
-      fetchRushEvents()
+      await fetchRushEvents()
     } catch (error) {
       console.error('Error adding rush event:', error)
       alert(`Failed to add rush event: ${error.message}`)
@@ -539,7 +614,7 @@ export default function RushAdminPanel() {
       } else {
         alert('Event updated!')
         handleCancelEditEvent()
-        fetchRushEvents()
+        await fetchRushEvents()
       }
     } catch (error) {
       console.error('Error updating event:', error)
@@ -566,6 +641,10 @@ export default function RushAdminPanel() {
             event.id === eventId ? { ...event, [field]: value } : event
           )
         )
+        // Refresh attendance counts if attendance field changed
+        if (field === 'attendance') {
+          setTimeout(() => fetchNonBrotherAttendanceCounts(), 100)
+        }
       }
     } catch (error) {
       console.error(`Error updating event ${field}:`, error)
@@ -589,7 +668,7 @@ export default function RushAdminPanel() {
         alert('Failed to delete rush event')
       } else {
         alert('Rush event deleted!')
-        fetchRushEvents()
+        await fetchRushEvents()
       }
     } catch (error) {
       console.error('Error deleting rush event:', error)
@@ -875,6 +954,11 @@ export default function RushAdminPanel() {
                                   )}
                                   {event.attendance && (
                                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Attendance</span>
+                                  )}
+                                  {event.attendance && nonBrotherAttendanceCounts[event.id] !== undefined && (
+                                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+                                      Rushees: {nonBrotherAttendanceCounts[event.id]}
+                                    </span>
                                   )}
                                 </div>
                                 {eventDate && (
