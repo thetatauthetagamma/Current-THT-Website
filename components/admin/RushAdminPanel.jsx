@@ -103,6 +103,77 @@ export default function RushAdminPanel() {
     }
   }
 
+  // Download brother attendee emails for a specific event as CSV
+  async function handleDownloadEventBrotherEmails(eventId, eventName) {
+    try {
+      // Fetch all brothers' uniqnames (userid field)
+      const { data: brothers, error: brothersError } = await supabase
+        .from('Brothers')
+        .select('userid')
+
+      if (brothersError) {
+        console.error('Error fetching brothers:', brothersError)
+        alert('Failed to fetch brothers. Check console.')
+        return
+      }
+
+      // Create a Set of brother uniqnames for quick lookup
+      const brotherUniqnames = new Set((brothers || []).map(b => b.userid?.toLowerCase().trim()).filter(Boolean))
+
+      // Fetch all attendance records for this event
+      const { data: attendanceRecords, error: attendanceError } = await supabase
+        .from('Rushee_Attendance')
+        .select('uniqname')
+        .eq('event_id', eventId)
+
+      if (attendanceError) {
+        console.error('Error fetching attendance records:', attendanceError)
+        alert('Failed to fetch attendance records. Check console.')
+        return
+      }
+
+      if (!attendanceRecords || attendanceRecords.length === 0) {
+        alert('No attendance records found for this event.')
+        return
+      }
+
+      // Filter to only brothers and format as emails
+      const brotherEmails = attendanceRecords
+        .map(record => record.uniqname?.toLowerCase().trim())
+        .filter(uniqname => uniqname && brotherUniqnames.has(uniqname))
+        .map(uniqname => `${uniqname}@umich.edu`)
+        .sort()
+
+      if (brotherEmails.length === 0) {
+        alert('No brother attendees found for this event.')
+        return
+      }
+
+      // Create CSV content
+      const csvContent = brotherEmails.join('\n')
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      // Sanitize event name for filename
+      const sanitizedEventName = eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      link.setAttribute('href', url)
+      link.setAttribute('download', `brother_emails_${sanitizedEventName}_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      alert(`Downloaded ${brotherEmails.length} brother emails!`)
+    } catch (err) {
+      console.error('Error downloading brother emails:', err)
+      alert('Something went wrong. Check console.')
+    }
+  }
+
   // ─────────────────────────────────────────────────────────
   //  Rush Events
   // ─────────────────────────────────────────────────────────
@@ -1097,6 +1168,13 @@ export default function RushAdminPanel() {
                                       title="Download CSV of rushee emails who attended this event"
                                     >
                                       Emails
+                                    </button>
+                                    <button
+                                      onClick={() => handleDownloadEventBrotherEmails(event.id, event.name)}
+                                      className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600 text-sm whitespace-nowrap"
+                                      title="Download CSV of brother emails who attended this event"
+                                    >
+                                      Brothers
                                     </button>
                                   </>
                                 )}
