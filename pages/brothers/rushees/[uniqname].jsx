@@ -913,110 +913,122 @@ export default function RusheeProfile() {
                                 {new Date(parent.time).toLocaleString()}
                               </span>
                             </p>
-                            <p className={`text-sm mb-1 ${isAppReview ? 'text-gray-900' : 'text-gray-800'}`}>
-                              {textOf(parent)}
-                            </p>
+                            {/* Only show comment text when not editing */}
+                            {editingCommentId !== parent.id && (
+                              <p className={`text-sm mb-1 ${isAppReview ? 'text-gray-900' : 'text-gray-800'}`}>
+                                {textOf(parent)}
+                              </p>
+                            )}
                           </div>
 
                           {/* Emphasis with a custom tooltip (no default browser delay) */}
-                          <div
-                            // NEW: group + relative for the hover-based custom tooltip
-                            className={`relative group flex items-center space-x-1 ${canClickEmphasis
-                              ? 'cursor-pointer'
-                              : 'cursor-not-allowed'
-                              }`}
-                            onClick={() => {
-                              if (!canClickEmphasis) return
-                              handleToggleEmphasis(parent.id)
-                            }}
-                          >
-                            {/* The Exclamation icons */}
-                            {isEmphasized ? (
-                              <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
-                                <FaExclamation className='mr-[-8px]' />
-                                <FaExclamation />
-                              </div>
-                            ) : (
-                              <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
-                                <FaExclamation className='mr-[-8px]' />
-                                <FaExclamation />
-                              </div>
-                            )}
-                            <span className='text-sm font-semibold text-gray-700'>
-                              {emphasisCount}
-                            </span>
-
-                            {/* Custom tooltip displayed on hover */}
+                          {/* Hide emphasis when editing */}
+                          {editingCommentId !== parent.id && (
                             <div
-                              className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
-             whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
+                              // NEW: group + relative for the hover-based custom tooltip
+                              className={`relative group flex items-center space-x-1 ${canClickEmphasis
+                                ? 'cursor-pointer'
+                                : 'cursor-not-allowed'
+                                }`}
+                              onClick={() => {
+                                if (!canClickEmphasis) return
+                                handleToggleEmphasis(parent.id)
+                              }}
                             >
-                              {emphasizedByNames.length > 0 ? (
-                                <div>
-                                  <p className='font-semibold mb-1'>
-                                    Emphasized by {emphasizedByNames.length} users
-                                  </p>
+                              {/* The Exclamation icons */}
+                              {isEmphasized ? (
+                                <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
+                                  <FaExclamation className='mr-[-8px]' />
+                                  <FaExclamation />
                                 </div>
                               ) : (
-                                'No emphasis yet'
+                                <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
+                                  <FaExclamation className='mr-[-8px]' />
+                                  <FaExclamation />
+                                </div>
                               )}
+                              <span className='text-sm font-semibold text-gray-700'>
+                                {emphasisCount}
+                              </span>
+
+                              {/* Custom tooltip displayed on hover */}
+                              <div
+                                className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded
+             whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'
+                              >
+                                {emphasizedByNames.length > 0 ? (
+                                  <div>
+                                    <p className='font-semibold mb-1'>
+                                      Emphasized by {emphasizedByNames.length} users
+                                    </p>
+                                  </div>
+                                ) : (
+                                  'No emphasis yet'
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
 
                         {/* Buttons: "Reply" / "View replies" */}
                         <div className='ml-0 flex items-center space-x-2 pl-2 text-sm '>
-                          {/* If there are children, show "View replies" or "Hide Replies" */}
-                          {childReplies.length > 0 && (
-                            <button
-                              onClick={() => handleToggleExpand(parent.id)}
-                              className='text-gray-500 underline'
-                            >
-                              {expandedReplies[parent.id]
-                                ? `Hide Replies`
-                                : `View replies (${childReplies.length})`}
-                            </button>
-                          )}
-                          {/* Edit button - only show for user's own comments */}
-                          {parent.brother === brotherID && (
-                            <button
-                              onClick={() => handleEditComment(parent.id, textOf(parent))}
-                              className='text-gray-500 underline'
-                            >
-                              Edit
-                            </button>
-                          )}
-                          {/* If currently editing this comment, show save/cancel buttons */}
+                          {/* If currently editing this comment, show edit UI */}
                           {editingCommentId === parent.id ? (
-                            <div className='flex space-x-2'>
+                            <div className='flex flex-col w-full space-y-2'>
                               <textarea
                                 value={editTexts[parent.id] || ''}
                                 onChange={(e) => setEditTexts(prev => ({
                                   ...prev,
                                   [parent.id]: e.target.value
                                 }))}
-                                className='border rounded p-1 text-sm w-full'
+                                className='border rounded p-2 text-sm w-full'
+                                rows={4}
                               />
-                              <button
-                                onClick={() => handleSaveEdit(parent.id)}
-                                className='bg-green-600 text-white px-2 py-1 rounded text-xs'
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
-                              >
-                                Cancel
-                              </button>
+                              <div className='flex space-x-2'>
+                                <button
+                                  onClick={() => handleSaveEdit(parent.id)}
+                                  className='bg-green-600 text-white px-3 py-1 rounded text-sm'
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className='bg-gray-500 text-white px-3 py-1 rounded text-sm'
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
-                          ) : null}
-                          <button
-                            onClick={() => handleToggleReplyBox(parent.id)}
-                            className='text-gray-500 underline'
-                          >
-                            {showReplyBox[parent.id] ? 'Cancel Reply' : 'Reply'}
-                          </button>
+                          ) : (
+                            <>
+                              {/* If there are children, show "View replies" or "Hide Replies" */}
+                              {childReplies.length > 0 && (
+                                <button
+                                  onClick={() => handleToggleExpand(parent.id)}
+                                  className='text-gray-500 underline'
+                                >
+                                  {expandedReplies[parent.id]
+                                    ? `Hide Replies`
+                                    : `View replies (${childReplies.length})`}
+                                </button>
+                              )}
+                              {/* Edit button - only show for user's own comments (including application reviews) */}
+                              {parent.brother === brotherID && (
+                                <button
+                                  onClick={() => handleEditComment(parent.id, textOf(parent))}
+                                  className='text-gray-500 underline'
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleToggleReplyBox(parent.id)}
+                                className='text-gray-500 underline'
+                              >
+                                {showReplyBox[parent.id] ? 'Cancel Reply' : 'Reply'}
+                              </button>
+                            </>
+                          )}
                         </div>
 
                         {/* If expanded, show child replies */}
@@ -1053,77 +1065,85 @@ export default function RusheeProfile() {
                                           {new Date(child.time).toLocaleString()}
                                         </span>
                                       </p>
-                                      <p className='text-sm text-gray-800 mb-1'>{textOf(child)}</p>
+                                      {/* Only show reply text when not editing */}
+                                      {editingCommentId !== child.id && (
+                                        <p className='text-sm text-gray-800 mb-1'>{textOf(child)}</p>
+                                      )}
                                     </div>
 
-                                    {/* existing emphasis UI for child (unchanged) */}
-                                    <div className={`relative group flex items-center space-x-1 ${canClickChild ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                                      onClick={() => {
-                                        if (!canClickChild) return
-                                        handleToggleEmphasis(child.id)
-                                      }}
-                                    >
-                                      {childEmphasized ? (
-                                        <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
-                                          <FaExclamation className='mr-[-8px]' />
-                                          <FaExclamation />
-                                        </div>
-                                      ) : (
-                                        <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
-                                          <FaExclamation className='mr-[-8px]' />
-                                          <FaExclamation />
-                                        </div>
-                                      )}
-                                      <span className='text-sm font-semibold text-gray-700'>
-                                        {childEmphasisCount}
-                                      </span>
-
-                                      <div className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'>
-                                        {childEmphasizedByNames.length > 0 ? (
-                                          <div>
-                                            <p className='font-semibold mb-1'>Emphasized by {childEmphasizedByNames.length} users</p>
+                                    {/* Hide emphasis when editing */}
+                                    {editingCommentId !== child.id && (
+                                      <div className={`relative group flex items-center space-x-1 ${canClickChild ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                        onClick={() => {
+                                          if (!canClickChild) return
+                                          handleToggleEmphasis(child.id)
+                                        }}
+                                      >
+                                        {childEmphasized ? (
+                                          <div className='flex items-center space-x-0 text-[#8B0000] text-2xl'>
+                                            <FaExclamation className='mr-[-8px]' />
+                                            <FaExclamation />
                                           </div>
                                         ) : (
-                                          'No emphasis yet'
+                                          <div className='flex items-center text-[#8B0000] text-2xl opacity-40 space-x-0'>
+                                            <FaExclamation className='mr-[-8px]' />
+                                            <FaExclamation />
+                                          </div>
                                         )}
-                                      </div>
-                                    </div>
-                                  </div>
+                                        <span className='text-sm font-semibold text-gray-700'>
+                                          {childEmphasisCount}
+                                        </span>
 
-                                  {/* actions row for replies */}
-                                  <div className='ml-0 flex items-center space-x-2 pl-2 text-sm mt-1'>
-                                    {child.brother === brotherID && editingCommentId !== child.id && (
-                                      <button
-                                        onClick={() => handleEditComment(child.id, textOf(child))}
-                                        className='text-gray-500 underline'
-                                      >
-                                        Edit
-                                      </button>
+                                        <div className='absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-1/2 -translate-y-1/2 right-full mr-2'>
+                                          {childEmphasizedByNames.length > 0 ? (
+                                            <div>
+                                              <p className='font-semibold mb-1'>Emphasized by {childEmphasizedByNames.length} users</p>
+                                            </div>
+                                          ) : (
+                                            'No emphasis yet'
+                                          )}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
 
-                                  {/* inline edit UI */}
-                                  {editingCommentId === child.id && (
-                                    <div className='flex w-full items-start space-x-2 mt-1 pl-2'>
+                                  {/* Edit UI for replies */}
+                                  {editingCommentId === child.id ? (
+                                    <div className='flex flex-col w-full space-y-2 mt-1 pl-2'>
                                       <textarea
                                         value={editTexts[child.id] || ''}
                                         onChange={(e) =>
                                           setEditTexts(prev => ({ ...prev, [child.id]: e.target.value }))
                                         }
-                                        className='border rounded p-1 text-sm w-full'
+                                        className='border rounded p-2 text-sm w-full'
+                                        rows={4}
                                       />
-                                      <button
-                                        onClick={() => handleSaveEdit(child.id)}
-                                        className='bg-green-600 text-white px-2 py-1 rounded text-xs'
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={handleCancelEdit}
-                                        className='bg-gray-500 text-white px-2 py-1 rounded text-xs'
-                                      >
-                                        Cancel
-                                      </button>
+                                      <div className='flex space-x-2'>
+                                        <button
+                                          onClick={() => handleSaveEdit(child.id)}
+                                          className='bg-green-600 text-white px-3 py-1 rounded text-sm'
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={handleCancelEdit}
+                                          className='bg-gray-500 text-white px-3 py-1 rounded text-sm'
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    /* actions row for replies */
+                                    <div className='ml-0 flex items-center space-x-2 pl-2 text-sm mt-1'>
+                                      {child.brother === brotherID && (
+                                        <button
+                                          onClick={() => handleEditComment(child.id, textOf(child))}
+                                          className='text-gray-500 underline'
+                                        >
+                                          Edit
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
