@@ -7,8 +7,9 @@ import thtlogo from '../../public/tht-logo.png'
 // Import the new ReactionBar
 import ReactionBar from './ReactionBar'
 import { FaRegTrashCan, FaComment } from "react-icons/fa6";
-import { FaCoffee, FaUsers } from "react-icons/fa";
+import { FaCoffee, FaUsers, FaFileAlt } from "react-icons/fa";
 import { useCommentCounts } from '@/contexts/CommentCountContext';
+import { useApplicationReviewCounts } from '@/contexts/ApplicationReviewCountContext';
 
 export default function RusheeTile({
   uniqname,
@@ -25,9 +26,11 @@ export default function RusheeTile({
   const [isAdmin, setIsAdmin] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false) // Loading state for delete
   const [commentCount, setCommentCount] = useState(0) // State to track comment count
+  const [reviewCount, setReviewCount] = useState(0) // State to track application review count
   const [hasDiversityFeedback, setHasDiversityFeedback] = useState(false) // Track diversity chat feedback
   const [hasCoffeeFeedback, setHasCoffeeFeedback] = useState(false) // Track coffee chat feedback
   const { commentCounts, loading: commentsLoading } = useCommentCounts()
+  const { reviewCounts, loading: reviewsLoading } = useApplicationReviewCounts()
 
   // Fetch the image from Supabase storage
   useEffect(() => {
@@ -69,6 +72,13 @@ export default function RusheeTile({
       setCommentCount(commentCounts[uniqname] || 0)
     }
   }, [uniqname, commentCounts, commentsLoading])
+
+  // Use application review count from context
+  useEffect(() => {
+    if (!reviewsLoading && uniqname && reviewCounts) {
+      setReviewCount(reviewCounts[uniqname] || 0)
+    }
+  }, [uniqname, reviewCounts, reviewsLoading])
 
   // Fetch feedback presence for diversity and coffee chat
   useEffect(() => {
@@ -146,6 +156,15 @@ export default function RusheeTile({
         >
           <FaComment className="w-3 h-3" />
           <span>{commentCount}</span>
+        </div>
+        
+        {/* Application review count icon */}
+        <div
+          className="bg-red-800 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs"
+          aria-label={`${reviewCount} application reviews`}
+        >
+          <FaFileAlt className="w-3 h-3" />
+          <span>{reviewCount}</span>
         </div>
         
         {/* Feedback icons */}
