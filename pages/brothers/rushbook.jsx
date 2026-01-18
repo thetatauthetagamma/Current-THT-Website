@@ -5,6 +5,7 @@ import supabase from "../../supabase";
 import { CSVLink } from "react-csv"; // Import CSV download library
 import { BrothersProvider } from "@/contexts/BrothersContext";
 import { CommentCountProvider } from "@/contexts/CommentCountContext";
+import { ApplicationReviewCountProvider } from "@/contexts/ApplicationReviewCountContext";
 import { StarCountProvider, useStarCount } from "@/contexts/StarCountContext";
 import { restoreScrollPosition } from "@/utils/scrollHelper";
 
@@ -177,7 +178,8 @@ export default function RushBook() {
   return (
     <BrothersProvider>
       <CommentCountProvider>
-        <StarCountProvider brotherID={userID}>
+        <ApplicationReviewCountProvider>
+          <StarCountProvider brotherID={userID}>
           <div className="flex flex-col md:flex-row flex-grow border-b-2 border-[#a3000020] min-h-screen">
             <BroNavBar />
             <div className="flex-1 p-4 bg-gray-100">
@@ -266,6 +268,7 @@ export default function RushBook() {
             </div>
           </div>
         </StarCountProvider>
+        </ApplicationReviewCountProvider>
       </CommentCountProvider>
     </BrothersProvider>
   );
