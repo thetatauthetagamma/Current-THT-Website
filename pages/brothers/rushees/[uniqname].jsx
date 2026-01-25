@@ -815,6 +815,7 @@ export default function RusheeProfile() {
                   </p>
                   {rushee.pronouns && <p>Pronouns: {rushee.pronouns}</p>}
                   {rushee.uniqname && <p>Email: {rushee.uniqname}@umich.edu</p>}
+                  {rushee.phone && <p>Phone: {rushee.phone}</p>}
 
                   {/* ─────────────────────────────────────────────────────────────────────── */}
                   <div className='mt-2'>
