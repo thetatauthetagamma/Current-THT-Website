@@ -8,6 +8,7 @@ import { CommentCountProvider } from "@/contexts/CommentCountContext";
 import { ApplicationReviewCountProvider } from "@/contexts/ApplicationReviewCountContext";
 import { StarCountProvider, useStarCount } from "@/contexts/StarCountContext";
 import { restoreScrollPosition } from "@/utils/scrollHelper";
+import { usePresenterMode } from "@/utils/usePresenterMode";
 
 // Helper to compute "net score"
 function getNetScore(rushee) {
@@ -24,6 +25,7 @@ export default function RushBook() {
   const [sortedRushees, setSortedRushees] = useState([]);
   const [userID, setUserID] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isPresenterMode, togglePresenterMode] = usePresenterMode();
 
   // Sorting & filtering states
   const [sortField, setSortField] = useState('uniqname');
@@ -193,6 +195,18 @@ export default function RushBook() {
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2 sm:mt-0">
+                  {/* Presenter Mode Toggle */}
+                  <button
+                    onClick={togglePresenterMode}
+                    className={`px-3 py-2 rounded transition-colors ${
+                      isPresenterMode
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                    title="Presenter Mode: Hide which rushees you have liked"
+                  >
+                    {isPresenterMode ? '🎭 Presenter Mode ON' : '🎭 Presenter Mode OFF'}
+                  </button>
                   {/* Star Count Display */}
                   {isAdmin && (
                     <CSVLink
@@ -262,6 +276,7 @@ export default function RushBook() {
                     dislikes={rushee.dislikes}
                     stars={rushee.stars}
                     brotherID={userID}
+                    presenterMode={isPresenterMode}
                   />
                 ))}
               </div>

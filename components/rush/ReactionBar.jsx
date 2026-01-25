@@ -33,7 +33,8 @@ export default function ReactionBar({
   dislikes = [],
   stars = [],
   isAdmin = false,
-  starUnlockDate = "2026-01-26" // ISO string or Date object for when star button becomes available
+  starUnlockDate = "2026-01-26", // ISO string or Date object for when star button becomes available
+  presenterMode = false // When true, hides that the user has liked this rushee
 }) {
   // Local state so the UI updates immediately on toggle
   const [localLikes, setLikes] = useState(likes || [])
@@ -42,10 +43,15 @@ export default function ReactionBar({
   const { brothersMap, isLoading: brothersLoading } = useBrothers()
   const { canStarMore, updateStarCount, isRusheeStarred, getRusheeStars } = useStarCount()
 
-  const isLiked = localLikes.includes(brotherID)
-  const isDisliked = localDislikes.includes(brotherID)
-  // Use context to determine if starred, with fallback to local state
-  const isStarred = isRusheeStarred ? isRusheeStarred(uniqname) : localStars.includes(brotherID)
+  // Actual states (used for logic)
+  const actualIsLiked = localLikes.includes(brotherID)
+  const actualIsDisliked = localDislikes.includes(brotherID)
+  const actualIsStarred = isRusheeStarred ? isRusheeStarred(uniqname) : localStars.includes(brotherID)
+  
+  // Display states (hidden in presenter mode)
+  const isLiked = presenterMode ? false : actualIsLiked
+  const isDisliked = presenterMode ? false : actualIsDisliked
+  const isStarred = presenterMode ? false : actualIsStarred
 
   // Use context stars with fallback to props
   const currentStars = getRusheeStars ? getRusheeStars(uniqname) : stars
@@ -69,8 +75,8 @@ export default function ReactionBar({
     let updatedLikes
     let updatedDislikes = localDislikes
 
-
-    if (isLiked) {
+    // Use actual like state for logic, not the presenter mode display state
+    if (actualIsLiked) {
       updatedLikes = localLikes.filter(id => id !== brotherID)
     } else {
       updatedLikes = [...localLikes, brotherID]
@@ -102,7 +108,8 @@ export default function ReactionBar({
     let updatedDislikes
     let updatedLikes = localLikes
 
-    if (isDisliked) {
+    // Use actual dislike state for logic, not the presenter mode display state
+    if (actualIsDisliked) {
       updatedDislikes = localDislikes.filter(id => id !== brotherID)
     } else {
       updatedDislikes = [...localDislikes, brotherID]
@@ -137,7 +144,8 @@ export default function ReactionBar({
       return // Exit early if star button is not yet enabled
     }
 
-    const willBeStar = !isStarred
+    // Use actual star state for logic, not the presenter mode display state
+    const willBeStar = !actualIsStarred
 
     // Check star limit using context
     if (willBeStar && !canStarMore()) {
@@ -152,7 +160,7 @@ export default function ReactionBar({
     }
 
     let updatedStars
-    if (isStarred) {
+    if (actualIsStarred) {
       updatedStars = currentStars.filter(id => id !== brotherID)
       setDislikes(d => d.filter(id => id !== brotherID))
     } else {

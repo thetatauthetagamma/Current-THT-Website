@@ -19,7 +19,8 @@ export default function RusheeTile({
   likes = [],
   dislikes = [],
   stars = [],
-  brotherID
+  brotherID,
+  presenterMode = false
 }) {
   const router = useRouter()
   const [imageUrl, setImageUrl] = useState('')
@@ -236,6 +237,7 @@ export default function RusheeTile({
         dislikes={dislikes}
         stars={stars}
         isAdmin={isAdmin}
+        presenterMode={presenterMode}
       />
     </div>
   )
