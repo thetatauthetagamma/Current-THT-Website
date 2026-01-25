@@ -32,6 +32,34 @@ export default function RushBook() {
   const [sortOrder, setSortOrder] = useState('asc');       // 'asc' or 'desc'
   const [searchTerm, setSearchTerm] = useState('');        // filter by name
 
+  // Load sort settings from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSortField = sessionStorage.getItem('rushbook_sortField');
+      const savedSortOrder = sessionStorage.getItem('rushbook_sortOrder');
+      if (savedSortField) {
+        setSortField(savedSortField);
+      }
+      if (savedSortOrder) {
+        setSortOrder(savedSortOrder);
+      }
+    }
+  }, []);
+
+  // Save sortField to sessionStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sortField) {
+      sessionStorage.setItem('rushbook_sortField', sortField);
+    }
+  }, [sortField]);
+
+  // Save sortOrder to sessionStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sortOrder) {
+      sessionStorage.setItem('rushbook_sortOrder', sortOrder);
+    }
+  }, [sortOrder]);
+
   // Restore scroll position when component mounts
   useEffect(() => {
     restoreScrollPosition('rushbook-scroll-position');
