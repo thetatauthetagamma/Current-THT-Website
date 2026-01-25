@@ -19,6 +19,7 @@ import RusheeAttendance from '@/components/rush/RusheeAttendance'
 import { FaExclamation, FaArrowLeft } from 'react-icons/fa'
 import { BrothersProvider } from '@/contexts/BrothersContext'
 import { StarCountProvider } from '@/contexts/StarCountContext'
+import { usePresenterMode } from '@/utils/usePresenterMode'
 
 
 const RusheeStatus = Object.freeze({
@@ -63,6 +64,7 @@ export default function RusheeProfile() {
   const [brotherID, setBrotherID] = useState('')
   const [rushee, setRushee] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isPresenterMode] = usePresenterMode()
 
   // Q&A
   const [questions, setQuestions] = useState([])
@@ -815,6 +817,7 @@ export default function RusheeProfile() {
                   </p>
                   {rushee.pronouns && <p>Pronouns: {rushee.pronouns}</p>}
                   {rushee.uniqname && <p>Email: {rushee.uniqname}@umich.edu</p>}
+                  {rushee.phone && <p>Phone: {rushee.phone}</p>}
 
                   {/* ─────────────────────────────────────────────────────────────────────── */}
                   <div className='mt-2'>
@@ -825,6 +828,7 @@ export default function RusheeProfile() {
                       dislikes={rushee.dislikes}
                       stars={rushee.stars}
                       isAdmin={isAdmin}
+                      presenterMode={isPresenterMode}
                     />
                   </div>
                 </div>
