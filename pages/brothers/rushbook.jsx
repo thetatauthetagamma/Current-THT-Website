@@ -205,7 +205,7 @@ export default function RushBook() {
                     }`}
                     title="Presenter Mode: Hide which rushees you have liked"
                   >
-                    {isPresenterMode ? '🎭 Presenter Mode ON' : '🎭 Presenter Mode OFF'}
+                    {isPresenterMode ? 'Presenter Mode ON' : 'Presenter Mode OFF'}
                   </button>
                   {/* Star Count Display */}
                   {isAdmin && (
