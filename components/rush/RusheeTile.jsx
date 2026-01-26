@@ -30,6 +30,7 @@ export default function RusheeTile({
   const [reviewCount, setReviewCount] = useState(0) // State to track application review count
   const [hasDiversityFeedback, setHasDiversityFeedback] = useState(false) // Track diversity chat feedback
   const [hasCoffeeFeedback, setHasCoffeeFeedback] = useState(false) // Track coffee chat feedback
+  const [hasCoffeeFeedback2, setHasCoffeeFeedback2] = useState(false) // Track coffee chat feedback 2
   const { commentCounts, loading: commentsLoading } = useCommentCounts()
   const { reviewCounts, loading: reviewsLoading } = useApplicationReviewCounts()
 
@@ -90,15 +91,17 @@ export default function RusheeTile({
         .from('Application_Feedback')
         .select('value_type, value')
         .eq('rushee', uniqname)
-        .in('value_type', ['diversity_chat_feedback', 'coffee_chat_feedback'])
+        .in('value_type', ['diversity_chat_feedback', 'coffee_chat_feedback', 'coffee_chat_feedback_2'])
 
       if (!error && data) {
         const diversityFeedback = data.find(f => f.value_type === 'diversity_chat_feedback')
         const coffeeFeedback = data.find(f => f.value_type === 'coffee_chat_feedback')
+        const coffeeFeedback2 = data.find(f => f.value_type === 'coffee_chat_feedback_2')
         
         // Check if feedback exists and has meaningful content
         setHasDiversityFeedback(diversityFeedback?.value?.text && diversityFeedback.value.text.trim().length > 0)
         setHasCoffeeFeedback(coffeeFeedback?.value?.text && coffeeFeedback.value.text.trim().length > 0)
+        setHasCoffeeFeedback2(coffeeFeedback2?.value?.text && coffeeFeedback2.value.text.trim().length > 0)
       }
     }
 
@@ -187,6 +190,17 @@ export default function RusheeTile({
               className="bg-red-800 text-white rounded-full p-1 flex items-center justify-center"
               aria-label="Has coffee chat feedback"
               title="Coffee chat feedback available"
+            >
+              <FaCoffee className="w-3 h-3" />
+            </div>
+          )}
+          
+          {/* Coffee Chat Feedback 2 Icon */}
+          {hasCoffeeFeedback2 && (
+            <div
+              className="bg-red-800 text-white rounded-full p-1 flex items-center justify-center"
+              aria-label="Has coffee chat feedback 2"
+              title="Coffee chat feedback 2 available"
             >
               <FaCoffee className="w-3 h-3" />
             </div>
