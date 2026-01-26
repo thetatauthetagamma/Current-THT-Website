@@ -77,14 +77,17 @@ export default function RusheeProfile() {
 
   // Coffee Chats
   const [coffeeChatFeedback, setCoffeeChatFeedback] = useState('')
+  const [coffeeChatFeedback2, setCoffeeChatFeedback2] = useState('')
   const [diversityChatFeedback, setDiversityChatFeedback] = useState('')
 
   const [coffeeChatRating, setCoffeeChatRating] = useState(RusheeStatus.NEUTRAL)
+  const [coffeeChatRating2, setCoffeeChatRating2] = useState(RusheeStatus.NEUTRAL)
   const [diversityChatRating, setDiversityChatRating] = useState(RusheeStatus.NEUTRAL)
 
   // Save success indicators
   const [diversitySaveSuccess, setDiversitySaveSuccess] = useState(false)
   const [coffeeSaveSuccess, setCoffeeSaveSuccess] = useState(false)
+  const [coffeeSaveSuccess2, setCoffeeSaveSuccess2] = useState(false)
 
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editTexts, setEditTexts] = useState({})
@@ -327,16 +330,20 @@ export default function RusheeProfile() {
         .from('Application_Feedback')
         .select('value, value_type')
         .eq('rushee', uniqname)
-        .in('value_type', ['diversity_chat_feedback', 'coffee_chat_feedback'])
+        .in('value_type', ['diversity_chat_feedback', 'coffee_chat_feedback', 'coffee_chat_feedback_2'])
         .order('time', { ascending: false });
       if (data && !error) {
         const diversity = data.find(f => f.value_type === 'diversity_chat_feedback');
         const coffee = data.find(f => f.value_type === 'coffee_chat_feedback');
+        const coffee2 = data.find(f => f.value_type === 'coffee_chat_feedback_2');
         if (diversity?.value?.text) {
           setDiversityChatFeedback(diversity.value.text);
         }
         if (coffee?.value?.text) {
           setCoffeeChatFeedback(coffee.value.text);
+        }
+        if (coffee2?.value?.text) {
+          setCoffeeChatFeedback2(coffee2.value.text);
         }
       }
     }
@@ -367,7 +374,7 @@ export default function RusheeProfile() {
     if (!uniqname) return;
 
     const fetchGlobalRatings = async () => {
-      const [divRes, cofRes] = await Promise.all([
+      const [divRes, cofRes, cof2Res] = await Promise.all([
         supabase
           .from('Application_Feedback')
           .select('value, time')
@@ -382,18 +389,30 @@ export default function RusheeProfile() {
           .eq('value_type', 'coffee_chat_decision')
           .order('time', { ascending: false })
           .limit(1),
+        supabase
+          .from('Application_Feedback')
+          .select('value, time')
+          .eq('rushee', uniqname)
+          .eq('value_type', 'coffee_chat_decision_2')
+          .order('time', { ascending: false })
+          .limit(1),
       ]);
 
       const { data: divRows } = divRes || {};
       const { data: cofRows } = cofRes || {};
+      const { data: cof2Rows } = cof2Res || {};
       const divRating = divRows?.[0]?.value?.rating;
       const cofRating = cofRows?.[0]?.value?.rating;
+      const cof2Rating = cof2Rows?.[0]?.value?.rating;
 
       if (divRating && Object.values(RusheeStatus).includes(divRating)) {
         setDiversityChatRating(divRating);
       }
       if (cofRating && Object.values(RusheeStatus).includes(cofRating)) {
         setCoffeeChatRating(cofRating);
+      }
+      if (cof2Rating && Object.values(RusheeStatus).includes(cof2Rating)) {
+        setCoffeeChatRating2(cof2Rating);
       }
     };
 
@@ -648,6 +667,8 @@ export default function RusheeProfile() {
         setDiversityChatFeedback(text);
       } else if (field === 'coffee') {
         setCoffeeChatFeedback(text);
+      } else if (field === 'coffee2') {
+        setCoffeeChatFeedback2(text);
       }
     }
 
@@ -661,6 +682,11 @@ export default function RusheeProfile() {
       setCoffeeSaveSuccess(true);
       setTimeout(() => {
         setCoffeeSaveSuccess(false);
+      }, 5000);
+    } else if (field === 'coffee2') {
+      setCoffeeSaveSuccess2(true);
+      setTimeout(() => {
+        setCoffeeSaveSuccess2(false);
       }, 5000);
     }
   }
@@ -713,6 +739,7 @@ export default function RusheeProfile() {
       // Update UI selection immediately
       if (type_name === 'diversity_chat_decision') setDiversityChatRating(rating);
       if (type_name === 'coffee_chat_decision') setCoffeeChatRating(rating);
+      if (type_name === 'coffee_chat_decision_2') setCoffeeChatRating2(rating);
 
       // Maintain feedback list if applicable
       setFeedback(prev => {
@@ -754,9 +781,10 @@ export default function RusheeProfile() {
 
       if (type_name === 'diversity_chat_decision') setDiversityChatRating(rating);
       if (type_name === 'coffee_chat_decision') setCoffeeChatRating(rating);
+      if (type_name === 'coffee_chat_decision_2') setCoffeeChatRating2(rating);
 
       // Ensure feedback reflects the new row if we track it
-      if (['comment', 'diversity_chat_decision', 'coffee_chat_decision'].includes(data.value_type)) {
+      if (['comment', 'diversity_chat_decision', 'coffee_chat_decision', 'coffee_chat_decision_2'].includes(data.value_type)) {
         setFeedback(prev => [...prev, data]);
       }
     }
@@ -1274,7 +1302,7 @@ export default function RusheeProfile() {
 
             {/* Coffee Chat Feedback */}
             <div className="p-4 rounded-lg shadow-md bg-white mt-4">
-              <h3 className="text-lg font-semibold mb-4">Coffee Chat Feedback</h3>
+              <h3 className="text-lg font-semibold mb-4">Coffee Chat Feedback 1</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Textarea */}
                 <div className="md:col-span-3">
@@ -1319,6 +1347,60 @@ export default function RusheeProfile() {
                   Save Coffee Chat Feedback
                 </button>
                 {coffeeSaveSuccess && (
+                  <span className="text-green-600 text-sm font-semibold transition-opacity duration-300">
+                    ✓ Saved successfully!
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Coffee Chat Feedback 2 */}
+            <div className="p-4 rounded-lg shadow-md bg-white mt-4">
+              <h3 className="text-lg font-semibold mb-4">Coffee Chat Feedback 2</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Textarea */}
+                <div className="md:col-span-3">
+                  <textarea
+                    value={coffeeChatFeedback2}
+                    onChange={(e) => setCoffeeChatFeedback2(e.target.value)}
+                    className="w-full p-2 border rounded min-h-[150px] mb-2"
+                  />
+                </div>
+
+                {/* Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Select Rating</label>
+                  <select
+                    value={coffeeChatRating2}
+                    onChange={(e) => {
+                      const selected = e.target.value;
+                      setCoffeeChatRating2(selected);
+                      handleAddRating(selected, 'coffee_chat_decision_2');
+                    }}
+                    className="w-full p-2 border rounded"
+                  >
+                    {Object.values(RusheeStatus).map((val) => (
+                      <option key={val} value={val}>
+                        {renderRusheeStatus(val)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    handleAddFeedback(
+                      coffeeChatFeedback2,
+                      'coffee_chat_feedback_2',
+                      'coffee2'
+                    );
+                  }}
+                  className="bg-[#8B0000] text-white px-3 py-1 rounded hover:bg-red-800"
+                >
+                  Save Coffee Chat Feedback 2
+                </button>
+                {coffeeSaveSuccess2 && (
                   <span className="text-green-600 text-sm font-semibold transition-opacity duration-300">
                     ✓ Saved successfully!
                   </span>
