@@ -152,10 +152,10 @@ export default function RusheeTile({
       onClick={handleCardClick}
     >
       {/* Icons in top left corner */}
-      <div className="absolute top-2 left-2 flex flex-col gap-1">
+      <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
         {/* Comment count icon */}
         <div
-          className="bg-red-800 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs"
+          className="bg-red-800 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs w-fit"
           aria-label={`${commentCount} comments`}
         >
           <FaComment className="w-3 h-3" />
@@ -164,7 +164,7 @@ export default function RusheeTile({
         
         {/* Application review count icon */}
         <div
-          className="bg-red-800 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs"
+          className="bg-red-800 text-white rounded-full px-2 py-1 flex items-center gap-1 text-xs w-fit"
           aria-label={`${reviewCount} application reviews`}
         >
           <FaFileAlt className="w-3 h-3" />
@@ -172,7 +172,7 @@ export default function RusheeTile({
         </div>
         
         {/* Feedback icons */}
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1 max-w-[60px]">
           {/* Diversity Chat Feedback Icon */}
           {hasDiversityFeedback && (
             <div
