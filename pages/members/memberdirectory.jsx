@@ -18,7 +18,7 @@ export default function MemberDirectory() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageLoading, setPageLoading] = useState(false)
-
+// hi im will
   const brothersPerPage = 10
 
   useEffect(() => {
