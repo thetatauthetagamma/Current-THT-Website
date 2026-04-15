@@ -116,7 +116,7 @@ export default function AddInterview() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('InterviewDetails')
         .insert([
           {
@@ -126,20 +126,18 @@ export default function AddInterview() {
             company: formData.company,
             position: formData.position,
             employment_type: formData.employmentType,
-            num_interviews: formData.numInterviewRounds,
+            num_interviews: parseInt(formData.numInterviewRounds, 10),
             overall_experience: formData.overallExperience,
             got_job: formData.gotJob,
             interview_rounds: formData.rounds,
             tips: formData.tips,
-            first_interview_date: formData.interviewDate
+            first_interview_date: formData.interviewDate || null
           }
-        ])
-        .select();
+        ]);
 
       if (error) {
         console.error('Error submitting interview:', error);
-        // You might want to show an error message to the user
-        alert('Failed to submit interview. Please try again.');
+        alert(`Failed to submit interview: ${error.message} (code: ${error.code})`);
         return;
       }
 
