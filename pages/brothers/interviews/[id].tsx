@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import supabase from "@/supabase";
 
+
 interface InterviewData {
   id: number;
   name: string;
@@ -29,6 +30,7 @@ export default function ViewInterview() {
   const { id } = router.query;
   const [interview, setInterview] = useState<InterviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -37,17 +39,18 @@ export default function ViewInterview() {
   }, [id]);
 
   const fetchInterview = async () => {
-    const { data, error } = await supabase
-      .from('InterviewDetails')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const [{ data: sessionData }, { data, error }] = await Promise.all([
+      supabase.auth.getSession(),
+      supabase.from('InterviewDetails').select('*').eq('id', id).single(),
+    ]);
 
     if (error) {
       console.error('Error fetching interview:', error);
       return;
     }
 
+    const sessionEmail = sessionData.session?.user.email ?? "";
+    setIsOwner(!!sessionEmail && sessionEmail.toLowerCase() === data.email?.toLowerCase());
     setInterview(data);
     setLoading(false);
   };
@@ -82,7 +85,17 @@ export default function ViewInterview() {
 
         {/* Interview Content */}
         <div className="max-w-4xl mx-auto p-8">
-          <h1 className="text-3xl font-bold mb-8 text-[#8b0000]">Interview Experience</h1>
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold text-[#8b0000]">Interview Experience</h1>
+            {isOwner && (
+              <Link
+                href={`/brothers/interviews/edit/${interview.id}`}
+                className="text-xs px-3 py-1.5 bg-white border border-[#8b000025] text-[#8b0000] rounded-lg hover:border-[#8b0000] hover:shadow-sm transition-all font-medium"
+              >
+                Edit
+              </Link>
+            )}
+          </div>
           
           <div className="bg-white rounded-lg p-6 shadow-sm space-y-6">
             <div>

@@ -1,16 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface InterviewRoundProps {
   roundNumber: number;
   onRemove: () => void;
   onChange: (data: { type: string; notes: string }) => void;
+  initialType?: string;
+  initialNotes?: string;
 }
 
-export default function InterviewRound({ 
-  roundNumber, 
+export default function InterviewRound({
+  roundNumber,
   onRemove,
-  onChange 
+  onChange,
+  initialType = '',
+  initialNotes = '',
 }: InterviewRoundProps) {
+  const [type, setType] = useState(initialType);
+  const [notes, setNotes] = useState(initialNotes);
+
   return (
     <div className="relative border border-[#8b000020] rounded-lg p-6 mb-4">
       <button
@@ -25,7 +32,11 @@ export default function InterviewRound({
           type="text"
           placeholder="e.g., Behavioral or Technical"
           className="w-full px-4 py-2 border border-[#8b000020] rounded-lg focus:outline-none focus:border-[#8b0000] transition-colors"
-          onChange={(e) => onChange({ type: e.target.value, notes: '' })}
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value);
+            onChange({ type: e.target.value, notes });
+          }}
         />
       </div>
       <div>
@@ -33,7 +44,11 @@ export default function InterviewRound({
         <textarea
           placeholder="e.g., Talked about OOP, inheritance, etc."
           className="w-full px-4 py-2 border border-[#8b000020] rounded-lg focus:outline-none focus:border-[#8b0000] transition-colors min-h-[100px]"
-          onChange={(e) => onChange({ type: '', notes: e.target.value })}
+          value={notes}
+          onChange={(e) => {
+            setNotes(e.target.value);
+            onChange({ type, notes: e.target.value });
+          }}
         />
       </div>
     </div>
