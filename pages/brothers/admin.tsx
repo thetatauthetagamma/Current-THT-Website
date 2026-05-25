@@ -1,5 +1,5 @@
 import BroNavBar from "@/components/BroNavBar";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, type ReactNode } from 'react';
 import supabase from '@/supabase';
 import Select from 'react-select';
 import RushAdminPanel from '@/components/admin/RushAdminPanel';
@@ -34,6 +34,47 @@ interface BrotherData {
   classes: string[];
   archivedclasses: string[];
 }
+
+type AdminCategoryKey = 'rush' | 'pnms' | 'brotherhood' | 'system';
+
+function CategorySection({
+  title,
+  requiredRoles,
+  adminRole,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  title: string;
+  requiredRoles: string[];
+  adminRole: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  if (!adminRole || !requiredRoles.includes(adminRole)) {
+    return null;
+  }
+
+  return (
+    <section className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
+      >
+        <span className="text-lg font-semibold text-[#8B0000]">{title}</span>
+        <span className="text-gray-500 text-sm" aria-hidden>
+          {isOpen ? '▼' : '▶'}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="p-4 border-t border-gray-200 space-y-4">{children}</div>
+      )}
+    </section>
+  );
+}
+
 /*This page is shown to "admin" of our org. On it different  */
 export default function Admin() {
   const [userID, setUserID] = useState('');
@@ -47,11 +88,11 @@ export default function Admin() {
   const [pledgeEditingMode, setPledgeEditingMode] = useState<boolean>(false);
   
   // Dropdown states for categories
-  const [openCategories, setOpenCategories] = useState<{ [key: string]: boolean }>({
-    rush: false,
-    pnms: false,
-    brotherhood: false,
-    system: false,
+  const [openCategories, setOpenCategories] = useState<Record<AdminCategoryKey, boolean>>({
+    rush: true,
+    pnms: true,
+    brotherhood: true,
+    system: true,
   });
   const [eboardEditingMode, setEboardEditingMode] = useState<boolean>(false);
   const [eboardMembers, setEboardMembers] = useState<BrotherData[]>([]);
@@ -320,8 +361,6 @@ export default function Admin() {
       ...prevAssignments,
       [uniqname]: roleNumber,
     }));
-    console.log(roleAssignments);
-    console.log(pledges)
   };
 
   const fetchPledges = async () => {
@@ -552,55 +591,11 @@ export default function Admin() {
   }, [userID])
 
 
-  const toggleCategory = (category: string) => {
+  const toggleCategory = (category: AdminCategoryKey) => {
     setOpenCategories((prev) => ({
       ...prev,
       [category]: !prev[category],
     }));
-  };
-
-  // Helper component for collapsible category sections
-  const CategorySection = ({ 
-    title, 
-    category, 
-    children, 
-    requiredRoles 
-  }: { 
-    title: string; 
-    category: string; 
-    children: React.ReactNode;
-    requiredRoles: string[];
-  }) => {
-    const hasAccess = requiredRoles.some(role => adminRole === role);
-    if (!hasAccess) return null;
-
-    const isOpen = openCategories[category];
-
-    return (
-      <div className="bg-white rounded-md shadow-md p-4 w-full">
-        <button
-          onClick={() => toggleCategory(category)}
-          className="w-full flex items-center justify-between text-left"
-        >
-          <h2 className="text-xl font-semibold text-[#8B0000]">
-            {title}
-          </h2>
-          <svg
-            className={`w-5 h-5 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {isOpen && (
-          <div className="mt-4">
-            {children}
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -617,8 +612,10 @@ export default function Admin() {
           {/* RUSH CATEGORY */}
           <CategorySection 
             title="Rush Management" 
-            category="rush"
             requiredRoles={['rush', 'dev', 'regent', 'vice']}
+            adminRole={adminRole}
+            isOpen={openCategories.rush}
+            onToggle={() => toggleCategory('rush')}
           >
             <div className="space-y-4">
               {(adminRole === 'rush' || adminRole === 'dev') && (
@@ -630,6 +627,7 @@ export default function Admin() {
                     <RushCommitteeManager setRushEditingMode={setRushEditingMode} />
                   ) : (
                     <button 
+                      type="button"
                       onClick={() => setRushEditingMode(true)} 
                       className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
                     >
@@ -644,8 +642,10 @@ export default function Admin() {
           {/* PNMs CATEGORY */}
           <CategorySection 
             title="PNM Management" 
-            category="pnms"
             requiredRoles={['regent', 'dev', 'scribe', 'parent']}
+            adminRole={adminRole}
+            isOpen={openCategories.pnms}
+            onToggle={() => toggleCategory('pnms')}
           >
             <div className="space-y-4">
               {(adminRole === 'dev' || adminRole === 'parent') && (
@@ -657,6 +657,7 @@ export default function Admin() {
                     <PledgeCommitteeManager setPledgeEditingMode={setPledgeEditingMode} />
                   ) : (
                     <button 
+                      type="button"
                       onClick={() => setPledgeEditingMode(true)} 
                       className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
                     >
@@ -677,6 +678,7 @@ export default function Admin() {
                   {/* Sign off everyone button */}
                   <div className="mb-4">
                     <button
+                      type="button"
                       onClick={handleSignOffEveryoneForEverything}
                       disabled={signOffEveryoneLoading || pledges.length === 0}
                       className={`font-bold py-2 px-4 rounded w-full ${
@@ -739,7 +741,11 @@ export default function Admin() {
               {(adminRole === 'regent' || adminRole === 'dev' || adminRole === 'scribe' || adminRole === 'parent') && (
                 <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                   {rollEditingMode ? (
-                    <div>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                      }}
+                    >
                       <h3 className="text-lg font-semibold mb-4 text-[#8B0000]">
                         Assign Roll Numbers to New Members
                       </h3>
@@ -755,7 +761,9 @@ export default function Admin() {
                             <input
                               type="text"
                               placeholder="Assign Roll Number"
+                              autoComplete="off"
                               className="border-2 border-[#8b000070] rounded p-2 flex-1"
+                              value={roleAssignments[pledge.uniqname] || ''}
                               onChange={(e) =>
                                 handleRoleNumberChange(pledge.uniqname, e.target.value)
                               }
@@ -765,21 +773,24 @@ export default function Admin() {
                       </div>
                       <div className="flex space-x-2">
                         <button
+                          type="button"
                           onClick={handleCancel}
                           className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded"
                         >
                           Cancel
                         </button>
                         <button
+                          type="button"
                           onClick={handleSubmit}
                           className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800"
                         >
                           Submit
                         </button>
                       </div>
-                    </div>
+                    </form>
                   ) : (
                     <button
+                      type="button"
                       onClick={handleInitiatePledges}
                       className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
                     >
@@ -859,6 +870,7 @@ export default function Admin() {
                             />
                           </div>
                           <button
+                            type="button"
                             onClick={() => handleEboardSubmit(selectedRole)}
                             className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full sm:w-auto"
                           >
@@ -868,6 +880,7 @@ export default function Admin() {
                       </div>
                     )}
                     <button
+                      type="button"
                       onClick={handleCancelEBoard}
                       className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full sm:w-auto mt-4"
                     >
@@ -876,6 +889,7 @@ export default function Admin() {
                   </div>
                 ) : (
                   <button
+                    type="button"
                     onClick={handleUpdateEboard}
                     className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
                   >
@@ -889,8 +903,10 @@ export default function Admin() {
           {/* BROTHERHOOD CATEGORY */}
           <CategorySection 
             title="Brotherhood Management" 
-            category="brotherhood"
             requiredRoles={['regent', 'dev', 'scribe']}
+            adminRole={adminRole}
+            isOpen={openCategories.brotherhood}
+            onToggle={() => toggleCategory('brotherhood')}
           >
             <div className="space-y-4">
               {(adminRole === 'dev' || adminRole === 'parent') && (
@@ -902,8 +918,10 @@ export default function Admin() {
           {/* SYSTEM CATEGORY */}
           <CategorySection 
             title="System Settings" 
-            category="system"
             requiredRoles={['academic', 'dev']}
+            adminRole={adminRole}
+            isOpen={openCategories.system}
+            onToggle={() => toggleCategory('system')}
           >
             <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
               <h3 className="text-lg font-semibold mb-4 text-[#8B0000]">
@@ -913,6 +931,7 @@ export default function Admin() {
                 Archive all current classes for all brothers and pledges. This should only be done at the end of a semester.
               </p>
               <button
+                type="button"
                 onClick={handleArchiveClasses}
                 className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
               >
@@ -1038,6 +1057,7 @@ function RushCommitteeManager({
                   {member.firstname} {member.lastname}
                 </span>
                 <button
+                  type="button"
                   onClick={() => removeRushMember(member.userid)}
                   className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 font-bold"
                 >
@@ -1071,6 +1091,7 @@ function RushCommitteeManager({
             />
           </div>
           <button
+            type="button"
             onClick={addRushMember}
             className="bg-[#8B0000] text-white font-bold px-4 py-2 rounded hover:bg-red-800"
           >
@@ -1081,6 +1102,7 @@ function RushCommitteeManager({
 
       {/* Done Updating Button */}
       <button
+        type="button"
         onClick={() => setRushEditingMode(false)}
         className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded w-full"
       >
