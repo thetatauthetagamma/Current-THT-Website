@@ -6,6 +6,7 @@ import RushAdminPanel from '@/components/admin/RushAdminPanel';
 import BLPairAdder from '@/components/admin/BLPairAdder';
 import PledgeCommitteeManager from "@/components/admin/PledgeCommitteeUpdate";
 import PledgeAdminPanel from '@/components/admin/PledgeAdminPanel';
+import PDManagerPanel from '@/components/admin/PDManagerPanel';
 import {
   Dropdown,
   DropdownTrigger,
@@ -923,20 +924,23 @@ export default function Admin() {
             isOpen={openCategories.system}
             onToggle={() => toggleCategory('system')}
           >
-            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-              <h3 className="text-lg font-semibold mb-4 text-[#8B0000]">
-                Archive Classes
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Archive all current classes for all brothers and pledges. This should only be done at the end of a semester.
-              </p>
-              <button
-                type="button"
-                onClick={handleArchiveClasses}
-                className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
-              >
-                Archive Classes
-              </button>
+            <div className="space-y-4">
+              {adminRole === 'dev' && <PDManagerPanel />}
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h3 className="text-lg font-semibold mb-4 text-[#8B0000]">
+                  Archive Classes
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Archive all current classes for all brothers and pledges. This should only be done at the end of a semester.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleArchiveClasses}
+                  className="bg-[#8B0000] text-white font-bold py-2 px-4 rounded hover:bg-red-800 w-full"
+                >
+                  Archive Classes
+                </button>
+              </div>
             </div>
           </CategorySection>
         </div>
