@@ -16,6 +16,8 @@ import Robbie from '../public/eboard/Robbie.jpeg';
 import Faith from '../public/eboard/Faith.jpeg';
 import Kaya from '../public/eboard/Kaya.jpeg';
 import JV from '../public/eboard/JV.jpeg';
+import Nolan from '../public/eboard/Nolan.jpg';
+import Elijah from '../public/eboard/Elijah.jpg';
 import image1 from '../public/companies/1.jpg';
 import image2 from '../public/companies/2.jpg';
 import image3 from '../public/companies/3.jpg';
@@ -141,7 +143,7 @@ export default function members() {
             <div className='flex-col text-center md:w-1/5 w-3/4 md:pb-0 pb-4 pr-1 pr-3 pl-3 md:self-start'>
               <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
                 <Image
-                  src={Elliot}
+                  src={Anthony}
                   alt="Gear icon"
                   className='w-full h-full rounded-full object-cover'
                 />
@@ -153,7 +155,7 @@ export default function members() {
             <div className='flex-col text-center md:w-1/5 w-3/4 md:pb-0 pb-4 pr-3 pl-3 md:self-start'>
               <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
                 <Image
-                  src={Kaya}
+                  src={Nolan}
                   alt="Gear icon"
                   className='w-full h-full rounded-full object-cover'
                 />
@@ -165,7 +167,7 @@ export default function members() {
             <div className='flex-col text-center md:w-1/5 w-3/4 md:pb-0 pb-4 pr-3 pl-3 md:self-start'>
               <div className='w-40 h-40 md:w-52 md:h-52 mx-auto mb-4'>
                 <Image
-                  src={Will}
+                  src={Elijah}
                   alt="Gear icon"
                   className='w-full h-full rounded-full object-cover'
                 />
