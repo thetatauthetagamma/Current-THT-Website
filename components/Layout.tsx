@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import Navbar from './Navbar';
-import Brotherhood from './Brotherhood';
 import Footer from './Footer';
 
 

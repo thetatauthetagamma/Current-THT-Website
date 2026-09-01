@@ -23,5 +23,5 @@
     "types": ["node"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "pages/**/*", "middleware/**/*", "components/BroNavBar.jsx", "components/Timeline.jsx"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "open-next.config.ts"]
 }
