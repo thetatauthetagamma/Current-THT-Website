@@ -1,8 +1,4 @@
-// next.config.js
-module.exports = {
-  // ... other configurations
-  middleware: async () => {
-    const middleware = require('./middleware').default;
-    return middleware;
-  },
-};
+/** @type {import('next').NextConfig} */
+const nextConfig = {}
+
+module.exports = nextConfig

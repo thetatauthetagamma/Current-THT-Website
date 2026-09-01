@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import TimelineEvent from "./TimelineEvent";
 import { VerticalTimeline, VerticalTimelineElement } from 'react-vertical-timeline-component';
-import supabase from "supabase"
+import supabase from "@/supabase"
 import 'react-vertical-timeline-component/style.min.css';
 
 const formatDate = (timestamp) => {

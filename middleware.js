@@ -1,37 +1,32 @@
-import { parse } from 'url';
 import { NextResponse } from 'next/server';
 import { isBrother, isPledge, isAdmin, isParentAdmin } from './auth';
 
 export default async function middleware(req) {
-  const url = parse(req.url || '', true);
-  const path = url.pathname || '';
+  const path = req.nextUrl.pathname || '';
 
   const errorPage = '/404';
 
-  const memberRoutes = [    
+  const memberRoutes = [
     '/members/memberdirectory',
     '/members/studybuddysearch',
-    '/members/*',
+    '/members/',
   ];
-  const memberBasePath = '/members/';
-  
+
   const brotherRoutes = [
     '/brothers',
-    '/brothers/*',
-    '/brothers/rushees/*'
+    '/brothers/rushees/',
   ];
 
   const pledgeRoutes = [
     '/pledges/pledgecalendar',
     '/pledges/progress',
     '/pledges/pledgeresources',
-    '/pledges/*',
+    '/pledges/',
   ];
 
   const adminRoutes = [
     '/brothers/admin',
-    '/brothers/admin/*'
-  ]
+  ];
 
   if (path.startsWith('/_next')) {
     return NextResponse.next();
@@ -48,26 +43,38 @@ export default async function middleware(req) {
   const isUserAdmin = await isAdmin(userEmail);
   const isUserParentAdmin = await isParentAdmin(userEmail);
 
+  const matchesRoute = (route) => {
+    if (route.endsWith('/')) {
+      return path.startsWith(route);
+    }
+    return path === route || path.startsWith(`${route}/`);
+  };
+
+  const isMemberRoute = memberRoutes.some(matchesRoute);
+  const isBrotherRoute = brotherRoutes.some(matchesRoute);
+  const isPledgeRoute = pledgeRoutes.some(matchesRoute);
+  const isAdminRoute = adminRoutes.some(matchesRoute);
+
   // Allow access for both brothers and pledges to member routes
-  if ((isUserBrother || isUserPledge) && memberRoutes.some(route => path.startsWith(route)) && path !== errorPage) {
+  if ((isUserBrother || isUserPledge) && isMemberRoute && path !== errorPage) {
     return NextResponse.next();
   }
 
-  // Restrict access for brothers to pledge routes
-  if (!isUserBrother && brotherRoutes.some(route => path.startsWith(route)) && path !== errorPage) {
+  // Restrict access for non-brothers to brother routes
+  if (!isUserBrother && isBrotherRoute && path !== errorPage) {
     const httpsRedirectUrl = new URL(errorPage, req.nextUrl).toString();
     return NextResponse.redirect(httpsRedirectUrl);
   }
 
-  // Restrict access for brothers to pledge routes
-  if (!isUserAdmin && adminRoutes.some(route => path.startsWith(route)) && path !== errorPage) {
+  // Restrict access for non-admins to admin routes
+  if (!isUserAdmin && isAdminRoute && path !== errorPage) {
       const httpsRedirectUrl = new URL(errorPage, req.nextUrl).toString();
       return NextResponse.redirect(httpsRedirectUrl);
   }
   
-  // Restrict access for pledges to brother routes
+  // Restrict access for non-pledges to pledge routes
   // Allow parent admins to access /pledges/progress (for viewing PNM progress)
-  if (!isUserPledge && pledgeRoutes.some(route => path.startsWith(route)) && path !== errorPage) {
+  if (!isUserPledge && isPledgeRoute && path !== errorPage) {
     // Allow parent admins to access /pledges/progress
     if (isUserParentAdmin && path === '/pledges/progress') {
       return NextResponse.next();
@@ -77,9 +84,7 @@ export default async function middleware(req) {
   }
 
   // redirect non members
-  const isPrivateRoute = (memberRoutes.concat(brotherRoutes, pledgeRoutes, ["/members/"])).some(route => {
-    return path.startsWith(route)}
-  )
+  const isPrivateRoute = isMemberRoute || isBrotherRoute || isPledgeRoute || path.startsWith('/members/');
 
   if (!isUserBrother && !isUserPledge && isPrivateRoute && path !== errorPage) {
     const httpsRedirectUrl = new URL(errorPage, req.nextUrl).toString();
@@ -88,3 +93,11 @@ export default async function middleware(req) {
 
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: [
+    '/members/:path*',
+    '/brothers/:path*',
+    '/pledges/:path*',
+  ],
+};

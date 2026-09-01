@@ -6,18 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@nextui-org/dropdown": "^2.1.16",
     "@nextui-org/react": "^2.1.12",
     "@ramonak/react-progress-bar": "^5.1.1",
-    "@supabase/auth-helpers-nextjs": "^0.7.4",
-    "@supabase/auth-helpers-react": "^0.4.2",
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.32.0",
-    "@types/node": "20.4.9",
-    "@types/react": "18.2.20",
-    "@types/react-dom": "18.2.7",
     "autoprefixer": "^10.4.14",
     "axios": "^1.6.0",
     "browser-image-compression": "^2.0.2",
@@ -30,19 +29,18 @@
     "js-cookie": "^3.0.5",
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.43",
-    "next": "13.4.13",
+    "next": "^15.5.25",
     "papaparse": "^5.5.2",
     "postcss": "8.4.27",
     "postcss-cli": "^10.1.0",
-    "qrcode.react": "^3.2.0",
+    "qrcode.react": "^4.2.0",
     "rc-progress": "^3.5.1",
-    "react": "18.2.0",
+    "react": "^19.2.8",
     "react-countup": "^6.5.3",
     "react-csv": "^2.2.2",
     "react-d3-tree": "^3.6.2",
     "react-datepicker": "^8.1.0",
-    "react-datetime-picker": "^5.5.3",
-    "react-dom": "18.2.0",
+    "react-dom": "^19.2.8",
     "react-easy-crop": "^5.2.0",
     "react-fast-marquee": "^1.6.0",
     "react-icons": "^5.5.0",
@@ -51,10 +49,15 @@
     "react-vertical-timeline-component": "^3.6.0",
     "sharp": "^0.32.6",
     "tailwindcss": "^3.3.3",
-    "tw-elements": "^1.0.0",
-    "typescript": "5.1.6"
+    "tw-elements": "^1.0.0"
   },
   "devDependencies": {
-    "@types/js-cookie": "^3.0.6"
+    "@opennextjs/cloudflare": "^1.17.0",
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.0.0"
   }
 }

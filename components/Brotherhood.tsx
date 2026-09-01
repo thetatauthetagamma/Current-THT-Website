@@ -1,6 +1,6 @@
 import React from 'react';
 import FastMarquee from 'react-fast-marquee';
-import Image from "next/legacy/image";
+import Image from "next/image";
 
 // brotherhood first row images are here:
 import image1 from '../images/homepage/brotherhood/1.jpg';
@@ -76,8 +76,8 @@ const Brotherhood: React.FC = () => {
               <Image
                 src={image}
                 alt={`brotherhood-${index}`}
-                layout="fill"
-                objectFit='cover'
+                fill
+                className="object-cover"
               />
             </div>
           ))}
@@ -96,8 +96,8 @@ const Brotherhood: React.FC = () => {
               <Image
                 src={image}
                 alt={`brotherhood-${index}`}
-                layout="fill"
-                objectFit='cover'
+                fill
+                className="object-cover"
               />
             </div>
           ))}
