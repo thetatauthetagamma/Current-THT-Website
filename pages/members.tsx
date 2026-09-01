@@ -4,7 +4,7 @@ import supabase from '../supabase'
 import React, { useEffect, useRef, useState } from 'react';
 import HorizontalMarquee from '../components/HorizontalMarquee';
 import CountUp from 'react-countup';
-
+// images for eboard
 import Danny from '../public/eboard/Danny.jpg';
 import Ella from  '../public/eboard/Ella.jpg';
 import Anthony from  '../public/eboard/Anthony.jpg';
