@@ -24,7 +24,7 @@ const Home: NextPage = ({ }) => {
 
       <div className='bg-gray-50  border-b-2 border-[#8b000050]'>
 
-        <div className={`bg-cover flex w-full ${isAprilFools ? "bg-[url('/aprilfools.JPG')]" : "bg-[url('/fratphoto1.jpg')]"}`}>
+        <div className={`bg-cover flex w-full ${isAprilFools ? "bg-[url('/aprilfools.JPG')]" : "bg-[url('/homepagef26.jpg')]"}`}>
 
 
 
@@ -108,7 +108,7 @@ const Home: NextPage = ({ }) => {
               <a href="mailto:tht-eboard@umich.edu" className="hover:text-gray-400   text-sm md:text-base font-semibold pb-4"> Executive Board  </a>
               <a href="mailto:tht-regents@umich.edu" className="hover:text-gray-400   text-sm md:text-base font-semibold pb-4"> Regent & Vice Regent  </a>
               <a href="mailto:tht-corsec@umich.edu" className="hover:text-gray-400   text-sm  md:text-base font-semibold pb-4"> Alumni & Interchapter Relations  </a>
-              <a href="mailto:tht-corporate@umich.edu" className="hover:text-gray-400  text-sm  md:text-base font-semibold"> Cooporate & Sponsorship Events </a>
+              <a href="mailto:tht-corporate@umich.edu" className="hover:text-gray-400  text-sm  md:text-base font-semibold"> Corporate & Sponsorship Events </a>
             </div>
           </div>
         </div>
