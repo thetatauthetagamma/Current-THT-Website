@@ -174,7 +174,8 @@ export default function MemberDirectory() {
     'MSE',
     'NERS',
     'Rob',
-    'BME'
+    'BME',
+    'EP'
   ]
 
   if (loading) {
