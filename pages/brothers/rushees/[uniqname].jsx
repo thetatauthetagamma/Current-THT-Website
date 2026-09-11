@@ -21,7 +21,6 @@ import { BrothersProvider } from '@/contexts/BrothersContext'
 import { StarCountProvider } from '@/contexts/StarCountContext'
 import { usePresenterMode } from '@/utils/usePresenterMode'
 
-
 const RusheeStatus = Object.freeze({
   STRONG_YES: 'Strong Bid',
   WEAK_YES: 'Weak Bid',
@@ -66,9 +65,9 @@ export default function RusheeProfile() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isPresenterMode] = usePresenterMode()
 
-  // Q&A (temporarily disabled so brothers cannot view application essays)
-  // const [questions, setQuestions] = useState([])
-  // const [answers, setAnswers] = useState([])
+  // Q&A
+  const [questions, setQuestions] = useState([])
+  const [answers, setAnswers] = useState([])
 
   // Comments
   const [feedback, setFeedback] = useState([])
@@ -292,34 +291,35 @@ export default function RusheeProfile() {
   }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
+  // 6a) Fetch Q&A
+  // ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      const { data, error } = await supabase
+        .from('Application_Questions')
+        .select('*')
+        .order('id', { ascending: true })
+      if (!error && data) setQuestions(data)
+    }
+    fetchQuestions()
+  }, [])
+
+  useEffect(() => {
+    if (!uniqname) return
+    const fetchAnswers = async () => {
+      const { data, error } = await supabase
+        .from('Application_Answers')
+        .select('*')
+        .eq('uniqname', uniqname)
+      if (!error && data) {
+        setAnswers(data)
+      }
+    }
+    fetchAnswers()
+  }, [uniqname])
+  // ─────────────────────────────────────────────────────────
   // 6b) Fetch feedback
   // ─────────────────────────────────────────────────────────
-  // 6a) Fetch Q&A (temporarily disabled)
-  // useEffect(() => {
-  //   const fetchQuestions = async () => {
-  //     const { data, error } = await supabase
-  //       .from('Application_Questions')
-  //       .select('*')
-  //       .order('id', { ascending: true })
-  //     if (!error && data) setQuestions(data)
-  //   }
-  //   fetchQuestions()
-  // }, [])
-
-  // useEffect(() => {
-  //   if (!uniqname) return
-  //   const fetchAnswers = async () => {
-  //     const { data, error } = await supabase
-  //       .from('Application_Answers')
-  //       .select('*')
-  //       .eq('uniqname', uniqname)
-  //     if (!error && data) {
-  //       setAnswers(data)
-  //     }
-  //   }
-  //   fetchAnswers()
-  // }, [uniqname])
-
   useEffect(() => {
     if (!uniqname) {
       return
@@ -350,20 +350,6 @@ export default function RusheeProfile() {
     fetchChatFeedback()
   }, [uniqname])
 
-  // Duplicate essay fetch retained for easy restoration if needed.
-  // useEffect(() => {
-  //   if (!uniqname) return
-  //   const fetchAnswers = async () => {
-  //     const { data, error } = await supabase
-  //       .from('Application_Answers')
-  //       .select('*')
-  //       .eq('uniqname', uniqname)
-  //     if (!error && data) {
-  //       setAnswers(data)
-  //     }
-  //   }
-  //   fetchAnswers()
-  // }, [uniqname])
 
   // ─────────────────────────────────────────────────────────
   // 6c) Populate ratings (GLOBAL latest per rushee)
@@ -870,8 +856,7 @@ export default function RusheeProfile() {
 
             <hr className='my-4' />
 
-            {/* Application Responses (temporarily hidden from brothers) */}
-            {/*
+            {/* APPLICATION RESPONSES */}
             <div className='mb-6 overflow-x-hidden'>
               <h3 className='text-xl font-semibold mb-2'>Application Responses</h3>
               {questions.length === 0 ? (
@@ -897,7 +882,6 @@ export default function RusheeProfile() {
             </div>
 
             <hr className='my-4' />
-            */}
 
             {/* COMMENTS (top-level + replies) */}
             <div className='p-4 rounded-lg shadow-md bg-white'>
