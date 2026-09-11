@@ -33,7 +33,7 @@ export default function ReactionBar({
   dislikes = [],
   stars = [],
   isAdmin = false,
-  starUnlockDate = "2026-01-26", // ISO string or Date object for when star button becomes available
+  starUnlockDate = "2026-09-21", // ISO string or Date object for when star button becomes available
   presenterMode = false // When true, hides that the user has liked this rushee
 }) {
   // Local state so the UI updates immediately on toggle
