@@ -197,6 +197,8 @@ export default function RushBook() {
       uniqname: rushee.uniqname,
       full_name: `${rushee.firstname} ${rushee.lastname}`,
       pronouns: rushee.pronouns || '',
+      major: rushee.major || '',
+      year: rushee.year || '',
       likes: rushee.likes?.length || 0,
       dislikes: rushee.dislikes?.length || 0,
       stars: rushee.stars?.length || 0,
