@@ -26,6 +26,7 @@ export default function RushBook() {
   const [userID, setUserID] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isPresenterMode, togglePresenterMode] = usePresenterMode();
+  const [ratingsByUniqname, setRatingsByUniqname] = useState({});
 
   // Sorting & filtering states
   const [sortField, setSortField] = useState('uniqname');
@@ -191,9 +192,67 @@ export default function RushBook() {
     setSortedRushees(updated);
   }, [rushees, sortField, sortOrder, searchTerm]);
 
+  // Fetch latest coffee chat 1/2 and diversity chat ratings for ALL rushees
+const fetchLatestRatings = async () => {
+  const { data, error } = await supabase
+    .from('Application_Feedback')
+    .select('rushee, value_type, value, time')
+    .in('value_type', [
+      'coffee_chat_decision',
+      'coffee_chat_decision_2',
+      'diversity_chat_decision',
+    ])
+    .order('time', { ascending: true }); // ascending so the LAST one we see per key is the newest
 
-  const generateCSVData = () => {
-    return sortedRushees.map((rushee) => ({
+  if (error) {
+    console.error('Error fetching ratings:', error);
+    return;
+  }
+
+  const typeToField = {
+    coffee_chat_decision: 'coffeeChatRating',
+    coffee_chat_decision_2: 'coffeeChatRating2',
+    diversity_chat_decision: 'diversityChatRating',
+  };
+
+  const lookup = {};
+  (data || []).forEach((row) => {
+    const field = typeToField[row.value_type];
+    if (!field) return;
+
+    if (!lookup[row.rushee]) {
+      lookup[row.rushee] = {
+        coffeeChatRating: '',
+        coffeeChatRating2: '',
+        diversityChatRating: '',
+      };
+    }
+    // Rows are ordered ascending by time, so later rows overwrite earlier
+    // ones — the last one written per (rushee, field) is the most recent.
+    lookup[row.rushee][field] = row.value?.rating || '';
+  });
+
+  setRatingsByUniqname(lookup);
+};
+
+// 3. Fetch rushees
+useEffect(() => {
+  fetchRushees();
+}, []);
+
+// 3b. Fetch latest ratings
+useEffect(() => {
+  fetchLatestRatings();
+}, []);
+
+const generateCSVData = () => {
+  return sortedRushees.map((rushee) => {
+    const ratings = ratingsByUniqname[rushee.uniqname] || {
+      coffeeChatRating: '',
+      coffeeChatRating2: '',
+      diversityChatRating: '',
+    };
+    return {
       uniqname: rushee.uniqname,
       full_name: `${rushee.firstname} ${rushee.lastname}`,
       pronouns: rushee.pronouns || '',
@@ -203,9 +262,12 @@ export default function RushBook() {
       dislikes: rushee.dislikes?.length || 0,
       stars: rushee.stars?.length || 0,
       score: getNetScore(rushee) || 0,
-    }));
-  };
-
+      coffeeChatRating: ratings.coffeeChatRating,
+      coffeeChatRating2: ratings.coffeeChatRating2,
+      diversityChatRating: ratings.diversityChatRating,
+    };
+  });
+};
 
   return (
     <BrothersProvider>
