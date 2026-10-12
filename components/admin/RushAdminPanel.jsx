@@ -2,10 +2,67 @@ import React, { useState, useEffect } from 'react'
 import supabase from '@/supabase'
 import Papa from 'papaparse'
 import QRCodeModal from './QRCodeModal'
+import JSZip from 'jszip'
 
 // Import react-datepicker
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+
+// Constants for PPT placeholder replacement
+const REQUIRED_PPT_FIELDS = [
+  'full_name',
+  'uniqname',
+  'major',
+  'year',
+  'stars',
+  'likes',
+  'dislikes',
+  'coffeeChatRating',
+  'coffeeChatRating2',
+  'diversityChatRating',
+]
+
+function escapeXml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function replacePptPlaceholders(slideXml, row) {
+  return slideXml.replace(/<a:p\b[^>]*>[\s\S]*?<\/a:p>/g, (paragraphXml) => {
+    const runMatches = [...paragraphXml.matchAll(/<a:t\b[^>]*>([\s\S]*?)<\/a:t>/g)]
+    if (runMatches.length === 0) return paragraphXml
+
+    // Reconstruct the true visible text by concatenating runs with NO
+    // separator — a word split across runs has nothing between the pieces.
+    let mergedText = runMatches.map((r) => r[1]).join('')
+
+    REQUIRED_PPT_FIELDS.forEach((field) => {
+      const tokenRegex = new RegExp(`\\b${field}\\b`, 'g')
+      mergedText = mergedText.replace(tokenRegex, escapeXml(row[field] ?? ''))
+    })
+
+    // Write the fully-replaced text into the FIRST run of this paragraph,
+    // and blank every other run — preserves run count/formatting elements
+    // while making the visible text correct.
+    let runIndex = 0
+    return paragraphXml.replace(
+      /(<a:t\b[^>]*>)([\s\S]*?)(<\/a:t>)/g,
+      (_fullMatch, opening, _text, closing) => {
+        const replacement = runIndex === 0 ? mergedText : ''
+        runIndex += 1
+        return `${opening}${replacement}${closing}`
+      }
+    )
+  })
+}
+
+function getXmlAttribute(tag, attribute) {
+  return tag.match(new RegExp(`${attribute}="([^"]+)"`))?.[1]
+}
 
 export default function RushAdminPanel() {
   const [rushInfo, setRushInfo] = useState(null)
@@ -31,6 +88,16 @@ export default function RushAdminPanel() {
   // ─────────────────────────────────────────────────────────
   const [csvFile, setCsvFile] = useState(null)
   const [parsedUnames, setParsedUnames] = useState([])
+
+
+  // ─────────────────────────────────────────────────────────
+  // Final Rush Discussion PowerPoint Generation
+  // ─────────────────────────────────────────────────────────
+  const [finalRusheeCsvFile, setFinalRusheeCsvFile] = useState(null)
+  const [finalRusheePptxFile, setFinalRusheePptxFile] = useState(null)
+  const [finalRusheeRows, setFinalRusheeRows] = useState([])
+  const [finalRusheeTemplate, setFinalRusheeTemplate] = useState(null)
+  const [finalRusheeImageRelId, setFinalRusheeImageRelId] = useState(null)
 
   // Download non-brother attendee emails for a specific event as CSV
   async function handleDownloadEventRusheeEmails(eventId, eventName) {
@@ -275,6 +342,333 @@ export default function RushAdminPanel() {
     }
   }
 
+  // Final Rush discussion CSV and PPTX selection handlers
+  function handleFinalRusheeCsvSelect(e) {
+    setFinalRusheeCsvFile(e.target.files?.[0] || null)
+    setFinalRusheeRows([])
+    setFinalRusheeTemplate(null)
+    setFinalRusheeImageRelId(null)
+  }
+
+  function handleFinalRusheePptxSelect(e) {
+    setFinalRusheePptxFile(e.target.files?.[0] || null)
+    setFinalRusheeRows([])
+    setFinalRusheeTemplate(null)
+    setFinalRusheeImageRelId(null)
+  }
+
+  async function handleParseFinalRusheeFiles() {
+    if (!finalRusheeCsvFile || !finalRusheePptxFile) {
+      alert('Please select both a CSV file and a PPTX template.')
+      return
+    }
+
+    try {
+      const rows = await new Promise((resolve, reject) => {
+        Papa.parse(finalRusheeCsvFile, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results.data || []),
+          error: reject,
+        })
+      })
+
+      if (!rows.length) {
+        alert('The CSV does not contain any rushees.')
+        return
+      }
+
+      const templateBuffer = await finalRusheePptxFile.arrayBuffer()
+      const templateZip = await JSZip.loadAsync(templateBuffer)
+      const slideFile = templateZip.file('ppt/slides/slide1.xml')
+
+      if (!slideFile) {
+        alert('The PPTX template does not contain ppt/slides/slide1.xml.')
+        return
+      }
+
+      const slideXml = await slideFile.async('string')
+
+      // Merge runs per-paragraph (not the whole slide) so a word split
+      // across runs — e.g. "star" + "s" — is correctly reassembled before
+      // checking for placeholders.
+      const paragraphTexts = [
+        ...slideXml.matchAll(/<a:p\b[^>]*>[\s\S]*?<\/a:p>/g),
+      ].map((match) => {
+        const runs = [...match[0].matchAll(/<a:t\b[^>]*>([\s\S]*?)<\/a:t>/g)]
+        return runs.map((r) => r[1]).join('')
+      })
+      const allText = paragraphTexts.join('\n')
+
+      const missingFields = REQUIRED_PPT_FIELDS.filter(
+        (field) => !new RegExp(`\\b${field}\\b`).test(allText)
+      )
+
+      const imageMatch = slideXml.match(
+        /<a:blip\b[^>]*r:embed="([^"]+)"/
+      )
+
+      if (!imageMatch) {
+        alert(
+          'Template must contain a picture placeholder for the rushee photo — insert any image into the template slide where the photo should appear.'
+        )
+        return
+      }
+
+      setFinalRusheeImageRelId(imageMatch[1])
+      setFinalRusheeRows(rows)
+      setFinalRusheeTemplate(templateZip)
+      alert(`Parsed ${rows.length} rushees.`)
+    } catch (error) {
+      console.error('Error parsing final rushee files:', error)
+      alert('Failed to parse the CSV or PPTX template. Check the console.')
+    }
+  }
+
+    async function handleGenerateFinalRusheePptx() {
+    if (!finalRusheeTemplate || finalRusheeRows.length === 0) {
+      alert('Please parse the CSV and PPTX files first.')
+      return
+    }
+
+    try {
+      const templateBuffer = await finalRusheeTemplate.generateAsync({
+        type: 'arraybuffer',
+      })
+      const zip = await JSZip.loadAsync(templateBuffer)
+
+      const templateSlide = await zip
+        .file('ppt/slides/slide1.xml')
+        .async('string')
+
+      const presentationFile = zip.file('ppt/presentation.xml')
+      const presentationRelsFile = zip.file(
+        'ppt/_rels/presentation.xml.rels'
+      )
+      const contentTypesFile = zip.file('[Content_Types].xml')
+
+      if (!presentationFile || !presentationRelsFile || !contentTypesFile) {
+        throw new Error('Required PPTX presentation files are missing.')
+      }
+
+      let presentationXml = await presentationFile.async('string')
+      let presentationRelsXml = await presentationRelsFile.async('string')
+      let contentTypesXml = await contentTypesFile.async('string')
+
+      const missingPhotos = []
+
+      if (!/<Default\b[^>]*Extension="jpg"/.test(contentTypesXml)) {
+        contentTypesXml = contentTypesXml.replace(
+          '</Types>',
+          '<Default Extension="jpg" ContentType="image/jpeg"/></Types>'
+        )
+      }
+
+      const slide1Relationship = [
+        ...presentationRelsXml.matchAll(
+          /<Relationship\b[^>]*Target="slides\/slide1\.xml"[^>]*\/>/g
+        ),
+      ][0]?.[0]
+
+      const slide1RelationshipId = slide1Relationship
+        ? getXmlAttribute(slide1Relationship, 'Id')
+        : null
+
+      if (!slide1RelationshipId) {
+        throw new Error('Could not find the template slide relationship.')
+      }
+
+      presentationRelsXml = presentationRelsXml.replace(
+        slide1Relationship,
+        ''
+      )
+
+      const originalSlideId = [
+        ...presentationXml.matchAll(
+          new RegExp(
+            `<p:sldId\\b[^>]*r:id="${slide1RelationshipId}"[^>]*/>`,
+            'g'
+          )
+        ),
+      ][0]?.[0]
+
+      if (!originalSlideId) {
+        throw new Error('Could not find the template slide ID.')
+      }
+
+      presentationXml = presentationXml.replace(originalSlideId, '')
+
+      contentTypesXml = contentTypesXml.replace(
+        /<Override\b[^>]*PartName="\/ppt\/slides\/slide1\.xml"[^>]*\/>/g,
+        ''
+      )
+
+      const relationshipIds = [
+        ...presentationRelsXml.matchAll(/\bId="rId(\d+)"/g),
+      ].map((match) => Number(match[1]))
+
+      let nextRelationshipId =
+        Math.max(0, ...relationshipIds) + 1
+
+      const slideIds = [
+        ...presentationXml.matchAll(/<p:sldId\b[^>]*id="(\d+)"/g),
+      ].map((match) => Number(match[1]))
+
+      let nextSlideId = Math.max(255, ...slideIds) + 1
+      const newSlideEntries = []
+
+      for (let index = 0; index < finalRusheeRows.length; index += 1) {
+        const slideNumber = index + 2
+        const row = finalRusheeRows[index]
+        const slidePath = `ppt/slides/slide${slideNumber}.xml`
+        const relationshipId = `rId${nextRelationshipId++}`
+        const slideId = nextSlideId++
+
+        const generatedSlideXml = replacePptPlaceholders(
+          templateSlide,
+          row
+        )
+
+        zip.file(slidePath, generatedSlideXml)
+
+        const templateRelsPath =
+          'ppt/slides/_rels/slide1.xml.rels'
+        const templateRels = zip.file(templateRelsPath)
+
+        if (templateRels) {
+          const relsXml = await templateRels.async('string')
+          zip.file(
+            `ppt/slides/_rels/slide${slideNumber}.xml.rels`,
+            relsXml
+          )
+        }
+
+        let generatedRelsXml = null
+
+        if (templateRels) {
+          generatedRelsXml = await templateRels.async('string')
+          generatedRelsXml = generatedRelsXml.replace(
+            /<Relationship\b[^>]*Type="[^"]*\/notesSlide"[^>]*\/>/g,
+            ''
+          )
+        }
+
+        const { data: photoBlob, error: photoError } = await supabase.storage
+          .from('rushees')
+          .download(`${row.uniqname}.jpeg`)
+
+        if (photoError) {
+          console.warn(
+            `Could not fetch photo for ${row.uniqname}; using template default.`,
+            photoError
+          )
+          missingPhotos.push(row.uniqname)
+        } else {
+          const photoArrayBuffer = await photoBlob.arrayBuffer()
+          zip.file(
+            `ppt/media/rushee_${row.uniqname}.jpg`,
+            photoArrayBuffer
+          )
+
+          if (generatedRelsXml) {
+            const escapedImageRelId = finalRusheeImageRelId.replace(
+              /[.*+?^${}()|[\]\\]/g,
+              '\\$&'
+            )
+            const imageRelationshipRegex = new RegExp(
+              `(<Relationship\\b(?=[^>]*\\bId="${escapedImageRelId}")[^>]*?\\bTarget=")[^"]*(")`
+            )
+
+            generatedRelsXml = generatedRelsXml.replace(
+              imageRelationshipRegex,
+              (_, beforeTarget, afterTarget) =>
+                `${beforeTarget}../media/rushee_${row.uniqname}.jpg${afterTarget}`
+            )
+          }
+        }
+
+        if (generatedRelsXml) {
+          zip.file(
+            `ppt/slides/_rels/slide${slideNumber}.xml.rels`,
+            generatedRelsXml
+          )
+        }
+
+        presentationRelsXml = presentationRelsXml.replace(
+          '</Relationships>',
+          `<Relationship Id="${relationshipId}" ` +
+            `Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" ` +
+            `Target="slides/slide${slideNumber}.xml"/>` +
+            '</Relationships>'
+        )
+
+        newSlideEntries.push(
+          `<p:sldId id="${slideId}" r:id="${relationshipId}"/>`
+        )
+
+        contentTypesXml = contentTypesXml.replace(
+          '</Types>',
+          `<Override PartName="/ppt/slides/slide${slideNumber}.xml" ` +
+            `ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>` +
+            '</Types>'
+        )
+      }
+
+      presentationXml = presentationXml.replace(
+        '</p:sldIdLst>',
+        `${newSlideEntries.join('')}</p:sldIdLst>`
+      )
+
+      zip.remove('ppt/slides/slide1.xml')
+      zip.remove('ppt/slides/_rels/slide1.xml.rels')
+
+      zip.file('ppt/presentation.xml', presentationXml)
+      zip.file(
+        'ppt/_rels/presentation.xml.rels',
+        presentationRelsXml
+      )
+      zip.file('[Content_Types].xml', contentTypesXml)
+
+      const outputBlob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(outputBlob)
+      const link = document.createElement('a')
+
+      link.href = url
+      link.download =
+        `final_rushees_${new Date().toISOString().slice(0, 10)}.pptx`
+      link.style.visibility = 'hidden'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      alert(
+        missingPhotos.length === 0
+        ? `Successfully generated ${finalRusheeRows.length} slides.`
+        : `Successfully generated ${finalRusheeRows.length} slides (${missingPhotos.length} 
+        missing photos, used template default: ${missingPhotos.join(', ')}).`
+      )
+    } catch (error) {
+      console.error('Error generating final rushee PPTX:', error)
+      alert('Failed to generate the PPTX. Check the console.')
+    }
+  }
+
+  function handleResetFinalRushees() {
+    setFinalRusheeCsvFile(null)
+    setFinalRusheePptxFile(null)
+    setFinalRusheeRows([])
+    setFinalRusheeTemplate(null)
+    setFinalRusheeImageRelId(null)
+
+    const fileInputs = document.querySelectorAll(
+      'input[data-final-rushee-file]'
+    )
+    fileInputs.forEach((input) => {
+      input.value = ''
+    })
+  }
 
   async function handleFinalizePC() {
     // Confirm with user before proceeding
@@ -1384,6 +1778,94 @@ export default function RushAdminPanel() {
             </ul>
           </div>
         )}
+      </div>
+      {/**CSV, PPTX UPLOAD FOR FINAL RUSH DISCUSSION */}
+      <div className="mt-8 p-4 border rounded bg-gray-50">
+        <h2 className="text-lg font-semibold mb-2 text-[#8B0000]">
+          Final Rushees (CSV, PPTX Upload)
+        </h2>
+          <div className="mt-4">
+            <p className="text-sm text-gray-600 mb-3">
+              Upload a final rushee CSV and a one-slide PPTX template
+              containing the required placeholders.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block font-medium mb-1">
+                  Final Rushees CSV
+                </label>
+                <input
+                  data-final-rushee-file
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFinalRusheeCsvSelect}
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium mb-1">
+                  PowerPoint Template
+                </label>
+                <input
+                  data-final-rushee-file
+                  type="file"
+                  accept=".pptx"
+                  onChange={handleFinalRusheePptxSelect}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleParseFinalRusheeFiles}
+                  disabled={!finalRusheeCsvFile || !finalRusheePptxFile}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  Parse Files
+                </button>
+
+                {finalRusheeRows.length > 0 && (
+                  <button
+                    onClick={handleResetFinalRushees}
+                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  >
+                    Start Over
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {finalRusheeRows.length > 0 && (
+              <div className="mt-4 text-sm text-gray-700">
+                <p className="font-semibold mb-2">
+                  Parsed {finalRusheeRows.length} rushees:
+                </p>
+
+                <ul className="list-disc list-inside max-h-64 overflow-y-auto">
+                  {finalRusheeRows.map((row, index) => (
+                    <li key={`${row.uniqname}-${index}`}>
+                      <span className="font-medium">
+                        {row.full_name}
+                      </span>
+                      {' — '}
+                      {row.uniqname}
+                      {' — '}
+                      {row.major}
+                      {' — '}
+                      {row.year}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={handleGenerateFinalRusheePptx}
+                  className="mt-4 bg-[#8B0000] text-white px-4 py-2 rounded hover:bg-red-800"
+                >
+                  Confirm & Download PPTX
+                </button>
+              </div>
+            )}
+          </div>
       </div>
       <div className="mt-8 p-4 border rounded bg-gray-50">
         <button

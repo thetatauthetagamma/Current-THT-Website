@@ -121,7 +121,7 @@ export default function pledgetracking() {
                 </p>
               </div>
               <a
-                href="https://forms.gle/SM3GDZzfLDXgfhDz6"
+                href="https://docs.google.com/forms/d/e/1FAIpQLScsLpYg6qZM4KkS8oLo8s3mkjujdRgF-bqWIR3TH11_gFQVwg/viewform?usp=header"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-6 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
