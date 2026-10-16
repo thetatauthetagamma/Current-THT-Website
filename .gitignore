@@ -36,3 +36,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# alumni data (real member info must never be committed)
+/scripts/alumni/data/
+/alumni*.csv
