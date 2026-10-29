@@ -166,6 +166,14 @@ export default function BroNavBar({ isPledge }) {
                   <a>Member Directory</a>
                 </li>
               </Link>
+              <Link legacyBehavior href="/brothers/alumni">
+                <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
+                  <a>
+                    Alumni
+                    <span className="ml-2 align-top text-[10px] font-bold bg-red-600 text-white rounded px-1 py-0.5">NEW</span>
+                  </a>
+                </li>
+              </Link>
               <Link legacyBehavior href="/members/studybuddysearch">
                 <li className="hover:bg-[#8b000070] transition-colors duration-300 rounded flex-grow py-4 pl-2">
                   <a>Study Buddy 🔎</a>
