@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { uniqnameFromEmail } from '@/utils/roles'
 import supabase from '@/supabase'
 import thtlogo from '../../public/tht-logo.png'
 import Image from 'next/image'
@@ -110,7 +111,7 @@ export default function Profile () {
 
   useEffect(() => {
     const isEditAble = async () => {
-      if (userid == currentEmail.slice(0, -10)) {
+      if (userid == uniqnameFromEmail(currentEmail)) {
         setIsEditable(true)
       } else {
         setIsEditable(false)

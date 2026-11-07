@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../../supabase';
 import BroNavBar from "@/components/BroNavBar";
+import { uniqnameFromEmail } from '@/utils/roles';
 import PledgeTilePledgeView from '../../components/PledgeTilePledgeView';
 
 
@@ -46,7 +47,7 @@ export default function progress() {
           .from('Brothers')
           .select('adminrole')
           .eq('email', userEmail)
-          .single();
+          .maybeSingle(); // PNMs have no Brothers row: no error / 406 in the console
 
         if (!error && data && data.adminrole === 'parent') {
           setIsParentAdmin(true);
@@ -68,8 +69,7 @@ export default function progress() {
       setViewingAsParent(true);
     } else if (userEmail) {
       // Otherwise, use the logged-in user's uniqname
-      const truncatedEmail = userEmail.slice(0, -10);
-      setPledgeUniqname(truncatedEmail);
+      setPledgeUniqname(uniqnameFromEmail(userEmail));
       setViewingAsParent(false);
     }
   }, [router.query.uniqname, userEmail, isParentAdmin]);
@@ -79,7 +79,7 @@ export default function progress() {
       try {
         const { data, error } = await supabase
           .from('Pledges')
-          .select('*')
+          .select('uniqname')
           .eq('uniqname', pledgeUniqname);
 
         if (error) throw error;

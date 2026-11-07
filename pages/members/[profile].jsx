@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { uniqnameFromEmail } from '@/utils/roles'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
 import imageCompression from 'browser-image-compression'  // <-- 1) IMPORT HERE
@@ -156,7 +157,7 @@ export default function Profile () {
   // 5) Check if logged-in user can edit this profile
   useEffect(() => {
     const isEditAble = async () => {
-      if (userid === currentEmail.slice(0, -10)) {
+      if (userid === uniqnameFromEmail(currentEmail)) {
         setIsEditable(true)
       } else {
         setIsEditable(false)

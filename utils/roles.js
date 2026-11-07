@@ -40,3 +40,10 @@ export function decideAccess(path, roles, hasEmail = true) {
   if (!isBrother && !isPledge) return 'redirect';
   return 'next';
 }
+
+// Uniqname = the part of the email before "@". Matches the SQL policies (split_part(email, '@', 1)).
+// Do not use email.slice(0, -10): that assumes "@umich.edu" and breaks for any other domain.
+export function uniqnameFromEmail(email) {
+  if (typeof email !== 'string') return '';
+  return email.trim().split('@')[0].toLowerCase();
+}
