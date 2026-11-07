@@ -49,6 +49,7 @@ export default function MemberDirectory() {
     }
 
     fetchData()
+    console.log("Tree Fam == Best Fam")
   }, [])
 
   useEffect(() => {
