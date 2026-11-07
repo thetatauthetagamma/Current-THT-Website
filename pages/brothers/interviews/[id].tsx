@@ -58,7 +58,7 @@ export default function ViewInterview() {
   if (loading) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={false}/>
+        <BroNavBar />
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: '#f5f3dc' }}>
           <p className="text-gray-600">Loading...</p>
         </div>
@@ -69,7 +69,7 @@ export default function ViewInterview() {
   if (!interview) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={false}/>
+        <BroNavBar />
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: '#f5f3dc' }}>
           <p className="text-gray-600">Interview not found</p>
         </div>
@@ -79,7 +79,7 @@ export default function ViewInterview() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false}/>
+      <BroNavBar />
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
         <InterviewHeader />
 
