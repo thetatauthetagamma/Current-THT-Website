@@ -1,4 +1,5 @@
 import BroNavBar from "@/components/BroNavBar";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 import Link from "next/link";
 import InterviewHeader from "@/components/InterviewHeader";
 import { useRouter } from "next/router";
@@ -25,6 +26,7 @@ interface FormData {
 }
 
 export default function AddInterview() {
+  const { base } = useInterviewsBase(); // brothers vs PNMs
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -142,7 +144,7 @@ export default function AddInterview() {
       }
 
       // Redirect to success page
-      router.push('/brothers/interviews/success');
+      router.push(`${base}/success`);
     } catch (error) {
       console.error('Error:', error);
       alert('An unexpected error occurred. Please try again.');
@@ -151,7 +153,7 @@ export default function AddInterview() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false}/>
+      <BroNavBar />
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
         <InterviewHeader />
 

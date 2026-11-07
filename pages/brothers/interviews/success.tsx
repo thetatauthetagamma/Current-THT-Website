@@ -1,11 +1,13 @@
 import BroNavBar from "@/components/BroNavBar";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 import Link from "next/link";
 import InterviewHeader from "@/components/InterviewHeader";
 
 export default function InterviewSuccess() {
+  const { base } = useInterviewsBase(); // brothers vs PNMs
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false}/>
+      <BroNavBar />
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
         <InterviewHeader />
 
@@ -20,7 +22,7 @@ export default function InterviewSuccess() {
             </p>
           </div>
           
-          <Link href="/brothers/interviews/add">
+          <Link href={`${base}/add`}>
             <button className="px-6 py-3 bg-[#8b0000] text-white rounded-lg hover:bg-[#a00000] transition-colors text-lg">
               Submit Another Interview
             </button>

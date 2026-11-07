@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PNM_HOME } from '@/utils/navItems';
 import React, { useState, useEffect } from "react"
 import Router from 'next/router';
 import Image from 'next/image';
@@ -22,7 +23,7 @@ const Navbar = () => {
         const session = await supabase.auth.getSession();
         if (session) {
           setUserEmail(session.data.session?.user.email || '')
-          Cookies.set('userEmail', session.data.session?.user.email || '');
+          Cookies.set('userEmail', session.data.session?.user.email || '', COOKIE_OPTIONS);
         }
       } catch (error) {
         console.log(error);
@@ -34,11 +35,11 @@ const Navbar = () => {
     const authListener = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         setUserEmail(session.user?.email || '');
-        Cookies.set('userEmail', session.user?.email || '');
+        Cookies.set('userEmail', session.user?.email || '', COOKIE_OPTIONS);
       }
       if (event === 'SIGNED_OUT') {
         setUserEmail('');
-        Cookies.set('userEmail', '')
+        Cookies.set('userEmail', '', COOKIE_OPTIONS)
         setIsPledge(false)
         setIsBrother(false);
         Router.push('/');
@@ -47,16 +48,17 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    if (!userEmail) return; // no session yet: skip the empty-email queries
     const checkIfBrother = async () => {
 
-      const { data, error } = await supabase.from('Brothers').select('*').eq('email', userEmail);
+      const { data, error } = await supabase.from('Brothers').select('userid').eq('email', userEmail);
       if (data?.length == 1 && !error) {
         setIsBrother(true);
       }
     }
     const checkIfPledge = async () => {
 
-      const { data, error } = await supabase.from('Pledges').select('*').eq('email', userEmail);
+      const { data, error } = await supabase.from('Pledges').select('uniqname').eq('email', userEmail);
       if (data?.length == 1 && !error) {
         setIsPledge(true);
       }
@@ -154,7 +156,7 @@ const Navbar = () => {
                   (
                     <div className="flex flex-row">
                       <li className="mx-1">
-                        <Link legacyBehavior href="/pledges/pledgecalendar">
+                        <Link legacyBehavior href={PNM_HOME}>
                           <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Potential New Members </a>
                         </Link>
                       </li>
@@ -231,7 +233,7 @@ const Navbar = () => {
                   (
                     <div className="flex flex-col">
                       <li className="mx-1">
-                        <Link legacyBehavior href="/pledges/pledgecalendar">
+                        <Link legacyBehavior href={PNM_HOME}>
                           <a className="text-black hover:text-gray-400 transition-colors duration-300 px-4 py-2 rounded-md font-bold text-lg"> Potential New Members </a>
                         </Link>
                       </li>
@@ -270,5 +272,8 @@ const Navbar = () => {
 
   );
 };
+
+// Secure only over https so localhost dev keeps working. This cookie is a navigation hint, not real auth.
+const COOKIE_OPTIONS = { sameSite: 'lax' as const, secure: typeof window !== 'undefined' && window.location.protocol === 'https:' };
 
 export default Navbar;

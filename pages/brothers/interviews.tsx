@@ -1,4 +1,5 @@
 import BroNavBar from "@/components/BroNavBar";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import InterviewHeader from "@/components/InterviewHeader";
@@ -21,6 +22,7 @@ interface Company {
 }
 
 export default function Interviews() {
+  const { base, canEdit } = useInterviewsBase(); // brothers vs PNMs
   const [searchQuery, setSearchQuery] = useState("");
   const [companies, setCompanies] = useState<Company[]>([]);
   const [allInterviews, setAllInterviews] = useState<Interview[]>([]);
@@ -107,7 +109,7 @@ export default function Interviews() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false} />
+      <BroNavBar />
       <div
         className="flex-grow flex flex-col overflow-hidden"
         style={{ backgroundColor: "#f5f3dc", height: "100vh" }}
@@ -195,12 +197,14 @@ export default function Interviews() {
                   ? "Loading..."
                   : `${filteredInterviews.length} interview${filteredInterviews.length !== 1 ? "s" : ""}`}
               </p>
-              <Link
-                href="/brothers/interviews/add"
-                className="text-xs px-3 py-1.5 bg-[#8b0000] text-white rounded-lg hover:bg-[#a00000] transition-colors font-medium"
-              >
-                + Add Interview
-              </Link>
+              {canEdit && (
+                <Link
+                  href={`${base}/add`}
+                  className="text-xs px-3 py-1.5 bg-[#8b0000] text-white rounded-lg hover:bg-[#a00000] transition-colors font-medium"
+                >
+                  + Add Interview
+                </Link>
+              )}
             </div>
 
             {/* Loading skeleton */}
@@ -229,7 +233,7 @@ export default function Interviews() {
                 {filteredInterviews.map((interview) => (
                   <Link
                     key={interview.id}
-                    href={`/brothers/interviews/${interview.id}`}
+                    href={`${base}/${interview.id}`}
                     className="flex items-start gap-3.5 bg-white rounded-xl border border-[#8b000010] hover:border-[#8b000035] hover:shadow-md transition-all p-4 group"
                   >
                     {/* Company initial */}
