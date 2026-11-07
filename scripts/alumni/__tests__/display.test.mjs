@@ -52,3 +52,18 @@ test('uniqueCaseInsensitive and safeLinkedInUrl', () => {
   assert.equal(safeLinkedInUrl('javascript:alert(1)'), null);
   assert.equal(safeLinkedInUrl('linkedin.com/in/jane'), 'https://linkedin.com/in/jane');
 });
+
+import { initialsOf, uniqnamesWithPhotos } from '../../../utils/alumni.js';
+
+test('initialsOf and uniqnamesWithPhotos', () => {
+  assert.equal(initialsOf('jane', 'doe'), 'JD');
+  assert.equal(initialsOf('', undefined), '?');
+  const map = uniqnamesWithPhotos([
+    { name: 'jadono.jpeg', updated_at: '2026-11-04T06:09:31Z' },
+    { name: 'x.JPG', created_at: '2026-01-01' },
+    { name: '.emptyFolderPlaceholder' }, null,
+  ]);
+  assert.deepEqual([...map.keys()].sort(), ['jadono', 'x']);
+  assert.equal(map.get('jadono'), '2026-11-04T06:09:31Z'); // version changes when the photo is re-uploaded
+  assert.equal(map.get('x'), '2026-01-01');
+});

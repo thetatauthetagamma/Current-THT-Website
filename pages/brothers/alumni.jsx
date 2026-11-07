@@ -3,7 +3,7 @@ import BroNavBar from '@/components/BroNavBar'
 import AlumniCard from '@/components/alumni/AlumniCard'
 import EditMyInfoModal from '@/components/alumni/EditMyInfoModal'
 import supabase from '../../supabase'
-import { classStatus, cleanText, gradYear, majorsOf, uniqueCaseInsensitive } from '@/utils/alumni'
+import { classStatus, cleanText, gradYear, majorsOf, uniqueCaseInsensitive, uniqnamesWithPhotos } from '@/utils/alumni'
 
 /*
 Brothers-only alumni directory (current brothers and alumni). Data comes from the
@@ -104,6 +104,24 @@ export default function AlumniDirectory() {
     }
     check()
   }, [])
+
+  // Which brothers have a site photo? One bucket listing, so cards only download photos that exist.
+  const [photoIds, setPhotoIds] = useState(() => new Map())
+  useEffect(() => {
+    if (!me) return
+    let cancelled = false
+    ;(async () => {
+      const all = []
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase.storage.from('brothers').list('', { limit: 1000, offset })
+        if (error || !data) break
+        all.push(...data)
+        if (data.length < 1000) break
+      }
+      if (!cancelled) setPhotoIds(uniqnamesWithPhotos(all))
+    })()
+    return () => { cancelled = true }
+  }, [me])
 
   // Filter dropdown values (standardized and de-duplicated)
   useEffect(() => {
@@ -322,7 +340,7 @@ export default function AlumniDirectory() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {visible.map((p) => (
-                <AlumniCard key={p.userid} person={p} isMe={p.userid === me} onEdit={() => setEditing(true)} />
+                <AlumniCard key={p.userid} person={p} isMe={p.userid === me} onEdit={() => setEditing(true)} photoVersion={photoIds.get(p.userid)} />
               ))}
             </div>
             {visible.length < filtered.length && (

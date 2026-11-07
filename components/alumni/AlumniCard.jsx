@@ -1,4 +1,5 @@
 import React from 'react'
+import AlumniPhoto from '@/components/alumni/AlumniPhoto'
 import { classStatus, cleanText, formatPhone, gradYear, majorsOf, safeLinkedInUrl } from '@/utils/alumni'
 
 const PHONE_SHOWN_AFTER_YEAR = 2024
@@ -8,7 +9,7 @@ const STATUS_STYLES = {
   alumni: 'bg-gray-200 text-gray-800'
 }
 
-export default function AlumniCard({ person, isMe, onEdit }) {
+export default function AlumniCard({ person, isMe, onEdit, photoVersion }) {
   const year = gradYear(person.year)
   const status = classStatus(person.year)
   const linkedin = safeLinkedInUrl(person.linkedin)
@@ -27,13 +28,16 @@ export default function AlumniCard({ person, isMe, onEdit }) {
   return (
     <div className="bg-white rounded shadow p-4 flex flex-col border-t-4 border-red-800">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="font-bold text-xl leading-tight">
-            {person.firstname} {person.lastname}
-          </h2>
-          <p className="text-gray-600 text-sm">
-            {[majors, year && `Class of ${year}`].filter(Boolean).join(' · ') || 'No major or year listed'}
-          </p>
+        <div className="flex items-center gap-3">
+          <AlumniPhoto userid={person.userid} firstname={person.firstname} lastname={person.lastname} version={photoVersion} />
+          <div>
+            <h2 className="font-bold text-xl leading-tight">
+              {person.firstname} {person.lastname}
+            </h2>
+            <p className="text-gray-600 text-sm">
+              {[majors, year && `Class of ${year}`].filter(Boolean).join(' · ') || 'No major or year listed'}
+            </p>
+          </div>
         </div>
         {STATUS_STYLES[status] && (
           <span className={`text-xs font-bold px-2 py-1 rounded ${STATUS_STYLES[status]}`}>

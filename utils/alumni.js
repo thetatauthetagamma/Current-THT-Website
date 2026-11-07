@@ -105,3 +105,20 @@ export function uniqueCaseInsensitive(values) {
   }
   return [...seen.values()].sort((a, b) => a.localeCompare(b))
 }
+
+// "Jane Doe" -> "JD". Used as the photo fallback on alumni cards.
+export function initialsOf(firstname, lastname) {
+  const pick = (s) => (typeof s === 'string' ? s.trim().charAt(0).toUpperCase() : '')
+  return pick(firstname) + pick(lastname) || '?'
+}
+
+// Storage .list() result -> Map of uniqname -> version stamp (the file's updated_at) for every "<uniqname>.jpeg"
+// in the brothers bucket. The stamp goes in the image URL so a replaced photo shows up right away instead of after the cache expires.
+export function uniqnamesWithPhotos(files) {
+  const out = new Map()
+  for (const f of files ?? []) {
+    const m = typeof f?.name === 'string' ? f.name.match(/^(.+)\.jpe?g$/i) : null
+    if (m) out.set(m[1], f.updated_at || f.created_at || '1')
+  }
+  return out
+}
