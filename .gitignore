@@ -40,3 +40,6 @@ next-env.d.ts
 # alumni data (real member info must never be committed)
 /scripts/alumni/data/
 /alumni*.csv
+
+# local AI tool config
+.codex/

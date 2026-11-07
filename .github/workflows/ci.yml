@@ -1,0 +1,27 @@
+name: CI
+
+# Runs on every pull request and every push to main: unit tests + a production build.
+# Nothing here needs real secrets: the build only needs the two NEXT_PUBLIC_ variables to exist, so dummy values are used.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-for-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: node --test scripts/alumni/__tests__
+      - name: Production build (type-checks and lints)
+        run: npx next build
