@@ -24,6 +24,22 @@ test('self-edited fields are never overwritten', () => {
   assert.deepEqual(p.selfEditedSkipped, ['company']);
 });
 
+test('self-edit within 2 years stays locked', () => {
+  const p = planChanges(row({ company: 'Mine', company_source: 'self-edited', self_edited_at: '2025-06-01T00:00:00.000Z' }), ok(A, { company: 'Theirs' }), NOW);
+  assert.equal(p.row.company, 'Mine'); assert.deepEqual(p.selfEditedSkipped, ['company']);
+});
+
+test('self-edit older than 2 years is replaced and the old value is logged', () => {
+  const p = planChanges(row({ company: 'Mine', company_source: 'self-edited', self_edited_at: '2020-01-01T00:00:00.000Z' }), ok(A, { company: 'Theirs' }), NOW);
+  assert.equal(p.row.company, 'Theirs'); assert.equal(p.row.company_source, 'enrichment');
+  assert.deepEqual(p.changes, [{ field: 'company', old: 'Mine', new: 'Theirs' }]);
+});
+
+test('expired self-edit is kept when LinkedIn returns blank', () => {
+  const p = planChanges(row({ company: 'Mine', company_source: 'self-edited', self_edited_at: '2020-01-01T00:00:00.000Z' }), ok(A, { company: '' }), NOW);
+  assert.equal(p.row.company, 'Mine'); assert.equal(p.changes.length, 0);
+});
+
 test('blank values never overwrite existing ones', () => {
   const p = planChanges(row({ company: 'Acme', company_source: 'enrichment' }), ok(A, { company: '  ', location: null }), NOW);
   assert.equal(p.row.company, 'Acme'); assert.equal(p.changes.length, 0);

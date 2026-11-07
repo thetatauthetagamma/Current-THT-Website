@@ -4,6 +4,12 @@ import { normalizeLinkedInUrl } from './csv.mjs';
 import { enrich as defaultEnrich, estimateCost } from './enrich.mjs';
 
 const FIELDS = ['company', 'title', 'location'];
+export const SELF_EDIT_TTL_DAYS = 730;                    // self-edits lock a field for 2 years
+// Locked while self_edited_at is within the TTL. A missing timestamp is treated as locked (safe default).
+export function selfEditLocked(existing, now) {
+  if (!existing?.self_edited_at) return true;
+  return new Date(now) - new Date(existing.self_edited_at) < SELF_EDIT_TTL_DAYS * 864e5;
+}
 const clean = (v) => (v == null ? '' : String(v).trim());
 const same = (a, b) => clean(a).toLowerCase() === clean(b).toLowerCase();
 
@@ -33,10 +39,10 @@ export function planChanges(existing, rec, now = new Date().toISOString()) {
   for (const f of FIELDS) {
     const incoming = clean(rec[f]);
     if (!incoming) continue;                              // never write blanks over anything
-    if (base[`${f}_source`] === 'self-edited') {          // locked by the brother
+    if (base[`${f}_source`] === 'self-edited' && selfEditLocked(base, now)) {   // locked by the brother
       if (!same(base[f], incoming)) selfEditedSkipped.push(f);
       continue;
-    }
+    }                                                     // expired self-edits fall through and may be replaced
     if (same(base[f], incoming)) continue;                // unchanged
     changes.push({ field: f, old: base[f] ?? null, new: incoming });
     row[f] = incoming;
