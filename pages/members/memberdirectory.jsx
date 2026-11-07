@@ -23,19 +23,13 @@ export default function MemberDirectory() {
 
   useEffect(() => {
     setUserEmail(Cookies.get('userEmail'))
+  }, [])
 
+  // Roster: fetched ONCE (it used to re-download every brother when the cookie loaded) and only the columns the tiles show.
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch pledge data for user
-        const [pledgeData, brothersData] = await Promise.all([
-          supabase.from('Pledges').select('*').eq('email', userEmail),
-          supabase.from('Brothers').select('*')
-        ])
-
-        // If user is found in Pledges, they are a pledge
-        if (pledgeData.data?.length === 1 && !pledgeData.error) {
-          setIsPledge(true)
-        }
+        const brothersData = await supabase.from('Brothers').select('userid, firstname, lastname, roll, email, phone, linkedin, major, year, classes, pronouns, archivedclasses')
 
         // Handle potential errors
         if (brothersData.error) {
@@ -55,14 +49,14 @@ export default function MemberDirectory() {
     }
 
     fetchData()
-    console.log("Fidget Fam == Best Fam")
-  }, [userEmail])
+  }, [])
 
   useEffect(() => {
+    if (!userEmail) return
     const checkIfBrother = async () => {
       const { data, error } = await supabase
         .from('Brothers')
-        .select('*')
+        .select('userid')
         .eq('email', userEmail)
       if (data?.length === 1 && !error) {
         setIsPledge(false)
@@ -72,7 +66,7 @@ export default function MemberDirectory() {
     const checkIfPledge = async () => {
       const { data, error } = await supabase
         .from('Pledges')
-        .select('*')
+        .select('uniqname')
         .eq('email', userEmail)
       if (data?.length === 1 && !error) {
         setIsPledge(true)
