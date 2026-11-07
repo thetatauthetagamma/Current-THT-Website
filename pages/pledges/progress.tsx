@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import supabase from '../../supabase';
 import BroNavBar from "@/components/BroNavBar";
@@ -20,6 +21,7 @@ export default function progress() {
   const [pledgeUniqname, setPledgeUniqname] = useState('');
   const [isParentAdmin, setIsParentAdmin] = useState(false);
   const [viewingAsParent, setViewingAsParent] = useState(false);
+  const [hasLinkedin, setHasLinkedin] = useState<boolean | null>(null); // null = not loaded yet
 
   //fetches the logged in users email from the session
   useEffect(() => {
@@ -79,12 +81,13 @@ export default function progress() {
       try {
         const { data, error } = await supabase
           .from('Pledges')
-          .select('uniqname')
+          .select('uniqname, linkedin')
           .eq('uniqname', pledgeUniqname);
 
         if (error) throw error;
 
         if (data && data.length > 0) {
+          setHasLinkedin(Boolean(String(data[0].linkedin ?? '').trim()));
           setLoading(false);
           setError(null);
         } else {
@@ -111,7 +114,23 @@ export default function progress() {
           ) : error ? (
             <div>Error: {error}</div>
           ) : (
-            <PledgeTilePledgeView pledge={pledgeUniqname}/>
+            <>
+              {/* PNMs can add their LinkedIn on their profile so they are in the alumni directory once they join. */}
+              {!viewingAsParent && hasLinkedin === false && (
+                <div className="bg-white rounded shadow p-4 mb-4 border-t-4 border-red-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <p className="text-sm">
+                    <span className="font-bold">Add your LinkedIn.</span> It takes a minute, and it gets you into the alumni directory when you join.
+                  </p>
+                  <Link
+                    href={`/members/${pledgeUniqname}`}
+                    className="text-center text-sm font-bold bg-red-800 text-white rounded px-4 py-2 hover:bg-red-900 transition-colors duration-300"
+                  >
+                    Add LinkedIn
+                  </Link>
+                </div>
+              )}
+              <PledgeTilePledgeView pledge={pledgeUniqname}/>
+            </>
           )}
         </div>
       </div>
