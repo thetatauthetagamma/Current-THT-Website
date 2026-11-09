@@ -168,7 +168,7 @@ export default function BroResources() {
                 {res.title}
               </a>
               {/* Only show delete/edit for certain admin roles */}
-              {(adminRole === "dev" || adminRole === "parent" || adminRole === "regent" || adminRole ==="vice" || adminRole === "scribe" || adminRole === "treasurer") && (
+              {(adminRole === "dev" || adminRole === "parent" || adminRole === "regent" || adminRole === "vice" || adminRole === "scribe" || adminRole === "treasurer") && (
                 <div className="flex space-x-2">
                   <button
                     onClick={() => beginEdit(res)}
@@ -189,7 +189,7 @@ export default function BroResources() {
         </div>
 
         {/* Admin-only: toggle a Resource Manager section */}
-        {(adminRole === "dev" || adminRole === "parent" || adminRole === "webhead") && (
+        {(adminRole === "dev" || adminRole === "parent" || adminRole === "regent" || adminRole === "vice" || adminRole === "scribe" || adminRole === "treasurer") && (
           <div className="bg-white rounded-md shadow-md p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-[#8B0000]">

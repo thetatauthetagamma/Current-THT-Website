@@ -1,6 +1,7 @@
 import BroNavBar from "@/components/BroNavBar";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/router";
 import InterviewHeader from "@/components/InterviewHeader";
 import supabase from "@/supabase";
 
@@ -21,6 +22,9 @@ interface Company {
 }
 
 export default function Interviews() {
+  const router = useRouter();
+  const isPledge = router.pathname.startsWith("/members/");
+  const interviewsRoute = isPledge ? "/members/interviews" : "/brothers/interviews";
   const [searchQuery, setSearchQuery] = useState("");
   const [companies, setCompanies] = useState<Company[]>([]);
   const [allInterviews, setAllInterviews] = useState<Interview[]>([]);
@@ -107,12 +111,13 @@ export default function Interviews() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false} />
+      <BroNavBar isPledge={isPledge} />
       <div
         className="flex-grow flex flex-col overflow-hidden"
         style={{ backgroundColor: "#f5f3dc", height: "100vh" }}
       >
         <InterviewHeader
+          isPledge={isPledge}
           onSearchClick={() => {
             setSearchQuery("");
             setActiveCompany(null);
@@ -196,7 +201,7 @@ export default function Interviews() {
                   : `${filteredInterviews.length} interview${filteredInterviews.length !== 1 ? "s" : ""}`}
               </p>
               <Link
-                href="/brothers/interviews/add"
+                href={`${interviewsRoute}/add`}
                 className="text-xs px-3 py-1.5 bg-[#8b0000] text-white rounded-lg hover:bg-[#a00000] transition-colors font-medium"
               >
                 + Add Interview
@@ -229,7 +234,7 @@ export default function Interviews() {
                 {filteredInterviews.map((interview) => (
                   <Link
                     key={interview.id}
-                    href={`/brothers/interviews/${interview.id}`}
+                    href={`${interviewsRoute}/${interview.id}`}
                     className="flex items-start gap-3.5 bg-white rounded-xl border border-[#8b000010] hover:border-[#8b000035] hover:shadow-md transition-all p-4 group"
                   >
                     {/* Company initial */}

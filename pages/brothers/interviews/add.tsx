@@ -15,7 +15,7 @@ interface FormData {
   employmentType: "Internship" | "Full Time";
   numInterviewRounds: string;
   overallExperience: string;
-  gotJob: "Y" | "N";
+  gotJob: "Y" | "N" | "M";
   tips: string;
   interviewDate: string;
   rounds: Array<{
@@ -26,6 +26,8 @@ interface FormData {
 
 export default function AddInterview() {
   const router = useRouter();
+  const isPledge = router.pathname.startsWith("/members/");
+  const interviewsRoute = isPledge ? "/members/interviews" : "/brothers/interviews";
   const [formData, setFormData] = useState<FormData>({
     name: "",
     major: "",
@@ -35,7 +37,7 @@ export default function AddInterview() {
     employmentType: "Internship",
     numInterviewRounds: "",
     overallExperience: "",
-    gotJob: "N",
+    gotJob: "M",
     tips: "",
     interviewDate: "",
     rounds: [{ type: "", notes: "" }]
@@ -142,7 +144,7 @@ export default function AddInterview() {
       }
 
       // Redirect to success page
-      router.push('/brothers/interviews/success');
+      router.push(`${interviewsRoute}/success`);
     } catch (error) {
       console.error('Error:', error);
       alert('An unexpected error occurred. Please try again.');
@@ -151,9 +153,9 @@ export default function AddInterview() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false}/>
+      <BroNavBar isPledge={isPledge}/>
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        <InterviewHeader />
+        <InterviewHeader isPledge={isPledge} />
 
         {/* Form Content */}
         <div className="max-w-4xl mx-auto p-8">
@@ -337,6 +339,17 @@ export default function AddInterview() {
                         className="mr-2"
                       />
                       No
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gotJob"
+                        value="M"
+                        checked={formData.gotJob === "M"}
+                        onChange={handleInputChange}
+                        className="mr-2"
+                      />
+                      Not Yet
                     </label>
                   </div>
                 </div>
