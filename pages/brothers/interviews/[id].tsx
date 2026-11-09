@@ -27,6 +27,8 @@ interface InterviewData {
 
 export default function ViewInterview() {
   const router = useRouter();
+  const isPledge = router.pathname.startsWith("/members/");
+  const interviewsRoute = isPledge ? "/members/interviews" : "/brothers/interviews";
   const { id } = router.query;
   const [interview, setInterview] = useState<InterviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function ViewInterview() {
   if (loading) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={false}/>
+        <BroNavBar isPledge={isPledge}/>
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: '#f5f3dc' }}>
           <p className="text-gray-600">Loading...</p>
         </div>
@@ -69,7 +71,7 @@ export default function ViewInterview() {
   if (!interview) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={false}/>
+        <BroNavBar isPledge={isPledge}/>
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: '#f5f3dc' }}>
           <p className="text-gray-600">Interview not found</p>
         </div>
@@ -79,9 +81,9 @@ export default function ViewInterview() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false}/>
+      <BroNavBar isPledge={isPledge}/>
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        <InterviewHeader />
+        <InterviewHeader isPledge={isPledge} />
 
         {/* Interview Content */}
         <div className="max-w-4xl mx-auto p-8">
@@ -89,7 +91,7 @@ export default function ViewInterview() {
             <h1 className="text-3xl font-bold text-[#8b0000]">Interview Experience</h1>
             {isOwner && (
               <Link
-                href={`/brothers/interviews/edit/${interview.id}`}
+                href={`${interviewsRoute}/edit/${interview.id}`}
                 className="text-xs px-3 py-1.5 bg-white border border-[#8b000025] text-[#8b0000] rounded-lg hover:border-[#8b0000] hover:shadow-sm transition-all font-medium"
               >
                 Edit
