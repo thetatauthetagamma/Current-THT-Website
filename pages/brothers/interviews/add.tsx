@@ -15,7 +15,7 @@ interface FormData {
   employmentType: "Internship" | "Full Time";
   numInterviewRounds: string;
   overallExperience: string;
-  gotJob: "Y" | "N" | "M";
+  gotJob: "Y" | "N";
   tips: string;
   interviewDate: string;
   rounds: Array<{
@@ -37,7 +37,7 @@ export default function AddInterview() {
     employmentType: "Internship",
     numInterviewRounds: "",
     overallExperience: "",
-    gotJob: "M",
+    gotJob: "N",
     tips: "",
     interviewDate: "",
     rounds: [{ type: "", notes: "" }]
@@ -339,17 +339,6 @@ export default function AddInterview() {
                         className="mr-2"
                       />
                       No
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="gotJob"
-                        value="M"
-                        checked={formData.gotJob === "M"}
-                        onChange={handleInputChange}
-                        className="mr-2"
-                      />
-                      Not Yet
                     </label>
                   </div>
                 </div>
