@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import supabase from "@/supabase";
 import InterviewRound from "@/components/InterviewRound";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 
 interface FormData {
   name: string;
@@ -24,6 +25,7 @@ interface FormData {
 
 export default function EditInterview() {
   const router = useRouter();
+  const { base } = useInterviewsBase(); // brothers vs PNMs
   const { id } = router.query;
 
   const [formData, setFormData] = useState<FormData | null>(null);
@@ -151,7 +153,7 @@ export default function EditInterview() {
         return;
       }
 
-      router.push(`/brothers/interviews/${id}`);
+      router.push(`${base}/${id}`);
     } catch (err) {
       console.error("Error:", err);
       alert("An unexpected error occurred. Please try again.");
@@ -161,7 +163,7 @@ export default function EditInterview() {
   if (loading) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={false} />
+        <BroNavBar />
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: "#f5f3dc" }}>
           <p className="text-gray-600">Loading...</p>
         </div>
@@ -172,13 +174,13 @@ export default function EditInterview() {
   if (unauthorized) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={false} />
+        <BroNavBar />
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: "#f5f3dc" }}>
           <div className="text-center">
             <p className="text-gray-700 font-medium">You don&apos;t have permission to edit this entry.</p>
             <p className="text-gray-500 text-sm mt-1">Only the original submitter can edit it.</p>
             <button
-              onClick={() => router.push(`/brothers/interviews/${id}`)}
+              onClick={() => router.push(`${base}/${id}`)}
               className="mt-4 px-4 py-2 bg-[#8b0000] text-white rounded-lg hover:bg-[#a00000] transition-colors text-sm"
             >
               Go Back
@@ -192,7 +194,7 @@ export default function EditInterview() {
   if (!formData) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={false} />
+        <BroNavBar />
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: "#f5f3dc" }}>
           <p className="text-gray-600">Interview not found</p>
         </div>
@@ -202,7 +204,7 @@ export default function EditInterview() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={false} />
+      <BroNavBar />
       <div className="flex-grow" style={{ backgroundColor: "#f5f3dc" }}>
         <InterviewHeader />
 
@@ -403,7 +405,7 @@ export default function EditInterview() {
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => router.push(`/brothers/interviews/${id}`)}
+                onClick={() => router.push(`${base}/${id}`)}
                 className="px-6 py-2 bg-white border border-[#8b000020] text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
