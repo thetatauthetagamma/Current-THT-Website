@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local AI tool config
 .codex/
+
+# LinkedIn cleanup change logs (real alumni data)
+/linkedin-cleanup-*.json

@@ -1,3 +1,4 @@
+import { safeLinkedInUrl, validateLinkedInUrl } from '@/utils/alumni'
 import React, { useEffect, useState } from 'react'
 import { uniqnameFromEmail } from '@/utils/roles'
 import supabase from '@/supabase'
@@ -94,19 +95,26 @@ export default function Profile () {
   }, [userid, currentEmail, editableFields])
   // Fetches profile image from storage based on userid
   useEffect(() => {
+    // Reset on profile change so a profile without a photo doesn't keep the previous one (component is reused).
+    let cancelled = false
+    setImageUrl('')
+    setProfileImage(null)
     const fetchBrotherImage = async () => {
       if (userid) {
         const { data: ImageData, error } = await supabase.storage
           .from('brothers')
           .download(`${userid}.jpeg`)
 
-        if (!error) {
+        if (!error && !cancelled) {
           setImageUrl(URL.createObjectURL(new Blob([ImageData])))
         }
       }
     }
 
     fetchBrotherImage()
+    return () => {
+      cancelled = true
+    }
   }, [userid])
 
   useEffect(() => {
@@ -138,6 +146,12 @@ export default function Profile () {
 
   // Saves the updated profile information to Supabase
   const handleSave = async () => {
+    const linkedinCheck = validateLinkedInUrl(linkedin)
+    if (!linkedinCheck.ok) {
+      alert(linkedinCheck.error)
+      return
+    }
+    setLinkedin(linkedinCheck.value)
     try {
       // Update the user's profile in Supabase with the new values
       const { data, error } = await supabase
@@ -149,7 +163,7 @@ export default function Profile () {
             year,
             major,
             phone,
-            linkedin: linkedin,
+            linkedin: linkedinCheck.value,
             classes: currentClasses
           }
         ])
@@ -384,6 +398,15 @@ export default function Profile () {
                       onChange={e => setLinkedin(e.target.value)}
                       className='md:whitespace-nowrap w-4/12 border-2 border-[#8b000070]'
                     />
+                  ) : safeLinkedInUrl(linkedin) ? (
+                    <a
+                      href={safeLinkedInUrl(linkedin)}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='text-lg text-center md:whitespace-nowrap text-[#8b0000] hover:underline'
+                    >
+                      {linkedin}
+                    </a>
                   ) : (
                     <p className='text-lg text-center md:whitespace-nowrap'>
                       {linkedin}

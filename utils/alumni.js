@@ -32,6 +32,27 @@ export function safeLinkedInUrl(raw) {
   }
 }
 
+// Strict check for the profile forms. Accepts "linkedin.com/in/name", "www.linkedin.com/in/name", or a full https URL.
+// Returns { ok, value, error }. value is the cleaned canonical URL ('' when the field is left blank).
+const LINKEDIN_PATH = /^\/(in|pub|company|school)\/[^/\s]+/i
+export function validateLinkedInUrl(raw) {
+  const value = (raw ?? '').trim()
+  if (!value) return { ok: true, value: '', error: null }
+  const bad = { ok: false, value, error: 'Please enter a valid LinkedIn profile link, like linkedin.com/in/your-name' }
+  if (/\s/.test(value)) return bad
+  let url
+  try {
+    url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
+  } catch {
+    return bad
+  }
+  const host = url.hostname.toLowerCase()
+  if (host !== 'linkedin.com' && !host.endsWith('.linkedin.com')) return bad
+  if (!LINKEDIN_PATH.test(url.pathname)) return bad
+  const path = url.pathname.replace(/\/+$/, '')
+  return { ok: true, value: `https://www.linkedin.com${path}`, error: null }
+}
+
 // ---- Display standardization. Never written back to Brothers: only how the directory shows and filters values. ----
 
 // Majors are shown spelled out. Keys are lowercase letters/digits only ("Mech E", "MechE" -> "meche").

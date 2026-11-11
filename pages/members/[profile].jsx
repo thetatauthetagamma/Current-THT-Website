@@ -1,3 +1,4 @@
+import { safeLinkedInUrl, validateLinkedInUrl } from '@/utils/alumni'
 import React, { useEffect, useState } from 'react'
 import { uniqnameFromEmail } from '@/utils/roles'
 import { useRouter } from 'next/router'
@@ -136,23 +137,32 @@ export default function Profile () {
     fetchSession()
   }, [userid, currentEmail, editableFields])
 
-  // 4) Try to fetch existing profile image from Supabase Storage
+  // 4) Load the profile image. Reset first: Next reuses this component between /members/a and /members/b,
+  // so without a reset a profile with no photo keeps showing the previous person's photo, and a staged
+  // upload would be saved under the wrong userid. PNM photos live in the 'pledges' bucket, brothers' in 'brothers'.
   useEffect(() => {
-    const fetchBrotherImage = async () => {
-      if (userid) {
+    let cancelled = false
+    setImageUrl('')
+    setProfileImage(null)
+    if (!userid) return
+    const buckets = profileIsPledge ? ['pledges', 'brothers'] : ['brothers', 'pledges']
+    const fetchProfileImage = async () => {
+      for (const bucket of buckets) {
         const { data: ImageData, error } = await supabase.storage
-          .from('brothers')
+          .from(bucket)
           .download(`${userid}.jpeg`)
-
+        if (cancelled) return
         if (!error && ImageData) {
-          console.log('Profile image found')
-          console.log(userid);
           setImageUrl(URL.createObjectURL(new Blob([ImageData])))
+          return
         }
       }
     }
-    fetchBrotherImage()
-  }, [userid])
+    fetchProfileImage()
+    return () => {
+      cancelled = true
+    }
+  }, [userid, profileIsPledge])
 
   // 5) Check if logged-in user can edit this profile
   useEffect(() => {
@@ -186,6 +196,12 @@ export default function Profile () {
    * 6) Save updated fields back to Supabase (either Brothers or Pledges)
    */
   const handleSave = async () => {
+    const linkedinCheck = validateLinkedInUrl(linkedin)
+    if (!linkedinCheck.ok) {
+      alert(linkedinCheck.error)
+      return
+    }
+    setLinkedin(linkedinCheck.value)
     if (!profileIsPledge) {
       // It's a Brother
       try {
@@ -200,7 +216,7 @@ export default function Profile () {
             year,
             major,
             phone,
-            linkedin,
+            linkedin: linkedinCheck.value,
             classes: classesToSave,
             pronouns
           })
@@ -257,7 +273,7 @@ export default function Profile () {
           year,
           major,
           phone,
-          linkedin,
+          linkedin: linkedinCheck.value,
           classes: classesToSave,
           pronouns,
           email
@@ -271,7 +287,7 @@ export default function Profile () {
             year,
             major,
             phone,
-            linkedin,
+            linkedin: linkedinCheck.value,
             classes: classesToSave,
             pronouns
           })
@@ -290,7 +306,7 @@ export default function Profile () {
           console.log("Updating profile image")
           const fileName = `${userid}.jpeg`
           const { error: uploadError } = await supabase.storage
-            .from('brothers') // or 'pledges' if you store pledge images differently
+            .from('pledges') // PNM photos live in the pledges bucket (same as PledgeTile / newPledge)
             .upload(fileName, profileImage, {
               cacheControl: '3600',
               contentType: 'image/jpeg',
@@ -573,6 +589,15 @@ export default function Profile () {
                       onChange={e => setLinkedin(e.target.value)}
                       className='md:whitespace-nowrap w-4/12 border-2 border-[#8b000070]'
                     />
+                  ) : safeLinkedInUrl(linkedin) ? (
+                    <a
+                      href={safeLinkedInUrl(linkedin)}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='text-lg text-center md:whitespace-nowrap text-[#8b0000] hover:underline'
+                    >
+                      {linkedin}
+                    </a>
                   ) : (
                     <p className='text-lg text-center md:whitespace-nowrap'>
                       {linkedin}
