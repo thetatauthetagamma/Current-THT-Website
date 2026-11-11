@@ -74,11 +74,12 @@ test('nav: every sidebar link points at a route the middleware lets that role in
 
 import { interviewsBase, canEditInterviews } from '../../../utils/interviewRoutes.js';
 
-test('interviews links stay in the visitor section; PNMs cannot add or edit', () => {
+test('interviews links stay in the visitor section; brothers and PNMs can add', () => {
   assert.equal(interviewsBase('/members/interviews'), '/members/interviews');
   assert.equal(interviewsBase('/members/interviews/[id]'), '/members/interviews');
   assert.equal(interviewsBase('/brothers/interviews/add'), '/brothers/interviews');
-  assert.equal(canEditInterviews('/members/interviews'), false);
+  assert.equal(canEditInterviews('/members/interviews'), true);
+  assert.equal(canEditInterviews('/somewhere/else'), false);
   assert.equal(canEditInterviews('/brothers/interviews'), true);
   // every link built from a PNM base is a route the middleware allows a PNM into
   for (const path of ['/members/interviews', '/members/interviews/12', '/members/interviews/success']) {

@@ -5,7 +5,7 @@ export function interviewsBase(pathname = '') {
   return String(pathname).startsWith('/members/') ? '/members/interviews' : '/brothers/interviews';
 }
 
-// Only brothers can add or edit interviews (the InterviewDetails insert/update policies are brother-only).
+// Brothers and PNMs can both add interviews (sql/015). PNMs can only add/edit rows with their own email.
 export function canEditInterviews(base) {
-  return base === '/brothers/interviews';
+  return base === '/brothers/interviews' || base === '/members/interviews';
 }
