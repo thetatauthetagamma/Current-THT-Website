@@ -82,7 +82,11 @@ const Navbar = () => {
 
   const handleGoogleSignIn = async () => {
     // Handle the Google sign in
-    const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      // Always show Google's account picker, so people signed into a personal account can choose their umich one.
+      options: { queryParams: { prompt: 'select_account' } },
+    });
     console.log(error);
   };
 
