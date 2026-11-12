@@ -1,0 +1,53 @@
+name: Alumni LinkedIn sync
+# Refreshes company/location in the alumni table from LinkedIn (Bright Data).
+# Runs automatically twice a year and can be started by hand from the Actions tab.
+# GitHub disables scheduled workflows after 60 days without repo activity; if a run
+# is missed, start it manually (Actions > Alumni LinkedIn sync > Run workflow).
+on:
+  schedule:
+    - cron: '0 14 15 1,8 *'   # Jan 15 and Aug 15, 14:00 UTC
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Live run (spends Bright Data credits and writes to the database). Off = dry run.'
+        type: boolean
+        default: false
+      limit:
+        description: 'Only look up the first N profiles (blank = all)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run sync
+        shell: bash   # bash with pipefail so a failing sync fails the job even through tee
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
+          # Scheduled runs are always live; manual runs follow the checkbox.
+          LIVE: ${{ github.event_name == 'schedule' || inputs.live }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          args=()
+          [ "$LIVE" = "true" ] && args+=(--yes)
+          [ -n "$LIMIT" ] && args+=(--limit "$LIMIT")
+          {
+            echo '## Alumni sync report'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          set +e
+          node scripts/alumni/sync-cli.mjs "${args[@]}" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          status=${PIPESTATUS[0]}
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $status

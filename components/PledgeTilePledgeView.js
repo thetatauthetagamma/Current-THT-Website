@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react'
 import ProgressBar from '@ramonak/react-progress-bar'
 import thtlogo from '../public/tht-logo.png'
 import Image from 'next/image'
+import { daysUntilDue } from '../utils/daysUntilDue'
 import supabase from '../supabase'
-import moment from 'moment-timezone'
 
 // Keep these specific imports from your constants:
 // import {
@@ -138,7 +138,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
 
   useEffect(() => {
     fetchPledgeDetails()
-  }, [userID, pledge])
+  }, [pledge]) // was [userID, pledge]: ran twice per visit
 
   // ============================
   //  PD & Committee Requirements from DB
@@ -228,10 +228,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
           console.error('Error cleaning invalid signoffs:', updateError)
         } else {
           // Re-fetch after cleaning to update UI
-          await Promise.all([
-            fetchPledgePDSignoffs(),
-            fetchPledgeCommitteeSignoffs()
-          ])
+          await fetchPledgeSignoffs()
         }
       }
     } catch (err) {
@@ -242,9 +239,9 @@ const PledgeTilePledgeView = ({ pledge }) => {
   // ============================
   //  Pledge SignOffs for PD / Committee
   // ============================
-  async function fetchPledgePDSignoffs() {
+  // One query feeds both lists (it used to read the same Pledges row twice per refresh).
+  async function fetchPledgeSignoffs() {
     try {
-      // Fetch pledge's signoffs array
       const { data: pledgeData, error: pledgeError } = await supabase
         .from('Pledges')
         .select('signoffs')
@@ -253,58 +250,22 @@ const PledgeTilePledgeView = ({ pledge }) => {
 
       if (pledgeError) throw pledgeError
 
-      const signoffIds = pledgeData?.signoffs || []
-      
       // Validate signoffs (don't write to DB here - that happens in validateAndCleanSignoffsOnce)
-      const validSignoffIds = validateSignoffs(signoffIds)
+      const validSignoffIds = validateSignoffs(pledgeData?.signoffs || [])
 
-      // Filter to only PD signoffs
-      const pdReqIdSet = new Set(
-        pdRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n))
-      )
-      const pdSignoffIds = validSignoffIds.filter(id => 
-        pdReqIdSet.has(Number(id))
-      )
+      const pdReqIdSet = new Set(pdRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n)))
+      const committeeReqIdSet = new Set(committeeRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n)))
+      const pdSignoffIds = validSignoffIds.filter(id => pdReqIdSet.has(Number(id)))
+      const committeeSignoffIds = validSignoffIds.filter(id => committeeReqIdSet.has(Number(id)))
 
       setPDSignOffs(pdSignoffIds.map(id => ({ id })))
       setPDCompletedCount(pdSignoffIds.length)
-    } catch (err) {
-      console.error('Error fetching PD signoffs:', err)
-      setPDSignOffs([])
-      setPDCompletedCount(0)
-    }
-  }
-
-  async function fetchPledgeCommitteeSignoffs() {
-    try {
-      // Fetch pledge's signoffs array
-      const { data: pledgeData, error: pledgeError } = await supabase
-        .from('Pledges')
-        .select('signoffs')
-        .eq('uniqname', pledge)
-        .single()
-
-      if (pledgeError) throw pledgeError
-
-      const signoffIds = pledgeData?.signoffs || []
-      
-      // Validate signoffs (don't write to DB here - that happens in validateAndCleanSignoffsOnce)
-      const validSignoffIds = validateSignoffs(signoffIds)
-
-      // Filter to only committee signoffs
-      const committeeReqIdSet = new Set(
-        committeeRequirements.map(r => Number(r.id)).filter(n => Number.isFinite(n))
-      )
-      const committeeSignoffIds = validSignoffIds.filter(id => 
-        committeeReqIdSet.has(Number(id))
-      )
-
       setCommitteeSignOffs(committeeSignoffIds.map(id => ({ id })))
       setCommitteeCompletedCount(committeeSignoffIds.length)
     } catch (err) {
-      console.error('Error fetching committee signoffs:', err)
-      setCommitteeSignOffs([])
-      setCommitteeCompletedCount(0)
+      console.error('Error fetching signoffs:', err)
+      setPDSignOffs([]); setPDCompletedCount(0)
+      setCommitteeSignOffs([]); setCommitteeCompletedCount(0)
     }
   }
 
@@ -318,10 +279,7 @@ const PledgeTilePledgeView = ({ pledge }) => {
   useEffect(() => {
     if (pdRequirements.length > 0 && committeeRequirements.length > 0) {
       // Fetch both signoffs together to avoid race conditions
-      Promise.all([
-        fetchPledgePDSignoffs(),
-        fetchPledgeCommitteeSignoffs()
-      ]).then(() => {
+      fetchPledgeSignoffs().then(() => {
         // After both fetch, validate and clean signoffs ONCE
         validateAndCleanSignoffsOnce()
       })
@@ -335,22 +293,16 @@ const PledgeTilePledgeView = ({ pledge }) => {
       return
     }
 
-    // Set up periodic refresh every 5 seconds (just refresh, don't validate/clean)
-    const interval = setInterval(() => {
-      fetchPledgePDSignoffs()
-      fetchPledgeCommitteeSignoffs()
-    }, 5000)
-
-    // Refresh when page comes into focus
-    const handleFocus = () => {
-      fetchPledgePDSignoffs()
-      fetchPledgeCommitteeSignoffs()
-    }
-    window.addEventListener('focus', handleFocus)
+    // Refresh every 30s while the tab is visible (was every 5s even in the background), and whenever you come back to it.
+    const refresh = () => { if (document.visibilityState === 'visible') fetchPledgeSignoffs() }
+    const interval = setInterval(refresh, 30000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
 
     return () => {
       clearInterval(interval)
-      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
     }
   }, [pledge, pdRequirements, committeeRequirements])
 
@@ -358,26 +310,12 @@ const PledgeTilePledgeView = ({ pledge }) => {
   //  Countdown to due date
   // ============================
   useEffect(() => {
-    if (!requirementDueDate) {
-      setCountdown('--')
-      return
+    const update = () => {
+      const days = daysUntilDue(requirementDueDate)
+      setCountdown(days === null ? '--' : days)
     }
-
-    const interval = setInterval(() => {
-      const now = moment().tz('America/Detroit').startOf('day')
-      const eventDate = moment
-        .tz(requirementDueDate, 'YYYY-MM-DD', 'America/Detroit')
-        .startOf('day')
-
-      if (!eventDate.isValid()) {
-        setCountdown('--')
-        return
-      }
-
-      const remainingTime = eventDate.diff(now, 'days') // diff in days
-      setCountdown(remainingTime >= 0 ? remainingTime : 0)
-    }, 1000)
-
+    update() // immediately, not after a 1s delay
+    const interval = setInterval(update, 60000) // the value only changes at midnight; once a minute is plenty
     return () => clearInterval(interval)
   }, [requirementDueDate])
 

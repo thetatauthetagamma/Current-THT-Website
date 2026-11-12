@@ -101,13 +101,10 @@ export default function AttendancePage() {
     const fetchEvent = async () => {
       try {
         // Look up event by attendance_key only
-        const { data, error } = await supabase
-          .from('RushEvents')
-          .select('*')
-          .eq('attendance_key', eventId)
-          .single()
+        const { data: rows, error } = await supabase.rpc('attendance_event', { p_key: String(eventId) })
+        const data = Array.isArray(rows) ? rows[0] : rows
 
-        if (error) {
+        if (error || !data) {
           console.error('Error fetching event:', error)
           setError('Event not found')
           return
@@ -153,76 +150,31 @@ export default function AttendancePage() {
       }
 
       setRecording(true)
-      const email = session.user.email?.toLowerCase()
-      if (!email) {
-        setError('No email found in session')
-        setRecording(false)
-        return
-      }
-      const uniqname = email.split('@')[0]
 
       try {
-        // Upsert attendance - insert or update if exists
-        // First check if record exists
-        const { data: existing, error: checkError } = await supabase
-          .from('Rushee_Attendance')
-          .select('id')
-          .eq('uniqname', uniqname)
-          .eq('event_id', event.id)
-          .maybeSingle()
+        // The database records it: it reads who you are from your sign-in (never from this page), and checks the
+        // event key, that attendance is on, and the end-of-event-day deadline. Nobody can record attendance for someone else.
+        const { data: rows, error: rpcError } = await supabase.rpc('record_attendance', { p_key: String(eventId) })
+        const result = Array.isArray(rows) ? rows[0] : rows
 
-        if (checkError && checkError.code !== 'PGRST116') {
-          // Error other than "no rows found"
-          console.error('Error checking existing attendance:', checkError)
+        if (rpcError || !result) {
+          console.error('Error recording attendance:', rpcError)
           setError('Failed to record attendance. Please try again.')
           setRecording(false)
           return
         }
 
-        if (existing) {
-          // Update existing record
-          const { error: updateError } = await supabase
-            .from('Rushee_Attendance')
-            .update({
-              event_name: event.name, // Update event name in case it changed
-            })
-            .eq('id', existing.id)
-
-          if (updateError) {
-            console.error('Error updating attendance:', updateError)
-            setError('Failed to record attendance. Please try again.')
-            setRecording(false)
-            return
+        if (result.out_status !== 'recorded') {
+          const messages: Record<string, string> = {
+            not_signed_in: 'Please sign in to record attendance.',
+            not_umich: 'Please sign in with your @umich.edu account.',
+            event_not_found: 'Event not found',
+            attendance_disabled: 'Attendance is not enabled for this event.',
+            deadline_passed: 'Attendance can only be taken until the end of the event day.',
           }
-        } else {
-          // Get next available ID (similar to RushEvents pattern)
-          const { data: maxIdData, error: maxIdError } = await supabase
-            .from('Rushee_Attendance')
-            .select('id')
-            .order('id', { ascending: false })
-            .limit(1)
-
-          let nextId = 1
-          if (!maxIdError && maxIdData && maxIdData.length > 0) {
-            nextId = (maxIdData[0].id || 0) + 1
-          }
-
-          // Insert new record with calculated ID
-          const { error: insertError } = await supabase
-            .from('Rushee_Attendance')
-            .insert({
-              id: nextId,
-              uniqname: uniqname,
-              event_id: event.id,
-              event_name: event.name,
-            })
-
-          if (insertError) {
-            console.error('Error inserting attendance:', insertError)
-            setError('Failed to record attendance. Please try again.')
-            setRecording(false)
-            return
-          }
+          setError(messages[result.out_status] || 'Failed to record attendance. Please try again.')
+          setRecording(false)
+          return
         }
 
         // Success - attendance recorded

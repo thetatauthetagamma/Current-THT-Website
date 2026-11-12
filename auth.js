@@ -1,72 +1,24 @@
 // middleware/auth.ts
 import supabase from './supabase';
+import { rolesFromRpc, NO_ROLES } from './utils/roles';
 
-export const isBrother = async (userEmail) => {
+const emailOf = (userEmail) => (typeof userEmail === 'string' ? userEmail : userEmail?.value) || '';
+
+// One narrow SQL function (scripts/alumni/sql/004_role_lookup.sql) instead of reading Brothers/Pledges.
+export async function getRoles(userEmail, client = supabase) {
+  const email = emailOf(userEmail);
+  if (!email) return NO_ROLES;
   try {
-    if (userEmail) {
-      const { data, error } = await supabase.from('Brothers').select('*').eq('email', userEmail.value);
-      return data?.length === 1 && !error;
-    }
-    return false;
+    const { data, error } = await client.rpc('role_for_email', { p_email: email });
+    if (!error) return rolesFromRpc(data);
+    console.error('role_for_email failed:', error.message);
   } catch (error) {
-    console.error('Error checking brother status:', error);
-    return false;
+    console.error('Error checking roles:', error);
   }
-};
+  return NO_ROLES;
+}
 
-export const isPledge = async (userEmail) => {
-  try {
-    if (userEmail) {
-      const { data, error } = await supabase.from('Pledges').select('*').eq('email', userEmail.value);
-      return data?.length === 1 && !error;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error checking pledge status:', error);
-    return false;
-  }
-};
-
-export const isAdmin = async (userEmail) => {
-  try {
-    if (userEmail) {
-      const { data, error } = await supabase
-        .from('Brothers')
-        .select('adminrole')
-        .eq('email', userEmail.value) // Assuming userEmail is a string
-
-      if (error || !data || data.length === 0) {
-        // console.error('Error checking admin status or no data found:', error);
-        return false;
-      }
-
-      // Ensure data[0] exists and has the adminrole property
-      return data[0].adminrole && data[0].adminrole !== '';
-    }
-    return false;
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return false;
-  }
-};
-
-export const isParentAdmin = async (userEmail) => {
-  try {
-    if (userEmail) {
-      const { data, error } = await supabase
-        .from('Brothers')
-        .select('adminrole')
-        .eq('email', userEmail.value)
-
-      if (error || !data || data.length === 0) {
-        return false;
-      }
-
-      return data[0].adminrole === 'parent';
-    }
-    return false;
-  } catch (error) {
-    console.error('Error checking parent admin status:', error);
-    return false;
-  }
-};
+export const isBrother = async (userEmail) => (await getRoles(userEmail)).isBrother;
+export const isPledge = async (userEmail) => (await getRoles(userEmail)).isPledge;
+export const isAdmin = async (userEmail) => Boolean((await getRoles(userEmail)).adminRole);
+export const isParentAdmin = async (userEmail) => (await getRoles(userEmail)).adminRole === 'parent';

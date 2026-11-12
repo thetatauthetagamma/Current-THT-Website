@@ -1,8 +1,9 @@
 import BroNavBar from "@/components/BroNavBar";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 import Link from "next/link";
 import InterviewHeader from "@/components/InterviewHeader";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import supabase from "@/supabase";
 import InterviewRound from "@/components/InterviewRound";
 
@@ -25,9 +26,9 @@ interface FormData {
 }
 
 export default function AddInterview() {
+  const { base } = useInterviewsBase(); // brothers vs PNMs
   const router = useRouter();
-  const isPledge = router.pathname.startsWith("/members/");
-  const interviewsRoute = isPledge ? "/members/interviews" : "/brothers/interviews";
+  const isPnm = base === "/members/interviews";
   const [formData, setFormData] = useState<FormData>({
     name: "",
     major: "",
@@ -42,6 +43,15 @@ export default function AddInterview() {
     interviewDate: "",
     rounds: [{ type: "", notes: "" }]
   });
+
+
+  // Prefill the signed-in user's email. PNMs can only save interviews under their own email (RLS, sql/015).
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const mail = data.session?.user.email;
+      if (mail) setFormData((prev) => (prev.email ? prev : { ...prev, email: mail }));
+    });
+  }, []);
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, boolean>>>({});
 
@@ -144,7 +154,7 @@ export default function AddInterview() {
       }
 
       // Redirect to success page
-      router.push(`${interviewsRoute}/success`);
+      router.push(`${base}/success`);
     } catch (error) {
       console.error('Error:', error);
       alert('An unexpected error occurred. Please try again.');
@@ -153,9 +163,9 @@ export default function AddInterview() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={isPledge}/>
+      <BroNavBar />
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        <InterviewHeader isPledge={isPledge} />
+        <InterviewHeader />
 
         {/* Form Content */}
         <div className="max-w-4xl mx-auto p-8">
@@ -203,6 +213,7 @@ export default function AddInterview() {
                     className={`w-full px-4 py-2 border ${errors.email ? 'border-red-500' : 'border-[#8b000020]'} rounded-lg focus:outline-none focus:border-[#8b0000] transition-colors`}
                     value={formData.email}
                     onChange={handleInputChange}
+                    readOnly={isPnm}
                     required
                   />
                   {errors.email && <p className="text-red-500 text-sm mt-1">Valid email is required</p>}

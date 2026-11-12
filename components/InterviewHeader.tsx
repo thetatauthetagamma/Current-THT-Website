@@ -1,13 +1,13 @@
 import Link from "next/link";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 import { useState } from "react";
 
 interface InterviewHeaderProps {
   onSearchClick?: () => void;  // Optional for the search page reset functionality
-  isPledge?: boolean;  // To determine which route to use
 }
 
-export default function InterviewHeader({ onSearchClick, isPledge = false }: InterviewHeaderProps) {
-  const baseRoute = isPledge ? '/members/interviews' : '/brothers/interviews';
+export default function InterviewHeader({ onSearchClick }: InterviewHeaderProps) {
+  const { base: baseRoute, canEdit } = useInterviewsBase(); // follows the section the visitor is in (brothers vs PNMs)
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -28,9 +28,11 @@ export default function InterviewHeader({ onSearchClick, isPledge = false }: Int
             Search
           </Link>
         )}
-        <Link href={`${baseRoute}/add`} className="text-[#8b0000] hover:underline">
-          Add An Interview
-        </Link>
+        {canEdit && (
+          <Link href={`${baseRoute}/add`} className="text-[#8b0000] hover:underline">
+            Add An Interview
+          </Link>
+        )}
       </div>
 
       {/* Mobile Hamburger Button */}
@@ -86,13 +88,15 @@ export default function InterviewHeader({ onSearchClick, isPledge = false }: Int
               Search
             </Link>
           )}
-          <Link 
-            href={`${baseRoute}/add`}
-            className="block px-4 py-2 text-[#8b0000] hover:bg-[#8b000010]"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Add An Interview
-          </Link>
+          {canEdit && (
+            <Link 
+              href={`${baseRoute}/add`}
+              className="block px-4 py-2 text-[#8b0000] hover:bg-[#8b000010]"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Add An Interview
+            </Link>
+          )}
         </div>
       )}
     </div>
