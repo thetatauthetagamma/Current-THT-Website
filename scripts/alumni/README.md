@@ -28,7 +28,7 @@ Brothers table (Supabase)         Bright Data
   ```
   The directory page then hides them. (The sync does not check this list; it only affects what the page shows.)
 
-The database was set up by running the files in `sql/` (001, 002, 003) by hand in the Supabase SQL editor. They are already applied. `001_alumni_rollback.sql` undoes 001.
+The database is set up by running the numbered files in `sql/` by hand in the Supabase SQL editor, in order. Most have a `_rollback.sql` partner. To see which ones are already applied, run `sql/check_migrations.sql` (read-only).
 
 ## 2. Install (macOS, Windows, Linux)
 
