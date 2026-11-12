@@ -39,7 +39,8 @@ export function planChanges(existing, rec, now = new Date().toISOString()) {
   for (const f of FIELDS) {
     const incoming = clean(rec[f]);
     if (!incoming) continue;                              // never write blanks over anything
-    if (base[`${f}_source`] === 'self-edited' && selfEditLocked(base, now)) {   // locked by the brother
+    // Locked by the brother. A field they left blank is not locked: LinkedIn may fill it at the next sync.
+    if (base[`${f}_source`] === 'self-edited' && clean(base[f]) && selfEditLocked(base, now)) {
       if (!same(base[f], incoming)) selfEditedSkipped.push(f);
       continue;
     }                                                     // expired self-edits fall through and may be replaced

@@ -18,7 +18,7 @@ Brothers table (Supabase)         Bright Data
 - **`Brothers`** is the source of truth for name, major, class year, email, phone and **LinkedIn URL**. The sync only reads it.
 - **`alumni`** holds what `Brothers` does not: `company`, `title`, `location`, where each value came from (`enrichment`, `self-edited` or `import`), and when it was last updated.
 - **Who can see it:** only signed-in brothers. This is enforced in the database (row level security), not just in the page. The page reads through the `search_alumni` function.
-- **Brothers editing their own info:** the "Edit my info" button calls `update_my_alumni`, the only way a brother can write to `alumni`. Anything they save is marked `self-edited` and **the sync never overwrites it**.
+- **Brothers editing their own info:** the "Edit my info" button calls `update_my_alumni`, the only way a brother can write to `alumni`. Anything they fill in is marked `self-edited` and **the sync leaves it alone for 2 years**. A field they leave blank (for example, no company yet) stays open, so the next sync fills it from LinkedIn.
 - **Title:** Bright Data returned no job title in our tests, so titles come only from brothers' own edits.
 - **Changelog:** every change by the sync or a brother is recorded in `alumni_changelog` (old value, new value, source, time). Only `dev` and `parent` admins can read it.
 - **No self-service opt-out.** To hide someone, an officer adds a hash of their email to `alumni_optouts` in the Supabase SQL editor:
@@ -76,7 +76,7 @@ Always do a dry run first, then `--limit 3`, then the full run. A full run takes
 - *Failed/missing lookups* = Bright Data returned nothing. Most often "The profile is hidden or private" (dead URL or private profile). Nothing is written for these people; fix their URL in `Brothers` or leave them. A few of these are normal. The command only exits with an error (red run) when more than 25% of lookups fail, which points to a broken key or account, or when it crashes.
 - *Self-edited fields left alone* = the brother set that value themselves, so it was not overwritten.
 
-Rules the sync always follows: it only touches company and location (and title if a provider ever returns one); it never writes a blank over an existing value; it never overwrites a self-edited field; unchanged values (ignoring case and spaces) are skipped.
+Rules the sync always follows: it only touches company and location (and title if a provider ever returns one); it never writes a blank over an existing value; it never overwrites a filled-in self-edited field less than 2 years old (blank self-edited fields are filled from LinkedIn); unchanged values (ignoring case and spaces) are skipped.
 
 ## 6. Automatic refresh (GitHub Actions)
 

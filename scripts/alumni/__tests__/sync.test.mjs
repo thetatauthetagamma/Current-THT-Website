@@ -35,6 +35,14 @@ test('self-edit older than 2 years is replaced and the old value is logged', () 
   assert.deepEqual(p.changes, [{ field: 'company', old: 'Mine', new: 'Theirs' }]);
 });
 
+test('a field the brother saved blank is filled from LinkedIn, even within 2 years', () => {
+  const p = planChanges(row({ company: null, company_source: 'self-edited', title: 'Mine', title_source: 'self-edited',
+    self_edited_at: '2026-06-01T00:00:00.000Z' }), ok(A, { company: 'Acme', title: 'Theirs' }), NOW);
+  assert.equal(p.row.company, 'Acme'); assert.equal(p.row.company_source, 'enrichment');
+  assert.equal(p.row.title, 'Mine'); assert.deepEqual(p.selfEditedSkipped, ['title']);
+  assert.deepEqual(p.changes, [{ field: 'company', old: null, new: 'Acme' }]);
+});
+
 test('expired self-edit is kept when LinkedIn returns blank', () => {
   const p = planChanges(row({ company: 'Mine', company_source: 'self-edited', self_edited_at: '2020-01-01T00:00:00.000Z' }), ok(A, { company: '' }), NOW);
   assert.equal(p.row.company, 'Mine'); assert.equal(p.changes.length, 0);

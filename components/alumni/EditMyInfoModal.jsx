@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import supabase from '@/supabase'
 
-// Saves through update_my_alumni(); those fields become self-edited and the refresh job never overwrites them.
+// Saves through update_my_alumni(). Filled-in fields become self-edited (the refresh leaves them alone for 2 years);
+// fields left blank stay open for the LinkedIn refresh to fill (sync.mjs planChanges).
 export default function EditMyInfoModal({ person, onClose, onSaved }) {
   const [company, setCompany] = useState(person.company ?? '')
   const [title, setTitle] = useState(person.title ?? '')
@@ -33,7 +34,8 @@ export default function EditMyInfoModal({ person, onClose, onSaved }) {
       <form onSubmit={save} className="bg-white rounded shadow-lg p-6 w-full max-w-md border-t-4 border-red-800">
         <h2 className="font-bold text-2xl mb-1">Edit my info</h2>
         <p className="text-gray-600 text-sm mb-4">
-          What you save here is never overwritten by the automatic LinkedIn refresh.
+          What you fill in here won't be overwritten by the automatic LinkedIn refresh. Leave a field blank
+          (for example, no company yet) and it fills in from your LinkedIn at the next refresh.
         </p>
 
         <label className="block text-sm font-bold mb-1" htmlFor="alumni-company">Current company</label>
