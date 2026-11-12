@@ -4,6 +4,7 @@ import InterviewHeader from "@/components/InterviewHeader";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import supabase from "@/supabase";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 
 
 interface InterviewData {
@@ -28,6 +29,7 @@ interface InterviewData {
 export default function ViewInterview() {
   const router = useRouter();
   const { id } = router.query;
+  const { base } = useInterviewsBase(); // brothers vs PNMs: PNMs are sent away from /brothers/*
   const [interview, setInterview] = useState<InterviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
@@ -89,7 +91,7 @@ export default function ViewInterview() {
             <h1 className="text-3xl font-bold text-[#8b0000]">Interview Experience</h1>
             {isOwner && (
               <Link
-                href={`/brothers/interviews/edit/${interview.id}`}
+                href={`${base}/edit/${interview.id}`}
                 className="text-xs px-3 py-1.5 bg-white border border-[#8b000025] text-[#8b0000] rounded-lg hover:border-[#8b0000] hover:shadow-sm transition-all font-medium"
               >
                 Edit
@@ -119,7 +121,8 @@ export default function ViewInterview() {
                     {interview.first_interview_date ? new Date(interview.first_interview_date).toLocaleDateString('en-US', {
                       month: '2-digit',
                       day: '2-digit',
-                      year: 'numeric'
+                      year: 'numeric',
+                      timeZone: 'UTC' // date-only values parse as UTC midnight; without this US time zones show the day before
                     }) : 'Not provided'}
                   </p>
                 </div>

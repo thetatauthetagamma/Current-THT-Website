@@ -104,6 +104,7 @@ export default function Interviews() {
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
       year: "numeric",
+      timeZone: "UTC", // date-only values parse as UTC midnight; keeps the month from slipping back
     });
   };
 
