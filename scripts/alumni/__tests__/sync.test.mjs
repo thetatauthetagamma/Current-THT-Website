@@ -1,15 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planChanges, runSync, buildTargets, createRestClient, shouldFail } from '../sync.mjs';
+import { planChanges, runSync, buildTargets, createRestClient, shouldFail, fillFromPledges } from '../sync.mjs';
 
 const NOW = '2026-10-29T00:00:00.000Z';
 const ok = (url, o = {}) => ({ linkedin_url: url, status: 'ok', name: 'X', company: null, title: null, title_fresh: null, location: null, error: null, ...o });
 const A = 'https://www.linkedin.com/in/a', B = 'https://www.linkedin.com/in/b';
 
-function fakeDb({ brothers, alumni = [] }) {
-  const state = { alumni: new Map(alumni.map((r) => [r.userid, { ...r }])), log: [], upserts: 0 };
+function fakeDb({ brothers, alumni = [], pledges = [] }) {
+  const state = { alumni: new Map(alumni.map((r) => [r.userid, { ...r }])), log: [], upserts: 0, filled: [] };
   return { state,
     getBrothers: async () => brothers,
+    getPledgeLinkedins: async (ids) => pledges.filter((p) => ids.includes(p.uniqname)),
+    fillBrotherLinkedins: async (rows) => { state.filled.push(...rows); },
     getAlumni: async (ids) => ids.filter((i) => state.alumni.has(i)).map((i) => state.alumni.get(i)),
     upsertAlumni: async (rows) => { state.upserts++; rows.forEach((r) => state.alumni.set(r.userid, { ...r })); },
     insertChangelog: async (rows) => { state.log.push(...rows); } };
@@ -97,6 +99,25 @@ test('--limit caps lookups; shared URL maps to every userid', async () => {
   assert.deepEqual(t.urlToUsers.get(A), ['a', 'b']);
   const db = fakeDb({ brothers: [{ userid: 'a', linkedin: A }, { userid: 'b', linkedin: B }] });
   assert.equal((await runSync({ db, limit: 1 })).urls, 1);
+});
+
+test('brother with no LinkedIn uses the one saved as a PNM; existing LinkedIns win', () => {
+  const r = fillFromPledges(
+    [{ userid: 'new', linkedin: null }, { userid: 'old', linkedin: A }, { userid: 'none', linkedin: '' }],
+    [{ uniqname: 'new', linkedin: 'linkedin.com/in/b/' }, { uniqname: 'old', linkedin: 'linkedin.com/in/other' }, { uniqname: 'none', linkedin: 'not a url' }]);
+  assert.deepEqual(r.fromPledges, [{ userid: 'new', linkedin: B }]);
+  assert.equal(r.brothers[1].linkedin, A); assert.equal(r.brothers[2].linkedin, '');
+});
+
+test('live run looks up and saves the PNM LinkedIn; dry run saves nothing', async () => {
+  const mk = () => fakeDb({ brothers: [{ userid: 'new', linkedin: null }], pledges: [{ uniqname: 'new', linkedin: B }] });
+  const dry = mk();
+  const d = await runSync({ db: dry, live: false });
+  assert.equal(d.urls, 1); assert.equal(d.fromPledges.length, 1); assert.equal(dry.state.filled.length, 0);
+  const db = mk();
+  const r = await runSync({ db, live: true, now: NOW, enrichFn: fakeEnrich({ [B]: ok(B, { company: 'Acme' }) }) });
+  assert.deepEqual(db.state.filled, [{ userid: 'new', linkedin: B }]);
+  assert.equal(db.state.alumni.get('new').company, 'Acme'); assert.equal(r.updated, 1);
 });
 
 test('rest client fails loudly without key and never puts key in URL', async () => {

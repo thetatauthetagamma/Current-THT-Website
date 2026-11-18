@@ -15,7 +15,7 @@ Brothers table (Supabase)         Bright Data
             alumni_changelog    (every real change is logged)
 ```
 
-- **`Brothers`** is the source of truth for name, major, class year, email, phone and **LinkedIn URL**. The sync only reads it.
+- **`Brothers`** is the source of truth for name, major, class year, email, phone and **LinkedIn URL**. The sync only reads it, with one exception: if a brother has no LinkedIn but saved one as a PNM (`Pledges.linkedin`, matched by uniqname), the sync uses that one and copies it into `Brothers.linkedin`. It never replaces a LinkedIn that is already there. So when initiating PNMs into `Brothers` by hand, you don't have to copy their LinkedIn.
 - **`alumni`** holds what `Brothers` does not: `company`, `title`, `location`, where each value came from (`enrichment`, `self-edited` or `import`), and when it was last updated.
 - **Who can see it:** only signed-in brothers. This is enforced in the database (row level security), not just in the page. The page reads through the `search_alumni` function.
 - **Brothers editing their own info:** the "Edit my info" button calls `update_my_alumni`, the only way a brother can write to `alumni`. Anything they fill in is marked `self-edited` and **the sync leaves it alone for 2 years**. A field they leave blank (for example, no company yet) stays open, so the next sync fills it from LinkedIn.
