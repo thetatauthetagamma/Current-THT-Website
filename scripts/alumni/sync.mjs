@@ -55,16 +55,44 @@ export function planChanges(existing, rec, now = new Date().toISOString()) {
   return { row, changes, selfEditedSkipped };
 }
 
-// Core run. db = { getBrothers({userids}), getAlumni(userids), upsertAlumni(rows), insertChangelog(rows) }
+// Brothers with no LinkedIn get the one they saved as a PNM (Pledges.uniqname = Brothers.userid), if valid.
+// Returns { brothers (with linkedin filled in), fromPledges: [{userid, linkedin}] }.
+export function fillFromPledges(brothers, pledges) {
+  const byUniq = new Map();
+  for (const p of pledges ?? []) {
+    const url = clean(p.linkedin) && normalizeLinkedInUrl(p.linkedin);
+    if (url && p.uniqname) byUniq.set(String(p.uniqname).toLowerCase(), url);
+  }
+  const fromPledges = [];
+  const out = brothers.map((b) => {
+    if (clean(b.linkedin)) return b;
+    const url = byUniq.get(String(b.userid ?? '').toLowerCase());
+    if (!url) return b;
+    fromPledges.push({ userid: b.userid, linkedin: url });
+    return { ...b, linkedin: url };
+  });
+  return { brothers: out, fromPledges };
+}
+
+// Core run. db = { getBrothers({userids}), getAlumni(userids), upsertAlumni(rows), insertChangelog(rows),
+//   optional getPledgeLinkedins(uniqnames), fillBrotherLinkedins([{userid, linkedin}]) }
 export async function runSync({ db, enrichFn = defaultEnrich, userids = null, limit = null, live = false,
   now = new Date().toISOString(), enrichOptions = {} }) {
-  const brothers = await db.getBrothers({ userids });
+  let brothers = await db.getBrothers({ userids });
+  let fromPledges = [];
+  const missing = brothers.filter((b) => !clean(b.linkedin)).map((b) => b.userid);
+  if (missing.length && db.getPledgeLinkedins) {
+    ({ brothers, fromPledges } = fillFromPledges(brothers, await db.getPledgeLinkedins(missing)));
+  }
   const { urlToUsers, invalid } = buildTargets(brothers);
   let urls = [...urlToUsers.keys()];
   if (limit != null) urls = urls.slice(0, limit);
   const report = { urls: urls.length, invalid, cost: estimateCost(urls.length), live,
-    updated: 0, jobChanges: [], failed: [], selfEditedSkipped: [], changes: 0, unchanged: 0 };
-  if (!live || urls.length === 0) return report;          // dry run: no provider call, no writes
+    updated: 0, jobChanges: [], failed: [], selfEditedSkipped: [], changes: 0, unchanged: 0, fromPledges };
+  if (!live) return report;                               // dry run: no provider call, no writes
+  // Save PNM LinkedIns into Brothers (only where Brothers.linkedin is still blank) so the card's link works too.
+  if (fromPledges.length && db.fillBrotherLinkedins) await db.fillBrotherLinkedins(fromPledges);
+  if (urls.length === 0) return report;
 
   const out = await enrichFn(urls, enrichOptions);
   const userList = urls.flatMap((u) => urlToUsers.get(u));
@@ -120,8 +148,18 @@ export function createRestClient({ url, key, fetchFn = globalThis.fetch }) {
   };
   const inList = (ids) => `in.(${ids.map((i) => `"${String(i).replace(/"/g, '')}"`).join(',')})`;
   return {
-    getBrothers: ({ userids } = {}) => getAll('/Brothers?select=userid,linkedin&linkedin=not.is.null&order=userid' +
+    getBrothers: ({ userids } = {}) => getAll('/Brothers?select=userid,linkedin&order=userid' +
       (userids?.length ? `&userid=${encodeURIComponent(inList(userids))}` : '')),
+    async getPledgeLinkedins(uniqnames) {
+      const out = [];
+      for (let i = 0; i < uniqnames.length; i += 100) out.push(...await getAll('/Pledges?select=uniqname,linkedin&linkedin=not.is.null' +
+        `&uniqname=${encodeURIComponent(inList(uniqnames.slice(i, i + 100)))}`));
+      return out;
+    },
+    async fillBrotherLinkedins(rows) {                     // the or=() filter never overwrites a value someone added
+      for (const r of rows) await call(`/Brothers?userid=eq.${encodeURIComponent(r.userid)}&or=(linkedin.is.null,linkedin.eq.)`,
+        { method: 'PATCH', body: JSON.stringify({ linkedin: r.linkedin }), headers: { Prefer: 'return=minimal' } });
+    },
     async getAlumni(ids) {
       const out = [];
       for (let i = 0; i < ids.length; i += 100) out.push(...await getAll(`/alumni?select=*&userid=${encodeURIComponent(inList(ids.slice(i, i + 100)))}`));
@@ -143,6 +181,9 @@ export function shouldFail(r, maxFailRate = 0.25) {
 export function formatReport(r) {
   const L = [];
   L.push(`Records to look up: ${r.urls}. Skipped for invalid LinkedIn URL: ${r.invalid.length}.`);
+  const fp = r.fromPledges ?? [];
+  if (fp.length) L.push(`LinkedIn taken from their PNM profile (${r.live ? 'saved to' : 'would be saved to'} Brothers): ${fp.length}`);
+  for (const f of fp) L.push(`  ${f.userid}: ${f.linkedin}`);
   L.push(`Free tier: ${r.cost.freeTierRecords}/month (${r.cost.withinFreeTier ? 'within' : 'OVER'}). Pay-as-you-go would be $${r.cost.payAsYouGoUsd}.`);
   for (const i of r.invalid) L.push(`  invalid URL: ${i.userid} -> ${i.linkedin}`);
   if (!r.live) { L.push('DRY RUN: no Bright Data call, no database writes. Re-run with --yes to go live.'); return L.join('\n'); }
