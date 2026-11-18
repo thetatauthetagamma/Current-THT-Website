@@ -195,23 +195,10 @@ export default function AttendancePage() {
             return
           }
         } else {
-          // Get next available ID (similar to RushEvents pattern)
-          const { data: maxIdData, error: maxIdError } = await supabase
-            .from('Rushee_Attendance')
-            .select('id')
-            .order('id', { ascending: false })
-            .limit(1)
-
-          let nextId = 1
-          if (!maxIdError && maxIdData && maxIdData.length > 0) {
-            nextId = (maxIdData[0].id || 0) + 1
-          }
-
-          // Insert new record with calculated ID
+          // Let the DB assign the ID via its serial/identity column
           const { error: insertError } = await supabase
             .from('Rushee_Attendance')
             .insert({
-              id: nextId,
               uniqname: uniqname,
               event_id: event.id,
               event_name: event.name,
