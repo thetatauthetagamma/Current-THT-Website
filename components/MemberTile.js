@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import supabase from '../supabase'
 import linkdenLogo from '../public/linked-in.svg'
 import { Router, useRouter } from 'next/router'
+import { safeLinkedInUrl } from '@/utils/alumni'
 
 export default function MemberTile ({
   userid,
@@ -19,6 +20,7 @@ export default function MemberTile ({
   bio
 }) {
   const router = useRouter()
+  const linkedinUrl = safeLinkedInUrl(linkedin)
   const [imageUrl, setImageUrl] = useState('')
 
   useEffect(() => {
@@ -103,8 +105,8 @@ export default function MemberTile ({
               )}
             </div>
             {
-              linkedin ?
-              <a href={linkedin} className='flex items-center p-2 md:mr-6'>
+              linkedinUrl ?
+              <a href={linkedinUrl} target='_blank' rel='noopener noreferrer' className='flex items-center p-2 md:mr-6'>
                 <Image
                   src={linkdenLogo}
                   alt='linkedin'

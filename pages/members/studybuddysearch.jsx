@@ -16,11 +16,15 @@ export default function StudyBuddySearch() {
 
   useEffect(() => {
     setUserEmail(Cookies.get('userEmail'));
+  }, []);
+
+  // Roster: fetched ONCE, profile columns only (no PNM progress, no admin roles).
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const [pledgeData, brothersData] = await Promise.all([
-          supabase.from('Pledges').select('*'),
-          supabase.from('Brothers').select('*')
+          supabase.from('Pledges').select('uniqname, firstname, lastname, email, phone, linkedin, major, year, classes, pronouns, archivedclasses'),
+          supabase.from('Brothers').select('userid, firstname, lastname, roll, email, phone, linkedin, major, year, classes, pronouns, archivedclasses')
         ]);
 
         let combinedMembers = [];
@@ -48,7 +52,7 @@ export default function StudyBuddySearch() {
     };
 
     fetchData();
-  }, [userEmail]);
+  }, []);
 
   useEffect(() => {
     setCurrentPageCurrent(1);
@@ -56,10 +60,11 @@ export default function StudyBuddySearch() {
   }, [searchQuery]);
 
   useEffect(() => {
+    if (!userEmail) return;
     const checkIfBrother = async () => {
       const { data, error } = await supabase
         .from('Brothers')
-        .select('*')
+        .select('userid')
         .eq('email', userEmail);
       if (data?.length === 1 && !error) {
         setIsPledge(false);
@@ -69,7 +74,7 @@ export default function StudyBuddySearch() {
     const checkIfPledge = async () => {
       const { data, error } = await supabase
         .from('Pledges')
-        .select('*')
+        .select('uniqname')
         .eq('email', userEmail);
       if (data?.length === 1 && !error) {
         setIsPledge(true);

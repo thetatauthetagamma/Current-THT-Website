@@ -46,19 +46,14 @@ const firstrow = [image1, image2, image3, image4, image5, image6, image7, image8
 export default function members() {
   const [regentFirst, setRegentFirst] = useState('');
   const [regentLast, setRegentLast] = useState('');
-  const [regentImg, setRegentImg] = useState('');
   const [viceFirst, setViceFirst] = useState('');
   const [viceLast, setViceLast] = useState('');
-  const [viceImg, setViceImg] = useState('');
   const [scribeFirst, setScribeFirst] = useState('');
   const [scribeLast, setScribeLast] = useState('');
-  const [scribeImg, setScribeImg] = useState('');
   const [treasurerFirst, setTreasurerFirst] = useState('');
   const [treasurerLast, setTreasurerLast] = useState('');
-  const [treasurerImg, setTreasurerImg] = useState('');
   const [corsecFirst, setCorsecFirst] = useState('');
   const [corsecLast, setCorsecLast] = useState('');
-  const [corsecImg, setCorsecImg] = useState('');
 
   const refActiveMembers = useRef(null);
   const refDifferentMajors = useRef(null);
@@ -90,46 +85,30 @@ export default function members() {
       });
     };
   }, []);
+  // One narrow database function (names + role only) instead of 5 full-row reads and 5 unused photo downloads.
   useEffect(() => {
-    const fetchEBoard = async (
-      adminRole: string,
-      setFirstName: SetStateFunction,
-      setLastName: SetStateFunction,
-      setImage: SetStateFunction
-    ) => {
+    const loadEBoard = async () => {
       try {
-        const { data, error } = await supabase
-          .from('Brothers')
-          .select('*')
-          .eq('adminrole', adminRole);
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          setFirstName(data[0].firstname);
-          setLastName(data[0].lastname);
-          const { userid } = data[0];
-          const { data: ImageData, error: imageError } = await supabase.storage
-          .from('brothers')
-          .download(`${userid}.jpeg`);
-
-        if (!imageError) {
-          setImage(URL.createObjectURL(ImageData));
-
-        }
-        }
+        const { data, error } = await supabase.rpc('eboard_public');
+        if (error || !data) return;
+        const by = (role: string) => data.find((r: { adminrole: string }) => r.adminrole === role);
+        const apply = (role: string, setFirst: SetStateFunction, setLast: SetStateFunction) => {
+          const row = by(role);
+          if (row) {
+            setFirst(row.firstname);
+            setLast(row.lastname);
+          }
+        };
+        apply('regent', setRegentFirst, setRegentLast);
+        apply('vice', setViceFirst, setViceLast);
+        apply('scribe', setScribeFirst, setScribeLast);
+        apply('corsec', setCorsecFirst, setCorsecLast);
+        apply('treasurer', setTreasurerFirst, setTreasurerLast);
       } catch (error) {
-        // Handle errors if needed
+        // Leave the names blank if the lookup fails
       }
     };
-
-    fetchEBoard('regent', setRegentFirst, setRegentLast, setRegentImg);
-    fetchEBoard('vice', setViceFirst, setViceLast, setViceImg);
-    fetchEBoard('scribe', setScribeFirst, setScribeLast, setScribeImg);
-    fetchEBoard('corsec', setCorsecFirst,setCorsecLast, setCorsecImg);
-    fetchEBoard('treasurer', setTreasurerFirst,setTreasurerLast, setTreasurerImg)
+    loadEBoard();
   }, []);
 
 

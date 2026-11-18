@@ -1,18 +1,15 @@
 import BroNavBar from "@/components/BroNavBar";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 import Link from "next/link";
 import InterviewHeader from "@/components/InterviewHeader";
-import { useRouter } from "next/router";
 
 export default function InterviewSuccess() {
-  const router = useRouter();
-  const isPledge = router.pathname.startsWith("/members/");
-  const interviewsRoute = isPledge ? "/members/interviews" : "/brothers/interviews";
-
+  const { base } = useInterviewsBase(); // brothers vs PNMs
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={isPledge}/>
+      <BroNavBar />
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        <InterviewHeader isPledge={isPledge} />
+        <InterviewHeader />
 
         {/* Success Content */}
         <div className="flex flex-col items-center justify-center flex-grow p-8">
@@ -25,7 +22,7 @@ export default function InterviewSuccess() {
             </p>
           </div>
           
-          <Link href={`${interviewsRoute}/add`}>
+          <Link href={`${base}/add`}>
             <button className="px-6 py-3 bg-[#8b0000] text-white rounded-lg hover:bg-[#a00000] transition-colors text-lg">
               Submit Another Interview
             </button>

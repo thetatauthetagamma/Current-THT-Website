@@ -4,6 +4,7 @@ import InterviewHeader from "@/components/InterviewHeader";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import supabase from "@/supabase";
+import useInterviewsBase from "@/utils/useInterviewsBase";
 
 
 interface InterviewData {
@@ -27,9 +28,8 @@ interface InterviewData {
 
 export default function ViewInterview() {
   const router = useRouter();
-  const isPledge = router.pathname.startsWith("/members/");
-  const interviewsRoute = isPledge ? "/members/interviews" : "/brothers/interviews";
   const { id } = router.query;
+  const { base } = useInterviewsBase(); // brothers vs PNMs: PNMs are sent away from /brothers/*
   const [interview, setInterview] = useState<InterviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
@@ -60,7 +60,7 @@ export default function ViewInterview() {
   if (loading) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={isPledge}/>
+        <BroNavBar />
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: '#f5f3dc' }}>
           <p className="text-gray-600">Loading...</p>
         </div>
@@ -71,7 +71,7 @@ export default function ViewInterview() {
   if (!interview) {
     return (
       <div className="flex md:flex-row flex-col min-h-screen">
-        <BroNavBar isPledge={isPledge}/>
+        <BroNavBar />
         <div className="flex-grow flex items-center justify-center" style={{ backgroundColor: '#f5f3dc' }}>
           <p className="text-gray-600">Interview not found</p>
         </div>
@@ -81,9 +81,9 @@ export default function ViewInterview() {
 
   return (
     <div className="flex md:flex-row flex-col min-h-screen">
-      <BroNavBar isPledge={isPledge}/>
+      <BroNavBar />
       <div className="flex-grow" style={{ backgroundColor: '#f5f3dc' }}>
-        <InterviewHeader isPledge={isPledge} />
+        <InterviewHeader />
 
         {/* Interview Content */}
         <div className="max-w-4xl mx-auto p-8">
@@ -91,7 +91,7 @@ export default function ViewInterview() {
             <h1 className="text-3xl font-bold text-[#8b0000]">Interview Experience</h1>
             {isOwner && (
               <Link
-                href={`${interviewsRoute}/edit/${interview.id}`}
+                href={`${base}/edit/${interview.id}`}
                 className="text-xs px-3 py-1.5 bg-white border border-[#8b000025] text-[#8b0000] rounded-lg hover:border-[#8b0000] hover:shadow-sm transition-all font-medium"
               >
                 Edit
@@ -121,7 +121,8 @@ export default function ViewInterview() {
                     {interview.first_interview_date ? new Date(interview.first_interview_date).toLocaleDateString('en-US', {
                       month: '2-digit',
                       day: '2-digit',
-                      year: 'numeric'
+                      year: 'numeric',
+                      timeZone: 'UTC' // date-only values parse as UTC midnight; without this US time zones show the day before
                     }) : 'Not provided'}
                   </p>
                 </div>

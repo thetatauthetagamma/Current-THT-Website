@@ -1,8 +1,3 @@
 // next.config.js
-module.exports = {
-  // ... other configurations
-  middleware: async () => {
-    const middleware = require('./middleware').default;
-    return middleware;
-  },
-};
+// (The old "middleware" key was ignored by Next.js: middleware.js at the repo root is what runs.)
+module.exports = {};

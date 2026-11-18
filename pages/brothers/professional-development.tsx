@@ -1,3 +1,4 @@
+import { safeLinkedInUrl } from '@/utils/alumni'
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import BroNavBar from "@/components/BroNavBar";
 import supabase from "@/supabase";
@@ -627,9 +628,9 @@ export default function ProfessionalDevelopment() {
                           >
                             {member.phone}
                           </a>
-                          {member.linkedin_url && (
+                          {safeLinkedInUrl(member.linkedin_url) && (
                             <a
-                              href={member.linkedin_url}
+                              href={safeLinkedInUrl(member.linkedin_url) ?? undefined}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-gray-700 hover:text-[#8b0000] hover:underline"

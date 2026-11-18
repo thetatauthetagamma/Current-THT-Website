@@ -88,7 +88,7 @@ const Timeline = () => {
         try {
             const { data, error } = await supabase
                 .from('RushEvents')
-                .select("*")
+                .select("id, name, description, location, link, date, link_name, open, attendance")
                 .eq('open', true) // Only show events that are publicly visible
                 .order('date', { ascending: true }) // First sort by date ascending
                 .order('id', { ascending: true }); // Then sort by id ascending
